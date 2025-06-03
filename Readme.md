@@ -2,25 +2,31 @@
 
 ---
 
-### **I. Giới thiệu chung**
+## **
+
+```
+
+```
+
+I. Giới thiệu chung**
 
 * **Tên hệ thống:** Warehouse Management System (WMS)
-* **Ý tưởng:** Hệ thống hỗ trợ quản lý kho thông minh cho Chủ doanh nghiệp(Nhà phân phối cấp 1, nhập hàng trực tiếp từ nhà sản xuất và xuất hàng cho các đại lí bán lẻ), hiện đại hóa quy trình vận hành kho.
+* **Nhu cầu:** Hệ thống quản lí kho sinh ra với mục đích hỗ trợ Quản lý cho phép quản lí sản phẩm trong kho, quản lí việc xuất, nhập hàng vào kho và cho phép khách hàng có thể tạo đơn nhập hàng nhằm tối ưu trong công việc
 * **Lý do chọn đề tài:**
 
   * Trong bối cảnh số hóa ngày càng mạnh mẽ, việc quản lý kho bằng phương pháp thủ công hoặc các công cụ đơn giản như Excel đang bộc lộ nhiều hạn chế về hiệu quả và độ chính xác. Điều này đặt ra nhu cầu cấp thiết về một hệ thống quản lý kho thông minh, linh hoạt và dễ sử dụng, đặc biệt đối với các doanh nghiệp vừa và nhỏ.Doanh nghiệp lớn đang gặp nhiều vấn đề trong quá trình vận hành kho như:
   * Khó kiểm soát tồn kho thực tế tại từng vị trí lưu trữ.
-  * Thiếu khả năng tùy biến để đáp ứng các quy trình đặc thù của từng doanh nghiệp.
+  * Quản lý hóa giao dịch gặp nhiều khó khăn, thiếu sự minh bạch.
+  * 
 * **Mục tiêu:**
 
-  * Phát triển hệ thống web quản lý kho có chức năng phân quyền, quản lý sản phẩm, nhân viên, hóa đơn, nhà cung cấp,...
+  * Phát triển hệ thống web quản lý kho có chức năng phân quyền, quản lý sản phẩm, nhân viên, hóa đơn, nhà cung cấp,khách hàng đặt đơn, xem đơn của mình,...
 * **Phạm vi chức năng:**
 
-  * Tối thiểu: Quản lý người dùng, sản phẩm, giao dịch nhập xuất, kiểm kê hàng hóa.
+  * Tối thiểu: Quản lý người dùng, sản phẩm, giao dịch nhập xuất, kiểm kê hàng hóa,.
   * Mở rộng: Phân quyền, thống kê, thông báo, quản lý danh mục, tích hợp nhà cung cấp,...
 
 ---
-
 
 ### 1. **Luồng nhập kho(Inbound Operator)**
 
@@ -72,9 +78,15 @@
 
 ## 📌 **Gợi ý bảng dữ liệu bổ sung**
 
-| **Bảng**      | **Vai trò**                                                                       |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `Employee_WorkLog` | Lưu thời gian làm việc, check-in/check-out                                           |
-| `Task_Assignment`  | Giao nhiệm vụ nhập/xuất/kiểm theo nhân viên                                       |
-| `Customer`         | Thông tin đơn vị bán lẻ, để xuất hóa đơn và theo dõi lịch sử đơn hàng |
-| `Invoice`          | Hóa đơn bán hàng chi tiết (sản phẩm, đơn vị, giá, ngày xuất)               |
+| **Bảng**      | **Vai trò**                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------- |
+| `Employee_WorkLog` | Lưu thời gian làm việc, check-in/check-out                                                       |
+| `Order`            | Lưu trữ đơn hàng để cho khách hàng có thể xem và theo dõi tình trạng đơn của mình |
+| `Customer`         | Thông tin đơn vị bán lẻ, để xuất hóa đơn và theo dõi lịch sử đơn hàng             |
+| `Invoice`          | Hóa đơn bán hàng chi tiết (sản phẩm, đơn vị, giá, ngày xuất)                           |
+
+Những việc cần làm
+Huy Tâm: Thêm màn hình quản lý khách hàng, quản lí nhà cung cấp, Sửa phần back-end Nhập hàng, xuất hàng, tính giá hàng
+Trường:Thêm role customer trong Database,thêm back-end xử lí cho customer, có quyền đặt hàng, test api bằng swagger
+Nghĩa: Tạo thêm bảng Order để lưu trữ thông tin đơn hàng của khách hàng, Check = user.id kèm role là customer, lưu trữ đầy đủ thông tin order của khách hàng
+Việt:Sửa Front-end, Thêm màn hình thêm màn đăng kí, đăng nhập cho customer,quên mật khẩu,nhập mật khẩu mới cho Customer, tạo thêm cả màn hình Homepage cho Customer để đặt hàng,Viết Requirement theo project và mục tiêu hiện tại
