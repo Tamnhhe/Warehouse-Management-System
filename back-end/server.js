@@ -5,6 +5,9 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const httpsErrors = require("http-errors");
 const cors = require("cors");
+const { customerRouter } = require("./routes");
+
+
 
 const app = express();
 const db = require("./models/index");
@@ -17,6 +20,7 @@ const {
   categoryRouter,
   supplierRouter,
   supplierProductRouter,
+  customerController
 } = require("./routes");
 //Cung cấp URl công khai để lấy ảnh thông qua thư mục /uploads
 //cho phep truy cap anh bang url tren server 
@@ -49,7 +53,7 @@ app.use("/inventoryTransactions", inventoryTransactionRouter);
 app.use("/categories", categoryRouter); // Nguyễn Đức Linh - HE170256 23/1/2025
 app.use("/users", userRouter);
 app.use("/supplierProducts", supplierProductRouter);
-
+app.use("/customers", customerRouter);
 app.use(async (req, res, next) => {
   next(httpsErrors(404, "Bad Request"));
 });

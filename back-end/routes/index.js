@@ -7,7 +7,7 @@ const inventoryTransactionRouter = require("./inventoryTransaction.route");
 const categoryRouter = require("./category.route");
 const supplierRouter = require("./supplier.route");
 const supplierProductRouter = require("./supplierProduct.route");
-
+const customerRouter = require("./customer.route");
 module.exports = {
     userRouter,
     authenticationRouter,
@@ -16,5 +16,6 @@ module.exports = {
     inventoryTransactionRouter,
     categoryRouter,
     supplierRouter,
-    supplierProductRouter
+    supplierProductRouter,
+    customerRouter
 };

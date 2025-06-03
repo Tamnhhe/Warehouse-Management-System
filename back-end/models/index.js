@@ -1,4 +1,4 @@
-// Nguyễn Đức Linh - HE170256 17/1/2025
+
 const mongoose = require("mongoose");
 const Notification = require("./notification.model");
 const User = require("./user.model");
@@ -7,7 +7,7 @@ const InventoryTransaction = require("./inventoryTransaction.model");
 const Category = require("./category.model");
 const SupplierProduct = require("./supplierProduct.model");
 const Supplier = require("./supplier.model");
-
+const Customer = require("./customer.model");
 const db = {};
 
 db.User = User;
@@ -17,7 +17,7 @@ db.Notification = Notification;
 db.Category = Category;
 db.SupplierProduct = SupplierProduct;
 db.Supplier = Supplier;
-
+db.Customer = Customer;
 db.connectDB = async () => {
   try { 
     await mongoose.connect(process.env.MONGODB_URI);
