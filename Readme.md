@@ -115,4 +115,5 @@ I. Giới thiệu chung**
 - Nghiên cứu tổ chức file của dự  án sau https://drive.google.com/drive/folders/1YzLBlUK-bdz2FA9Pg4_7eSkABDH_GAEG
 - Sửa lại drive nhóm và tạo ra các diagram có trong RDS ra 1 thư mục riêng rồi tạo bằng drawIO
 - Sửa giao diện màn Login,register,Confirm account, reset password
--
+- Template UI preview [Inbox | Rasket - Responsive Admin Dashboard Template](https://techzaa.in/rasket/admin/apps-email.html)
+- Tên dự án là Movico Group
