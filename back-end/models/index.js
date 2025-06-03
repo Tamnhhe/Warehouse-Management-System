@@ -8,6 +8,7 @@ const Category = require("./category.model");
 const SupplierProduct = require("./supplierProduct.model");
 const Supplier = require("./supplier.model");
 const Customer = require("./customer.model");
+const Order = require("./order.model");
 const db = {};
 
 db.User = User;
@@ -18,6 +19,7 @@ db.Category = Category;
 db.SupplierProduct = SupplierProduct;
 db.Supplier = Supplier;
 db.Customer = Customer;
+db.Order = Order;
 db.connectDB = async () => {
   try { 
     await mongoose.connect(process.env.MONGODB_URI);

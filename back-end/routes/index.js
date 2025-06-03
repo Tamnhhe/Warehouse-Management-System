@@ -8,6 +8,7 @@ const categoryRouter = require("./category.route");
 const supplierRouter = require("./supplier.route");
 const supplierProductRouter = require("./supplierProduct.route");
 const customerRouter = require("./customer.route");
+const orderRouter = require("./order.route");
 module.exports = {
     userRouter,
     authenticationRouter,
@@ -17,5 +18,6 @@ module.exports = {
     categoryRouter,
     supplierRouter,
     supplierProductRouter,
-    customerRouter
+    customerRouter,
+    orderRouter
 };
