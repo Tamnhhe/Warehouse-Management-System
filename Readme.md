@@ -85,8 +85,37 @@ I. Giới thiệu chung**
 | `Customer`         | Thông tin đơn vị bán lẻ, để xuất hóa đơn và theo dõi lịch sử đơn hàng             |
 | `Invoice`          | Hóa đơn bán hàng chi tiết (sản phẩm, đơn vị, giá, ngày xuất)                           |
 
-Những việc cần làm
-Huy Tâm: Thêm màn hình quản lý khách hàng, quản lí nhà cung cấp, Sửa phần back-end Nhập hàng, xuất hàng, tính giá hàng
-Trường:Thêm role customer trong Database,thêm back-end xử lí cho customer, có quyền đặt hàng, test api bằng swagger
-Nghĩa: Tạo thêm bảng Order để lưu trữ thông tin đơn hàng của khách hàng, Check = user.id kèm role là customer, lưu trữ đầy đủ thông tin order của khách hàng
-Việt:Sửa Front-end, Thêm màn hình thêm màn đăng kí, đăng nhập cho customer,quên mật khẩu,nhập mật khẩu mới cho Customer, tạo thêm cả màn hình Homepage cho Customer để đặt hàng,Viết Requirement theo project và mục tiêu hiện tại
+# Công việc cần làm
+
+## 1. Huy Tâm
+- Thêm màn hình quản lý khách hàng
+- Thêm màn hình quản lý nhà cung cấp
+- Sửa phần back-end:
+  - Nhập hàng
+  - Xuất hàng
+  - Tính giá hàng
+
+---
+
+## 2. Trường
+- Thêm role **customer** trong Database
+- Thêm back-end xử lý cho customer:
+  - Có quyền đặt hàng
+- Test API bằng Swagger
+
+---
+
+## 3. Nghĩa
+- Tạo thêm bảng **Order** để lưu trữ thông tin đơn hàng của khách hàng
+- Kiểm tra (`Check`) dựa trên `user.id` và role là **customer**
+- Lưu trữ đầy đủ thông tin order của khách hàng
+
+---
+
+## 4. Việt
+- Sửa Front-end:
+  - Thêm màn hình đăng ký cho customer
+  - Thêm màn hình đăng nhập cho customer
+  - Thêm màn hình quên mật khẩu và nhập mật khẩu mới cho customer
+  - Tạo màn hình Homepage cho customer để đặt hàng
+- Viết **Requirement** theo project và mục tiêu hiện tại
