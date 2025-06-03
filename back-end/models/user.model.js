@@ -44,20 +44,26 @@ const UserSchema = new mongoose.Schema({
     },
     idCard: {
       type: Number,
-      required: true,
+      required: function() {
+        // Bắt buộc nếu role là manager hoặc employee
+        return this.role === 'manager' || this.role === 'employee';
+      },
       unique: true,
     },
   },
   salary: {
     type: Number,
-    required: true,
+    required: function() {
+        // Bắt buộc nếu role là manager hoặc employee
+        return this.role === 'manager' || this.role === 'employee';
+      },
     min: 0,
   },
   role: {
     type: String,
     required: true,
-    enum: ['manager', 'employee'],
-    default: 'employee',
+    enum: ['manager', 'employee', 'customer'],
+    default: 'customer',
   },
   type: {
     type: String,

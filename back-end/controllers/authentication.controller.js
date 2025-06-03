@@ -73,7 +73,47 @@ async function login(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+async function registerCustomer(req, res) {
+    try {
+        const { fullName, email, phoneNumber, password, confirmPassword } = req.body;
 
+        if (!fullName || !email || !phoneNumber || !password || !confirmPassword) {
+            return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin" });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Mật khẩu nhập lại không khớp!" });
+        }
+
+        const existingUser = await db.User.findOne({ "account.email": email });
+        if (existingUser) return res.status(409).json({ message: "Email đã tồn tại." });
+
+        const existingPhoneNumber = await db.User.findOne({ "profile.phoneNumber": phoneNumber });
+        if (existingPhoneNumber) return res.status(409).json({ message: "Số điện thoại này đã được sử dụng" });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = new db.User({
+            fullName,
+            account: {
+                email,
+                password: hashedPassword,
+            },
+            profile: {
+                phoneNumber,
+            },
+            role: "customer",
+            status: "active",
+        });
+
+        await newUser.save();
+
+        res.status(201).json({ message: "Đăng ký thành công!" });
+    } catch (error) {
+        console.error("Error registering customer:", error);
+        res.status(500).json({ message: "Có lỗi xảy ra!" });
+    }
+}
 // Hàm thêm nhân viên
 async function addEmployee(req, res) {
     try {
@@ -270,6 +310,7 @@ const authenticationController = {
     forgotPassword,
     resetPassword,
     verifyAccount,
+    registerCustomer
 };
 
 module.exports = authenticationController;
