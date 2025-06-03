@@ -1,4 +1,4 @@
-// Nguyễn Đức Linh - HE170256 23/1/2025
+
 const db = require("../models/index");
 const mongoose = require("mongoose");
 

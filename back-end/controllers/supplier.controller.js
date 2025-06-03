@@ -1,4 +1,4 @@
-//Nguyễn Bảo Phi-HE173187-22/2/2025
+
 const db = require("../models/index");
 const Supplier = db.Supplier;
 const SupplierProduct = db.SupplierProduct;
