@@ -1,4 +1,4 @@
-// Nguyễn Huy Tâm - HE173108 5/2/2025
+
 const db = require("../models/index");
 // Tạo mới một sản phẩm
 const createProduct = async (req, res, next) => {

@@ -262,50 +262,6 @@ async function verifyAccount(req, res) {
         res.status(500).json({ message: `${error._message}` });
     }
 }
-async function registerCustomer(req, res) {
-  try {
-    const { fullName, email, password, phoneNumber, dob, address, gender, idCard } = req.body;
-
-    // Kiểm tra bắt buộc các trường cần thiết
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin bắt buộc" });
-    }
-
-    // Kiểm tra email đã tồn tại chưa
-    const existingUser = await db.User.findOne({ "account.email": email });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email đã được sử dụng" });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Tạo user mới với role = 'customer' và status = 'active' luôn (không cần verify email)
-    const newUser = new db.User({
-      fullName,
-      account: {
-        email,
-        password: hashedPassword,
-      },
-      profile: {
-        phoneNumber: phoneNumber || null,
-        dob: dob || null,
-        address: address || null,
-        gender: gender || null,
-        idCard: idCard || null,
-      },
-      role: "customer",
-      status: "active", // active ngay lập tức
-    });
-
-    await newUser.save();
-
-    res.status(201).json({ message: "Đăng ký thành công! Bạn có thể đăng nhập ngay." });
-  } catch (error) {
-    console.error("Error registering customer:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" });
-  }
-}
 
 const authenticationController = {
     sendEmail,
@@ -314,7 +270,6 @@ const authenticationController = {
     forgotPassword,
     resetPassword,
     verifyAccount,
-    registerCustomer
 };
 
 module.exports = authenticationController;

@@ -1,4 +1,4 @@
-//Nguyễn Bảo Phi-HE173187-7/2/20252025
+
 const db = require("../models/index");
 const InventoryTransaction = db.InventoryTransaction;
 const User = db.User;

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const db = require("../models/index");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
+// - Hàm View Profile
 async function getProfile(req, res, next) {
   try {
     const token = req.headers.authorization;
@@ -112,7 +112,7 @@ async function editProfile(req, res, next) {
     res.status(500).json({ message: "Lỗi server" });
   }
 }
-
+// - Ham get user
 async function getAllUsers(req, res, next) {
   try {
     const users = await db.User.find({});
@@ -122,7 +122,7 @@ async function getAllUsers(req, res, next) {
     res.status(500).json({ message: "Lỗi server" });
   }
 }
-
+// - Ham change password
 async function changePassword(req, res) {
     try {
         const token = req.headers.authorization;

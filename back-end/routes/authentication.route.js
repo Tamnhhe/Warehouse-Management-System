@@ -8,6 +8,6 @@ authRouter.post("/add-employee", AuthenticationController.addEmployee);
 authRouter.post("/forgot-password", AuthenticationController.forgotPassword);
 authRouter.post("/reset-password/:id/:token", AuthenticationController.resetPassword);
 authRouter.post("/verify/:token", AuthenticationController.verifyAccount);
-authRouter.post("/register-customer", AuthenticationController.registerCustomer);
+
 
 module.exports = authRouter;
