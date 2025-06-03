@@ -33,11 +33,13 @@ import EditSuppliers from "./Components/Supplier_Components/EditSuppliers";
 import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
+import Register from "./Components/Login_Components/Register";
 
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
     "/login",
+    "/register",
     "/forgot-password",
     "/verify/:token",
     "/resetPassword/:id/:token",
@@ -66,6 +68,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify/:token" element={<ConfirmAccount />} />
           <Route path="/resetPassword/:id/:token" element={<ResetPassword />} />
