@@ -1,4 +1,4 @@
-// Nguyễn Đức Linh - HE170256 17/1/2025
+
 const userRouter = require("./user.route");
 const authenticationRouter = require("./authentication.route");
 const notificationRouter = require("./notification.route");

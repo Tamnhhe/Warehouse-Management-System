@@ -1,3 +1,4 @@
+
 const express = require("express");
 const inventoryTransactionRouter = express.Router();
 const { InventoryTransactionController } = require("../controllers");
