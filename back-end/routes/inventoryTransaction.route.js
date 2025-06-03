@@ -1,4 +1,3 @@
-//Nguyễn Bảo Phi-HE173187-7/2/20252025
 const express = require("express");
 const inventoryTransactionRouter = express.Router();
 const { InventoryTransactionController } = require("../controllers");
