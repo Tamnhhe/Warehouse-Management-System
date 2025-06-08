@@ -73,6 +73,7 @@ async function login(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+//Nghĩa sửa hàm này để cho phép tạo tài khoản cho customer gửi thông báo đặt mật khẩu về Gmail
 async function registerCustomer(req, res) {
     try {
         const { fullName, email, phoneNumber, password, confirmPassword } = req.body;

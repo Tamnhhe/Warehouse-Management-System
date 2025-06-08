@@ -88,6 +88,7 @@ I. Giới thiệu chung**
 # Công việc cần làm
 
 ## 1. Huy Tâm
+
 - Thêm màn hình quản lý khách hàng
 - Thêm màn hình quản lý nhà cung cấp
 - Sửa phần back-end:
@@ -98,24 +99,21 @@ I. Giới thiệu chung**
 ---
 
 ## 2. Trường
-- Thêm role **customer** trong Database
-- Thêm back-end xử lý cho customer:
-  - Có quyền đặt hàng
-- Test API bằng Swagger
+
+- Tạo màn hình Home cho Customer( Bao gồm cả back-end và front-end)
 
 ---
 
 ## 3. Nghĩa
-- Tạo thêm bảng **Order** để lưu trữ thông tin đơn hàng của khách hàng
-- Kiểm tra (`Check`) dựa trên `user.id` và role là **customer**
-- Lưu trữ đầy đủ thông tin order của khách hàng
+
+- Thêm Màn quản lý khách hàng(CRUD Customer)
 
 ---
 
 ## 4. Việt
-- Sửa Front-end:
-  - Thêm màn hình đăng ký cho customer
-  - Thêm màn hình đăng nhập cho customer
-  - Thêm màn hình quên mật khẩu và nhập mật khẩu mới cho customer
-  - Tạo màn hình Homepage cho customer để đặt hàng
-- Viết **Requirement** theo project và mục tiêu hiện tại
+
+- Nghiên cứu tổ chức file của dự  án sau https://drive.google.com/drive/folders/1YzLBlUK-bdz2FA9Pg4_7eSkABDH_GAEG
+- Sửa lại drive nhóm và tạo ra các diagram có trong RDS ra 1 thư mục riêng rồi tạo bằng drawIO
+- Sửa giao diện màn Login,register,Confirm account, reset password
+- Template UI preview [Inbox | Rasket - Responsive Admin Dashboard Template](https://techzaa.in/rasket/admin/apps-email.html)
+- Tên dự án là Movico Group
