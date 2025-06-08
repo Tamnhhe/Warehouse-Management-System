@@ -9,7 +9,7 @@ const getProductsBySupplier = async (req, res) => {
     const { supplierId } = req.params;
     console.log("Received supplierId:", supplierId, typeof supplierId);
 
-    if (!supplierId) {
+    if (!supplier) {
       return res.status(400).json({ message: "Nhà cung cấp không hợp lệ." });
     }
 
