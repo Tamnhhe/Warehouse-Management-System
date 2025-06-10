@@ -1,4 +1,3 @@
-//Nguyễn Bảo Phi-HE173187-7/2/2025
 import React, { useState, useEffect } from "react";
 import {
   Form,
@@ -24,7 +23,6 @@ const ExportProduct = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalProduct, setModalProduct] = useState(null);
   const [branch, setBranch] = useState("Chi nhánh A");
-  const [selectQuantity, setSelectQuantity] = useState(0);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
 
@@ -32,40 +30,10 @@ const ExportProduct = () => {
     axios
       .get("http://localhost:9999/supplierProducts/getAllSupplierProducts")
       .then((response) => {
-        const supplierProducts = response.data;
-
-        const priceMap = {};
-        const quantityMap = {};
-
-        supplierProducts.forEach((item) => {
-          const productId = item.product?._id;
-          const quantity = item.stock ?? 0; // ✅ dùng stock thay vì totalStock
-          const price = item.price ?? 0;
-
-          if (!productId) return;
-
-          priceMap[productId] = (priceMap[productId] || 0) + price * quantity;
-          quantityMap[productId] = (quantityMap[productId] || 0) + quantity;
-        });
-        const activeProducts = supplierProducts.filter(
+        const supplierProducts = response.data.filter(
           (item) => item.product?.status === "active"
         );
-        const supplierProductsWithAvg = activeProducts.map((item) => {
-          const productId = item.product?._id;
-          const avgPrice =
-            quantityMap[productId] > 0
-              ? Math.round(priceMap[productId] / quantityMap[productId])
-              : 0;
-
-          return {
-            ...item,
-            avgPrice: avgPrice, // ✅ bây giờ avgPrice sẽ chính xác
-          };
-        });
-
-        console.log("✅ Có avgPrice:", supplierProductsWithAvg);
-
-        setProducts(supplierProductsWithAvg);
+        setProducts(supplierProducts);
       })
       .catch((error) => {
         console.error("Lỗi khi gọi API:", error);
@@ -104,7 +72,7 @@ const ExportProduct = () => {
         {
           ...product,
           quantity: 1,
-          avgPrice: product.avgPrice || 0,
+          price: product.price || 0,
         },
       ]);
     }
@@ -132,57 +100,56 @@ const ExportProduct = () => {
   };
 
   const handleSubmit = async () => {
-    console.log("📦 Danh sách sản phẩm trước khi gửi API:", selectedProducts);
-
+    setError("");
+    setMessage("");
     if (selectedProducts.length === 0) {
       setMessage("Vui lòng chọn ít nhất một sản phẩm.");
       return;
     }
 
-    // 🛠 Tính tổng tiền hàng chính xác
-    const totalPrice = selectedProducts.reduce((acc, p) => {
-      return acc + (Number(p.avgPrice) || 0) * (Number(p.quantity) || 0);
-    }, 0);
-
-    console.log("💰 Tổng tiền sau khi tính:", totalPrice);
-
-    if (totalPrice <= 0) {
-      setError("Tổng tiền không hợp lệ, kiểm tra lại sản phẩm!");
-      return;
-    }
-
+    let totalExportPrice = 0;
+    let lotsUsedAll = [];
     try {
+      // Gọi xuất kho FIFO cho từng sản phẩm đã chọn
+      for (const p of selectedProducts) {
+        const res = await axios.post(
+          `http://localhost:9999/supplierProducts/export/${p.supplier?._id}/${p.product?._id}`,
+          { quantity: p.quantity }
+        );
+        if (res.data?.data?.totalCost) {
+          totalExportPrice += res.data.data.totalCost;
+          lotsUsedAll.push(...(res.data.data.lotsUsed || []));
+        }
+      }
+
+      // Sau đó tạo transaction với giá vốn thực tế đã xuất
       const requestData = {
         products: selectedProducts.map((p) => ({
           supplierProductId: p._id,
           productId: p.product?._id,
           requestQuantity: p.quantity,
-          price: p.avgPrice * p.quantity,
         })),
         transactionType: "export",
-        totalPrice: totalPrice,
+        totalPrice: totalExportPrice,
         status: "pending",
         supplier: selectedProducts[0]?.supplier?._id,
         branch: branch,
+        // Nếu muốn lưu chi tiết từng lô đã xuất, có thể thêm lotsUsedAll vào đây
       };
-
-      console.log("📤 Dữ liệu gửi lên API:", requestData);
 
       const response = await axios.post(
         "http://localhost:9999/inventoryTransactions/createTransaction",
         requestData
       );
 
-      console.log("✅ API response:", response.data);
-
-      setMessage(response.data.message);
+      setMessage(response.data.message || "Xuất kho thành công!");
       setSelectedProducts([]);
     } catch (error) {
-      console.error("❌ Lỗi khi tạo đơn:", error.response?.data || error);
-      setError("Lỗi khi xuất kho, vui lòng thử lại.");
+      setError(
+        error.response?.data?.message ||
+          "Lỗi khi xuất kho, vui lòng thử lại."
+      );
     }
-    console.log("✅ Chọn:", selectedProducts);
-    console.log("✅ Tổng tiền:", totalPrice);
   };
 
   return (
@@ -199,6 +166,7 @@ const ExportProduct = () => {
             onChange={handleSearch}
             className="mb-3"
           />
+
           {filteredProducts.length > 0 && (
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
               <Table striped bordered hover>
@@ -217,14 +185,15 @@ const ExportProduct = () => {
                         />
                       </td>
                       <td>{f?.product.productName}</td>
-                      <td>{(f?.avgPrice ?? 0).toLocaleString()} VND</td>
-                      <td>{f?.totalStock} in stock</td>
+                      <td>{(f?.price ?? 0).toLocaleString()} VND</td>
+                      <td>{f?.stock} in stock</td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
             </div>
           )}
+
           {selectedProducts.length > 0 && (
             <Table striped bordered hover className="mt-3">
               <thead>
@@ -232,7 +201,8 @@ const ExportProduct = () => {
                   <th>Image</th>
                   <th>Product Name</th>
                   <th>Quantity</th>
-                  <th>Total Price</th>
+                  <th>Giá xuất kho</th>
+                  <th>Thành tiền</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -270,12 +240,11 @@ const ExportProduct = () => {
                       />
                     </td>
                     <td>
-                      {(
-                        Number(s.avgPrice || 0) * Number(s.quantity || 0)
-                      ).toLocaleString("en-US")}{" "}
-                      VND
+                      {(s.price ?? 0).toLocaleString()} VND
                     </td>
-
+                    <td>
+                      {((s.price ?? 0) * (s.quantity ?? 0)).toLocaleString()} VND
+                    </td>
                     <td>
                       <Button
                         variant="info"
@@ -344,8 +313,8 @@ const ExportProduct = () => {
                       {getCategoryName(modalProduct.product?.categoryId)}
                     </p>
                     <p>
-                      <strong>Giá trung bình:</strong>{" "}
-                      {modalProduct.avgPrice?.toLocaleString() || 0} VND
+                      <strong>Giá nhập:</strong>{" "}
+                      {(modalProduct.price ?? 0).toLocaleString()} VND
                     </p>
                     <p>
                       <strong>Tồn kho từ nhà cung cấp:</strong>{" "}

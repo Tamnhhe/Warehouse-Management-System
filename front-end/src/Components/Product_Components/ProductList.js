@@ -4,12 +4,12 @@ import axios from "axios";
 import useProduct from "./useProduct";
 import FilterProduct from "./FilterProduct";
 import UpdateProductModal from "./UpdateProductModal";
-import ProductDetails from "./ProductDetails"; // Import ProductDetails component
-import AddProduct from "./AddProduct"; // Import AddProduct Modal
-import style from "./style.css"; // Nếu bạn có style.css, thêm vào đây
+import ProductDetails from "./ProductDetails";
+import AddProduct from "./AddProduct";
+import style from "./style.css";
 
 const ProductList = () => {
-  const { loading, error, fetchAllProducts } = useProduct();
+  const { loading, error } = useProduct();
   const [deleteError, setDeleteError] = useState("");
   const [filterText, setFilterText] = useState("");
   const [sortBy, setSortBy] = useState("name");
@@ -18,71 +18,24 @@ const ProductList = () => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showProductDetailsModal, setShowProductDetailsModal] = useState(false);
   const [products, setProducts] = useState([]);
-  const [statusFilter, setStatusFilter] = useState(null); // State to filter products by status
-  const [showAddProductModal, setShowAddProductModal] = useState(false); // State to show Add Product modal
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
-  const handleOpenUpdateModal = (product) => {
-    setSelectedProduct(product);
-    setShowUpdateModal(true);
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      // ĐÚNG route lấy tất cả sản phẩm
+      const res = await axios.get(
+        "http://localhost:9999/supplierProducts/getAllSupplierProducts"
+      );
+      setProducts(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+    }
   };
-
-  const handleOpenProductDetailsModal = (product) => {
-    setSelectedProduct(product);
-    setShowProductDetailsModal(true);
-  };
-
-  useEffect(() => {
-    const fetchAllProducts = async () => {
-      try {
-        const [productsRes, supplierProductsRes] = await Promise.all([
-          axios.get("http://localhost:9999/products/getAllProducts"),
-          axios.get(
-            "http://localhost:9999/supplierProducts/getAllSupplierProducts"
-          ),
-        ]);
-
-        const products = productsRes.data;
-        const supplierProducts = supplierProductsRes.data;
-
-        const latestPrices = {};
-        const avgPrices = {};
-        const priceMap = {};
-
-        supplierProducts.forEach((sp) => {
-          const productId = sp.product?._id;
-          if (!productId) return;
-
-          // Lấy giá mới nhất (lấy bản ghi đầu tiên)
-          if (!latestPrices[productId]) {
-            latestPrices[productId] = sp.price;
-          }
-
-          // Gom giá để tính trung bình
-          if (!priceMap[productId]) priceMap[productId] = [];
-          priceMap[productId].push(sp.price);
-        });
-
-        // Tính giá trung bình cho từng sản phẩm
-        Object.entries(priceMap).forEach(([productId, prices]) => {
-          const sum = prices.reduce((acc, price) => acc + price, 0);
-          avgPrices[productId] =
-            prices.length > 0 ? Math.round(sum / prices.length) : 0;
-        });
-
-        const updated = products.map((p) => ({
-          ...p,
-          latestPrice: latestPrices[p._id] || 0,
-          avgPrice: avgPrices[p._id] || 0,
-        }));
-
-        setProducts(updated);
-      } catch (error) {
-        console.error("Error fetching product or price info:", error);
-      }
-    };
-
-    fetchAllProducts();
-  }, []);
+  fetchProducts();
+}, []);
 
   const handleSort = (column) => {
     setSortBy(column);
@@ -93,42 +46,53 @@ const ProductList = () => {
     let updatedProducts = [...products];
 
     if (filterText) {
-      updatedProducts = updatedProducts.filter((product) =>
-        product.productName.toLowerCase().includes(filterText.toLowerCase())
-      );
+     updatedProducts = updatedProducts.filter((item) =>
+  item.product?.productName?.toLowerCase().includes(filterText.toLowerCase())
+);
     }
 
     if (statusFilter !== null) {
-      updatedProducts = updatedProducts.filter((product) =>
+      updatedProducts = updatedProducts.filter((item) =>
         statusFilter
-          ? product.status === "active"
-          : product.status === "inactive"
+          ? item.status === "active"
+          : item.status === "inactive"
       );
     }
 
     updatedProducts.sort((a, b) => {
-      if (sortBy === "name") {
-        return sortDirection === "asc"
-          ? a.productName.localeCompare(b.productName)
-          : b.productName.localeCompare(a.productName);
+     if (sortBy === "name") {
+  return sortDirection === "asc"
+    ? (a.product?.productName || "").localeCompare(b.product?.productName || "")
+    : (b.product?.productName || "").localeCompare(a.product?.productName || "");
+
       } else if (sortBy === "stock") {
         return sortDirection === "asc"
-          ? a.totalStock - b.totalStock
-          : b.totalStock - a.totalStock;
+          ? (a.totalStock || 0) - (b.totalStock || 0)
+          : (b.totalStock || 0) - (a.totalStock || 0);
       } else if (sortBy === "unit") {
         return sortDirection === "asc"
-          ? a.unit.localeCompare(b.unit)
-          : b.unit.localeCompare(a.unit);
+          ? (a.unit || "").localeCompare(b.unit || "")
+          : (b.unit || "").localeCompare(a.unit || "");
       } else if (sortBy === "location") {
         return sortDirection === "asc"
-          ? a.location.localeCompare(b.location)
-          : b.location.localeCompare(a.location);
+          ? (a.location || "").localeCompare(b.location || "")
+          : (b.location || "").localeCompare(a.location || "");
       }
       return 0;
     });
 
     return updatedProducts;
   }, [products, filterText, sortBy, sortDirection, statusFilter]);
+
+  const handleOpenUpdateModal = (item) => {
+    setSelectedProduct(item);
+    setShowUpdateModal(true);
+  };
+
+  const handleOpenProductDetailsModal = (item) => {
+    setSelectedProduct(item);
+    setShowProductDetailsModal(true);
+  };
 
   const handleChangeStatus = async (productId, newStatus) => {
     if (
@@ -137,18 +101,16 @@ const ProductList = () => {
       )
     )
       return;
-
     try {
       await axios.put(
         `http://localhost:9999/products/inactivateProduct/${productId}`,
         { status: newStatus }
       );
-
       setProducts((prevProducts) =>
-        prevProducts.map((product) =>
-          product._id === productId
-            ? { ...product, status: newStatus }
-            : product
+        prevProducts.map((item) =>
+          item.productId === productId
+            ? { ...item, status: newStatus }
+            : item
         )
       );
     } catch (err) {
@@ -171,7 +133,6 @@ const ProductList = () => {
   return (
     <div className="product-list-container">
       <div>
-        {/* Add Product Button */}
         <Button
           variant="success"
           onClick={() => setShowAddProductModal(true)}
@@ -284,100 +245,107 @@ const ProductList = () => {
           </thead>
 
           <tbody>
-            {filteredProducts.map((product) => (
-              <tr
-                key={product._id}
-                onClick={(e) => {
-                  // Kiểm tra xem người dùng có nhấn vào nút "Chỉnh sửa" hoặc "Vô hiệu hóa" không
-                  if (e.target.closest(".action-buttons") === null) {
-                    handleOpenProductDetailsModal(product);
-                  }
-                }}
-              >
-                <td>
-                  <img
-                    src={
-                      product.productImage
-                        ? `http://localhost:9999${product.productImage}`
-                        : "http://localhost:9999/uploads/default-product.png"
-                    }
-                    alt="Product Image"
-                    width="50"
-                  />
-                </td>
-                <td>
-                  <Button
-                    variant="link"
-                    style={{ textDecoration: "none", color: "inherit" }}
-                    onClick={() => handleOpenProductDetailsModal(product)}
-                  >
-                    {product.productName}
-                  </Button>
-                </td>
-                <td style={{ textAlign: "center" }}>{product.totalStock}</td>
-                <td style={{ textAlign: "right" }}>
-                  {(product.avgPrice || 0).toLocaleString("en-US")} VND
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  {(product.latestPrice || 0).toLocaleString("en-US")} VND
-                </td>
-                <td>{product.unit}</td>
-                <td>{product.location}</td>
-                <td>
-                  {product.status === "active" ? "Có sẵn" : "Không có sẵn"}
-                </td>
-                <td className="action-buttons">
-                  <Button
-                    className="fixed-button"
-                    variant="warning"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Ngăn sự kiện click truyền ra ngoài
-                      handleOpenUpdateModal(product);
-                    }}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                  <Button
-                    className="fixed-button"
-                    variant={product.status === "active" ? "danger" : "success"}
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Ngăn sự kiện click truyền ra ngoài
-                      handleChangeStatus(
-                        product._id,
-                        product.status === "active" ? "inactive" : "active"
-                      );
-                    }}
-                  >
-                    {product.status === "active" ? "Vô hiệu hóa" : "Kích hoạt"}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+  {filteredProducts.map((item) => (
+    <tr
+      key={item.product?._id}
+      onClick={(e) => {
+        if (e.target.closest(".action-buttons") === null) {
+          handleOpenProductDetailsModal(item);
+        }
+      }}
+    >
+      <td>
+        <img
+          src={
+            item.product?.productImage
+              ? `http://localhost:9999${item.product.productImage}`
+              : "http://localhost:9999/uploads/default-product.png"
+          }
+          alt="Product Image"
+          width="50"
+        />
+      </td>
+      <td>
+        <Button
+          variant="link"
+          style={{ textDecoration: "none", color: "inherit" }}
+          onClick={() => handleOpenProductDetailsModal(item)}
+        >
+          {item.product?.productName}
+        </Button>
+      </td>
+      <td style={{ textAlign: "center" }}>{item.stock}</td>
+      <td style={{ textAlign: "right" }}>
+        {(item.price || 0).toLocaleString("vi-VN")} đ
+      </td>
+      <td style={{ textAlign: "right" }}>
+        {(item.product?.newPrice || 0).toLocaleString("vi-VN")} đ
+      </td>
+      <td>{item.product?.unit}</td>
+      <td>{item.product?.location}</td>
+      <td>
+        {item.product?.status === "active" ? "Đang bán" : "Ngừng bán"}
+      </td>
+      <td className="action-buttons">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => handleOpenUpdateModal(item)}
+          style={{ marginRight: "5px" }}
+        >
+          Chỉnh sửa
+        </Button>
+        <Button
+          variant={item.product?.status === "active" ? "danger" : "success"}
+          size="sm"
+          onClick={() =>
+            handleChangeStatus(
+              item.product?._id,
+              item.product?.status === "active" ? "inactive" : "active"
+            )
+          }
+        >
+          {item.product?.status === "active" ? "Vô hiệu hóa" : "Kích hoạt"}
+        </Button>
+      </td>
+    </tr>
+  ))}
+</tbody>
         </Table>
       </div>
 
-      <ProductDetails
-        show={showProductDetailsModal}
-        handleClose={() => setShowProductDetailsModal(false)}
-        product={selectedProduct}
-      />
+      {showUpdateModal && selectedProduct && (
+        <UpdateProductModal
+          show={showUpdateModal}
+          product={selectedProduct}
+          onHide={() => setShowUpdateModal(false)}
+          onUpdate={(updatedProduct) => {
+            setProducts((prev) =>
+              prev.map((p) =>
+                p.productId === updatedProduct.productId
+                  ? { ...p, ...updatedProduct }
+                  : p
+              )
+            );
+          }}
+        />
+      )}
 
-      <UpdateProductModal
-        show={showUpdateModal}
-        handleClose={() => setShowUpdateModal(false)}
-        product={selectedProduct}
-        handleUpdate={fetchAllProducts}
-      />
+      {showProductDetailsModal && selectedProduct && (
+        <ProductDetails
+          show={showProductDetailsModal}
+          product={selectedProduct}
+          onHide={() => setShowProductDetailsModal(false)}
+        />
+      )}
 
-      {/* Modal Thêm Sản Phẩm */}
-      <AddProduct
-        show={showAddProductModal}
-        handleClose={() => setShowAddProductModal(false)}
-        handleSave={fetchAllProducts}
-      />
+      {showAddProductModal && (
+        <AddProduct
+          show={showAddProductModal}
+          onHide={() => setShowAddProductModal(false)}
+          onAdd={(newProduct) => setProducts((prev) => [...prev, newProduct])}
+        />
+      )}
     </div>
   );
 };

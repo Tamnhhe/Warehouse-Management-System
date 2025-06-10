@@ -22,7 +22,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 
-// Định nghĩa validation schema cho Form
+// Validation schema
 const validationSchema = Yup.object({
   transactionDate: Yup.date().required("Ngày nhập kho là bắt buộc"),
   supplierName: Yup.string().required("Nhà cung cấp là bắt buộc"),
@@ -41,17 +41,15 @@ const validationSchema = Yup.object({
 });
 
 const CreateReceipt = () => {
-  //Khai báo state để lưu dữ liệu từ API
-  const [products, setProducts] = useState([]); // Danh sách sản phẩm
-  const [categories, setCategories] = useState([]); // Danh sách danh mục
-  const [suppliers, setSuppliers] = useState([]); // Danh sách nhà cung cấp
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState(null); // Nhà cung cấp được chọn
-  const [filteredProducts, setFilteredProducts] = useState([]); // Danh sách sản phẩm theo nhà cung cấp
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
-  // Gọi API khi component được render lần đầu tiên
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -59,7 +57,6 @@ const CreateReceipt = () => {
   const fetchInitialData = async () => {
     try {
       const [productsRes, categoriesRes, suppliersRes] = await Promise.all([
-        // Gọi 3 API để lấy danh sách sản phẩm, danh mục và nhà cung cấp
         axios.get("http://localhost:9999/products/getAllProducts"),
         axios.get("http://localhost:9999/categories/getAllCategories"),
         axios.get("http://localhost:9999/suppliers/getAllSuppliers"),
@@ -67,24 +64,19 @@ const CreateReceipt = () => {
       const activeSuppliers = suppliersRes.data.filter(
         (supplier) => supplier.status === "active"
       );
-
-      console.log("Active Suppliers:", activeSuppliers);
-      // Cập nhật state với dữ liệu từ API
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
       setSuppliers(activeSuppliers);
     } catch (error) {
-      console.error("Error fetching initial data:", error);
       setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
     }
   };
 
-  // Khởi tạo Formik để quản lý form
   const formik = useFormik({
     initialValues: {
-      transactionDate: new Date().toISOString().split("T")[0], // Ngày mặc định là hôm nay
+      transactionDate: new Date().toISOString().split("T")[0],
       supplierName: "",
-      status: "pending", // Trạng thái mặc định là "Chờ xử lý"
+      status: "pending",
       products: [
         {
           productName: "",
@@ -94,31 +86,45 @@ const CreateReceipt = () => {
         },
       ],
     },
-    validationSchema, // Áp dụng validation
-    onSubmit: async (values) => {
-      setLoading(true);
-      setError("");
-      setSuccess(false);
-      try {
-        // Gửi dữ liệu phiếu nhập lên server
-        const response = await axios.post(
-          "http://localhost:9999/inventoryTransactions/create-receipts",
-          values
-        );
-        console.log("Receipt created:", response.data);
-        setSuccess(true);
-        formik.resetForm();
-        setSelectedSupplier(null);
-        setFilteredProducts([]);
-      } catch (error) {
-        console.error("Error creating receipt:", error);
-        setError(
-          error.response?.data?.message || "Có lỗi xảy ra khi tạo phiếu nhập"
-        );
-      } finally {
-        setLoading(false);
+    validationSchema,
+ onSubmit: async (values) => {
+  setLoading(true);
+  setError("");
+  setSuccess(false);
+  try {
+    // Tạo mảng sản phẩm có trường totalPrice
+    const productsWithTotal = values.products.map((product) => ({
+      ...product,
+      totalPrice: product.quantity * product.price,
+    }));
+
+    // Tính tổng tiền của tất cả sản phẩm
+    const totalPrice = productsWithTotal.reduce(
+      (sum, p) => sum + p.totalPrice,
+      0
+    );
+
+    // Gửi dữ liệu lên BE
+    await axios.post(
+      "http://localhost:9999/inventoryTransactions/create-receipts",
+      {
+        ...values,
+        products: productsWithTotal,
+        totalPrice, // tổng tiền của phiếu nhập
       }
-    },
+    );
+    setSuccess(true);
+    formik.resetForm();
+    setSelectedSupplier(null);
+    setFilteredProducts([]);
+  } catch (error) {
+    setError(
+      error.response?.data?.message || "Có lỗi xảy ra khi tạo phiếu nhập"
+    );
+  } finally {
+    setLoading(false);
+  }
+},
   });
 
   const handleSupplierChange = async (_, value) => {
@@ -131,30 +137,24 @@ const CreateReceipt = () => {
         quantity: "",
         price: "",
       },
-    ]); // Reset sản phẩm khi đổi nhà cung cấp
-    console.log("ang:");
+    ]);
     if (value) {
       try {
         const response = await axios.get(
           `http://localhost:9999/supplierProducts/getProductsBySupplier/${value._id}`
         );
-        // Đảm bảo filteredProducts luôn là một mảng
         const supplierProducts = Array.isArray(response.data)
           ? response.data.filter((item) => item.status === "active")
           : [];
-
-        console.log("Supplier products:", supplierProducts);
         setFilteredProducts(supplierProducts);
       } catch (error) {
         setFilteredProducts([]);
-        console.error("Lỗi khi tải sản phẩm của nhà cung cấp:", error);
       }
     } else {
       setFilteredProducts([]);
     }
   };
 
-  // Hàm thêm một dòng sản phẩm vào danh sách
   const addProductRow = () => {
     formik.setFieldValue("products", [
       ...formik.values.products,
@@ -167,15 +167,11 @@ const CreateReceipt = () => {
     ]);
   };
 
-  // Hàm xóa một sản phẩm khỏi danh sách
   const removeProductRow = (index) => {
-    const updatedProducts = formik.values.products.filter(
-      (_, i) => i !== index
-    );
+    const updatedProducts = formik.values.products.filter((_, i) => i !== index);
     formik.setFieldValue("products", updatedProducts);
   };
 
-  // Hàm tính tổng tiền của tất cả sản phẩm
   const calculateTotal = () => {
     return formik.values.products.reduce((sum, product) => {
       return sum + (product.price * product.quantity || 0);
@@ -185,7 +181,6 @@ const CreateReceipt = () => {
   const handleProductSelect = (index, value) => {
     if (value) {
       formik.setFieldValue(`products.${index}.productName`, value.productName);
-
       if (value.categoryId?.categoryName) {
         formik.setFieldValue(
           `products.${index}.categoryName`,
@@ -204,7 +199,6 @@ const CreateReceipt = () => {
           Tạo Phiếu Nhập Kho
         </Typography>
 
-        {/* Hiển thị lỗi nếu có */}
         {error && (
           <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
             {error}
@@ -217,7 +211,6 @@ const CreateReceipt = () => {
         )}
 
         <form onSubmit={formik.handleSubmit}>
-          {/* Nhập ngày nhập kho & chọn nhà cung cấp */}
           <Box sx={{ mb: 3, display: "flex", gap: 2 }}>
             <TextField
               fullWidth
@@ -236,7 +229,6 @@ const CreateReceipt = () => {
               InputLabelProps={{ shrink: true }}
             />
 
-            {/* Chọn nhà cung cấp */}
             <Autocomplete
               fullWidth
               options={suppliers}
@@ -258,7 +250,6 @@ const CreateReceipt = () => {
               onChange={handleSupplierChange}
             />
 
-            {/* Trạng thái (không chỉnh sửa) */}
             <TextField
               fullWidth
               label="Trạng Thái"
@@ -270,7 +261,6 @@ const CreateReceipt = () => {
             />
           </Box>
 
-          {/* Danh sách sản phẩm */}
           <TableContainer sx={{ maxHeight: 400, overflowY: "auto" }}>
             <Table stickyHeader>
               <TableHead>
