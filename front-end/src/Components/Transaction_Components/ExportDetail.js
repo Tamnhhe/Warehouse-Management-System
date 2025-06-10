@@ -1,129 +1,114 @@
 //Nguyễn Bảo Phi-HE173187-28/2/2025
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "react-bootstrap";
+import html2pdf from "html2pdf.js";
+import "./InvoiceStyles.css";
 
 const ExportDetail = () => {
   const { id } = useParams();
   const [transaction, setTransaction] = useState(null);
   const navigate = useNavigate();
-  // Gọi API để lấy thông tin giao dịch khi component được render
+  const invoiceRef = useRef();
 
   useEffect(() => {
     axios
-      .get(
-        `http://localhost:9999/inventoryTransactions/getTransactionById/${id}`
-      )
-      .then((response) => {
-        setTransaction(response.data);
-      })
-      .catch((error) => {
-        console.error("Lỗi khi lấy chi tiết giao dịch:", error);
-      });
+      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
+      .then((response) => setTransaction(response.data))
+      .catch((error) => console.error("Lỗi khi lấy chi tiết giao dịch:", error));
   }, [id]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownload = () => {
+    const element = invoiceRef.current;
+    const opt = {
+      margin: 0.5,
+      filename: `export-invoice-${transaction?._id}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+    html2pdf().set(opt).from(element).save();
+  };
 
   if (!transaction) return <p>Đang tải dữ liệu...</p>;
 
   return (
-    <div className="container mt-4">
-      <h2>Chi tiết giao dịch</h2>
-      <table className="table table-bordered">
-        <tbody>
-          <tr>
-            <th>ID</th>
-            <td>{transaction._id}</td>
-          </tr>
-          <tr>
-            <th>Chi nhánh</th>
-            <td>{transaction.branch || "Không có chi nhánh"}</td>
-          </tr>
+    <div className="container my-4 invoice-container">
+      <div ref={invoiceRef} className="invoice-box">
+        <div className="header d-flex justify-content-between align-items-center">
+          <div>
+            <h1 className="text-danger">HÓA ĐƠN XUẤT HÀNG</h1>
+            <p><strong>Ngày lập:</strong> {new Date(transaction.transactionDate).toLocaleDateString()}</p>
+            <p><strong>Mã hóa đơn:</strong> {transaction._id}</p>
+            <p><strong>Trạng thái:</strong> {transaction.status}</p>
+          </div>
+          <div className="text-end">
+            <h5>CÔNG TY TNHH ABC</h5>
+            <p>123 Đường Chính, Hà Nội</p>
+            <p>hotro@abc.vn</p>
+          </div>
+        </div>
 
-          <tr>
-            <th>Loại giao dịch</th>
-            <td>
-              <td>
-                <span className="badge bg-danger">Xuất hàng</span>
-              </td>
-            </td>
-          </tr>
-          <tr>
-            <th>Ngày giao dịch</th>
-            <td>
-              {new Date(transaction.transactionDate).toLocaleDateString()}
-            </td>
-          </tr>
-          <tr>
-            <th>Tổng tiền</th>
-            <td>{transaction.totalPrice.toLocaleString()} đ</td>
-          </tr>
-          <tr>
-            <th>Trạng thái</th>
-            <td>
-              <span
-                className={`badge ${
-                  transaction.status === "pending"
-                    ? "bg-warning"
-                    : transaction.status === "completed"
-                    ? "bg-success"
-                    : transaction.status === "cancelled"
-                    ? "bg-danger"
-                    : "bg-primary"
-                }`}
-              >
-                {transaction.status === "pending"
-                  ? "Chờ xử lý"
-                  : transaction.status === "completed"
-                  ? "Hoàn thành"
-                  : transaction.status === "cancelled"
-                  ? "Từ chối"
-                  : "Đã duyệt"}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <div className="section my-4">
+          <h5>Thông tin chi nhánh xuất hàng:</h5>
+          <p><strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}</p>
+        </div>
 
-      {/* 🛒 Danh sách sản phẩm trong giao dịch */}
-      <h3 className="mt-4">Danh sách sản phẩm</h3>
-      <table className="table table-striped table-bordered">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Tên sản phẩm</th>
-            <th>Số lượng yêu cầu</th>
-            <th>Giá</th>
-          </tr>
-        </thead>
-        <tbody>
-          {transaction.products.length > 0 ? (
-            transaction.products.map((product, index) => (
-              <tr key={index}>
-                <td>{index + 1}</td>
-                <td>
-                  {product.supplierProductId?.product?.productName ||
-                    "Không có dữ liệu"}
-                </td>
-                <td>{product.requestQuantity}</td>
-                <td>
-                  {typeof product.price === "number"
-                    ? product.price.toLocaleString() + " đ"
-                    : "N/A"}
-                </td>
-              </tr>
-            ))
-          ) : (
+        <div className="section my-4">
+          <h5>Người thực hiện:</h5>
+          <p><strong>Họ tên:</strong> {transaction.operator?.fullName || "Chưa rõ"}</p>
+        </div>
+
+        <table className="table table-bordered text-center">
+          <thead className="table-light">
             <tr>
-              <td colSpan="6" className="text-center">
-                Không có sản phẩm nào
-              </td>
+              <th>#</th>
+              <th>Tên sản phẩm</th>
+              <th>SL yêu cầu</th>
+              <th>SL xuất</th>
+              <th>Giá</th>
+              <th>Thành tiền</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {transaction.products.map((product, index) => {
+              const total = product.price * product.achievedProduct;
+              return (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{product.supplierProductId?.product?.productName || "--"}</td>
+                  <td>{product.requestQuantity}</td>
+                  <td>{product.achievedProduct}</td>
+                  <td>{product.price.toLocaleString()} đ</td>
+                  <td>{total.toLocaleString()} đ</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-      <button className="btn btn-secondary mt-3" onClick={() => navigate(-1)}>
-        Quay lại
-      </button>
+        <div className="text-end mt-4">
+          <h4><strong>TỔNG TIỀN:</strong> {transaction.totalPrice.toLocaleString()} đ</h4>
+        </div>
+
+        <div className="mt-5">
+          <p><strong>Ghi chú:</strong></p>
+          <p className="text-muted">
+            Hóa đơn này được tạo cho giao dịch xuất kho. Vui lòng xác nhận lại số lượng và giá trước khi ký nhận.
+          </p>
+        </div>
+      </div>
+
+      <div className="d-flex gap-3 mt-4">
+        <Button variant="secondary" onClick={() => navigate(-1)}>Quay lại</Button>
+        <Button variant="primary" onClick={handlePrint}>In hóa đơn</Button>
+        <Button variant="success" onClick={handleDownload}>Tải xuống PDF</Button>
+      </div>
     </div>
   );
 };
