@@ -76,28 +76,28 @@ function CreateEmployee() {
     setIsError(false);
     setStatusMessage("");
 
-        // Kiem tra xem nguoi dung co du 18 tuoi khong
-        if (data.dob && calculateAge(data.dob) < 18) {
-            setStatusMessage('Nhân viên chưa đủ 18 tuổi');
-            setIsError(true);
-            return;
-        }
-        //kiểm tra căn cước đủ 12 số không
-        if (data.idCard.length !== 12) {
-            setStatusMessage('CMND chưa đủ 12 số');
-            setIsError(true);
-            return;
-        }
-        //kiểm tra tên nhân viên
-        if (data.fullName.trim().length === 0) {
-            setStatusMessage('Vui lòng nhập tên nhân viên');
-            setIsError(true);
-            return;
-        }
+    // Kiem tra xem nguoi dung co du 18 tuoi khong
+    if (data.dob && calculateAge(data.dob) < 18) {
+      setStatusMessage('Nhân viên chưa đủ 18 tuổi');
+      setIsError(true);
+      return;
+    }
+    //kiểm tra căn cước đủ 12 số không
+    if (data.idCard.length !== 12) {
+      setStatusMessage('CMND chưa đủ 12 số');
+      setIsError(true);
+      return;
+    }
+    //kiểm tra tên nhân viên
+    if (data.fullName.trim().length === 0) {
+      setStatusMessage('Vui lòng nhập tên nhân viên');
+      setIsError(true);
+      return;
+    }
 
     try {
       const response = await axios.post(
-        "http://localhost:9999/authentication/add-employee",
+        "http://localhost:9999/users/add-employee",
         data
       );
       setStatusMessage(response.data.message);
@@ -344,16 +344,15 @@ function CreateEmployee() {
                             ].map((day, index) => (
                               <div
                                 key={day}
-                                className={`px-3 py-2 border rounded cursor-pointer ${
-                                  data.workDays.includes(day)
-                                    ? "bg-success text-white"
-                                    : ""
-                                }`}
+                                className={`px-3 py-2 border rounded cursor-pointer ${data.workDays.includes(day)
+                                  ? "bg-success text-white"
+                                  : ""
+                                  }`}
                                 onClick={() => toggleWorkDay(day)}
                               >
                                 {
                                   ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][
-                                    index
+                                  index
                                   ]
                                 }
                               </div>
@@ -411,8 +410,8 @@ function CreateEmployee() {
                                       shift === "Morning"
                                         ? "Sáng"
                                         : shift === "Afternoon"
-                                        ? "Chiều"
-                                        : "Tối"
+                                          ? "Chiều"
+                                          : "Tối"
                                     }
                                     name="shifts"
                                     value={shift}

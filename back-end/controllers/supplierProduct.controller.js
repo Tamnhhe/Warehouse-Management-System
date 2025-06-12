@@ -27,7 +27,6 @@ const getProductsBySupplier = async (req, res) => {
       },
     });
 
-    console.log("Products found:", products);
 
     if (!products || products.length === 0) {
       return res
@@ -41,7 +40,7 @@ const getProductsBySupplier = async (req, res) => {
         productName: sp.product?.productName || "Không có tên",
         price: sp.price,
         categoryId: sp.product?.categoryId || null,
-        status: sp.product?.status || "inactive",    
+        status: sp.product?.status || "inactive",
       }))
     );
   } catch (error) {

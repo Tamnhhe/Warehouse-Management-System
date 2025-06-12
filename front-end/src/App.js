@@ -35,8 +35,10 @@ import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
+import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
-
+// Context
+import { NotyfProvider } from "./Contexts/NotyfContext";
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
@@ -45,6 +47,7 @@ const Layout = ({ children }) => {
     "/forgot-password",
     "/verify/:token",
     "/resetPassword/:id/:token",
+    "/verify-email/:user/:token",
     "/",
   ];
 
@@ -65,165 +68,171 @@ const Layout = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/verify/:token" element={<ConfirmAccount />} />
-          <Route path="/resetPassword/:id/:token" element={<ResetPassword />} />
+    <NotyfProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify/:token" element={<ConfirmAccount />} />
+            <Route path="/resetPassword/:id/:token" element={<ResetPassword />} />
 
-          {/* Các route yêu cầu đăng nhập */}
-          <Route
-            path="/manager/create-employee"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <CreateEmployee />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/product"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ProductList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/view-profile"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ViewProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/edit-profile"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <EditProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/change-password"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ChangePassword />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ExportProduct />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/create-receipt"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <CreateReceipt />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/list-transaction"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ListTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transaction/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <DetailTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export-detail/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ExportDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/edit-transaction/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <EditTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/get-all-user"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ListAllUsers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/category"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ListCategory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/get-list-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <SupplierList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/add-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <AddNewSuppliers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/edit-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <EditSuppliers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/category/add-category"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <AddCategory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Các route yêu cầu đăng nhập */}
+            <Route
+              path="/manager/create-employee"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <CreateEmployee />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/product"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ProductList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/view-profile"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ViewProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-profile"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <EditProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ExportProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-receipt"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <CreateReceipt />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/list-transaction"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ListTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transaction/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <DetailTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export-detail/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ExportDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-transaction/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <EditTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/get-all-user"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ListAllUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/category"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ListCategory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/get-list-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <SupplierList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/add-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <AddNewSuppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/edit-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <EditSuppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/category/add-category"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <AddCategory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/verify-email/:user/:token"
+              element={<VerifyEmail />}
+            />
 
-        </Routes>
-      </Layout>
-    </Router>
+          </Routes>
+        </Layout>
+      </Router>
+    </NotyfProvider>
   );
 }
 
