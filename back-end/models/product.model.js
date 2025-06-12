@@ -1,42 +1,38 @@
+// Nguyễn Đức Linh - HE170256 17/1/2025
 const mongoose = require('mongoose');
 
 const ProductSchema = new mongoose.Schema({
-    productName: { // tên sản phẩm
+    productName: { //tên sản phẩm
         type: String,
         required: true,
     },
-    categoryId: { // Danh mục
+    categoryId: { //Danh mục
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
+        ref: 'Category', // Reference to the Category collection
         required: true,
     },
-    supplierId: { // Nhà cung cấp
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Supplier',
-        required: true,
-    },
-    totalStock: { // Tổng số lượng
+    totalStock: { //Tong so luong
         type: Number,
         required: true,
         default: 0,
     },
-    thresholdStock: { // Ngưỡng tồn kho
+    thresholdStock: {   //Nguong ton kho
         type: Number,
         required: true,
     },
-    productImage: { // Ảnh sản phẩm
+    productImage: { //Anh san pham
         type: String,
         required: true,
     },
-    unit: { // Đơn vị
+    unit: { //Don vi
         type: String,
         required: true,
     },
-    location: { // Vị trí
+    location: { //Vi tri
         type: String,
         required: true,
     },
-    status: { // Trạng thái
+    status: { //Trang thái
         type: String,
         required: true,
         enum: ['active', 'inactive'],

@@ -1,3 +1,4 @@
+
 const db = require("../models/index");
 const InventoryTransaction = db.InventoryTransaction;
 const User = db.User;
@@ -9,68 +10,77 @@ const mongoose = require("mongoose");
 
 // Tạo mới một giao dịch xuất/nhập kho
 const createTransaction = async (req, res, next) => {
-  try {
-    const {
-      supplier,
-      transactionType,
-      transactionDate,
-      products,
-      totalPrice,
-      status,
-      branch,
-    } = req.body;
+  //try {
+  const {
+    supplier,
+    transactionType,
+    transactionDate,
+    products,
+    totalPrice,
+    status,
+    branch,
+  } = req.body;
 
-    // Kiểm tra các trường bắt buộc
-    if (!products || products.length === 0 || totalPrice == null) {
-      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
-    }
-
-    // Tìm một user với vai trò 'manager'
-    const manager = await User.findOne({ role: "manager" });
-    if (!manager) {
-      return res.status(400).json({ message: "Manager not found." });
-    }
-
-    const newTransaction = new InventoryTransaction({
-      supplier,
-      transactionType,
-      transactionDate: transactionDate || Date.now(),
-      products,
-      operator: manager._id, // Sử dụng ObjectId của manager
-      totalPrice,
-      status: status || "pending",
-      branch,
-    });
-
-    await newTransaction.save();
-
-    // Nếu là giao dịch xuất kho, cập nhật tồn kho
-    if (transactionType === "export") {
-      for (const p of products) {
-        const supplierProduct = await SupplierProduct.findById(
-          p.supplierProductId
-        ).populate("product");
-
-        if (supplierProduct && supplierProduct.product) {
-          const productId = supplierProduct.product._id;
-
-          // Trừ đi số lượng hàng xuất
-          await Product.findByIdAndUpdate(productId, {
-            $inc: { totalStock: -p.requestQuantity },
-          });
-        }
-      }
-    }
-    return res
-      .status(201)
-      .json({ message: "Giao dịch được tạo thành công", newTransaction });
-  } catch (err) {
-    console.error("Error creating transaction:", err);
-    return res.status(500).json({ message: "Failed to create transaction." });
+  // Kiểm tra các trường bắt buộc
+  if (!products || products.length === 0 || totalPrice == null) {
+    return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
   }
+
+  // Tìm một user với vai trò 'manager'
+  const manager = await User.findOne({ role: "manager" });
+  if (!manager) {
+    return res.status(400).json({ message: "Manager not found." });
+  }
+
+  const newTransaction = new InventoryTransaction({
+    supplier,
+    transactionType,
+    transactionDate: transactionDate || Date.now(),
+    products,
+    operator: manager._id, // Sử dụng ObjectId của manager
+    totalPrice,
+    status: status || "pending",
+    branch,
+  });
+
+  await newTransaction.save();
+
+  // Nếu là giao dịch xuất kho, cập nhật tồn kho
+if (transactionType === "export") {
+  for (const p of products) {
+    const supplierProduct = await SupplierProduct.findById(p.supplierProductId).populate("product");
+
+    if (supplierProduct && supplierProduct.product) {
+      const productId = supplierProduct.product._id;
+
+      // Trừ đi số lượng hàng xuất
+      await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { totalStock: -p.requestQuantity } }
+      );
+    }
+  }
+}
+  return res
+    .status(201)
+    .json({ message: "Giao dịch được tạo thành công", newTransaction });
+  // } catch (err) {
+  //   console.error("Error creating transaction:", err);
+  //   return res.status(500).json({ message: "Failed to create transaction." });
+  // }
 };
 
 // Lấy tất cả giao dịch xuất/nhập kho
+// const getAllTransactions = async (req, res) => {
+//   try {
+//     const transactions = await InventoryTransaction.find()
+//       .populate("products.productId")
+//       .populate("operator");
+//     res.status(200).json(transactions);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 const getAllTransactions = async (req, res) => {
   try {
     const transactions = await InventoryTransaction.find()
@@ -99,13 +109,17 @@ const getTransactionById = async (req, res) => {
       })
       .populate("operator");
 
+    console.log(" API DATA:", JSON.stringify(transaction, null, 2));
+
     if (!transaction) {
       return res.status(404).json({ message: "Giao dịch không tồn tại" });
     }
 
+    console.log(" API sau khi populate:", JSON.stringify(transaction, null, 2));
+
     res.status(200).json(transaction);
   } catch (error) {
-    console.error("Lỗi khi lấy giao dịch:", error);
+    console.error(" Lỗi khi lấy giao dịch:", error);
     res.status(500).json({ message: "Lỗi server", error });
   }
 };
@@ -114,6 +128,8 @@ const updateTransactionStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const transactionId = req.params.id;
+
+    console.log("Cập nhật trạng thái:", transactionId, status);
 
     const updatedTransaction1 = await InventoryTransaction.findByIdAndUpdate(
       transactionId,
@@ -137,6 +153,9 @@ const updateTransaction = async (req, res) => {
     const { id } = req.params;
     const { products } = req.body;
 
+    console.log("ID giao dịch:", id);
+    console.log("Dữ liệu sản phẩm cần cập nhật:", req.body);
+
     // Kiểm tra ID hợp lệ
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID giao dịch không hợp lệ" });
@@ -157,6 +176,9 @@ const updateTransaction = async (req, res) => {
         !product.supplierProductId ||
         product.supplierProductId.length !== 24
       ) {
+        console.warn(
+          `⚠️ Cảnh báo: sản phẩm ${product._id} thiếu supplierProductId`
+        );
         return;
       }
 
@@ -208,6 +230,7 @@ const updateTransaction = async (req, res) => {
         .json({ message: "Không tìm thấy sản phẩm để cập nhật" });
     }
 
+    console.log("Giao dịch sau cập nhật:", updatedTransaction);
     res.status(200).json({
       message: "Cập nhật sản phẩm thành công",
       transaction: updatedTransaction,
@@ -294,26 +317,12 @@ const createReceipt = async (req, res) => {
         });
 
         if (supplierProduct) {
-          // TÍNH LẠI GIÁ TRUNG BÌNH DÙNG ĐÚNG totalPrice FE GỬI LÊN
-          const oldStock = Number(supplierProduct.stock);
-          const oldPrice = Number(supplierProduct.price);
-          const newStock = Number(product.quantity);
-
-          // Dùng đúng thành tiền FE gửi lên
-          const newTotalValue =
-            product.totalPrice != null
-              ? Number(product.totalPrice)
-              : newStock * Number(product.price);
-
-          const totalStock = oldStock + newStock;
-          const totalValue = oldStock * oldPrice + newTotalValue;
-          const avgPrice =
-            totalStock > 0 ? Math.floor(totalValue / totalStock) : 0;
+          // Update existing supplier product
           supplierProduct = await SupplierProduct.findByIdAndUpdate(
             supplierProduct._id,
             {
-              price: avgPrice,
-              stock: totalStock,
+              price: product.price,
+              stock: supplierProduct.stock + Number(product.quantity),
             },
             { new: true }
           );

@@ -6,7 +6,6 @@ import {
   useLocation,
   matchPath,
 } from "react-router-dom";
-import 'notyf/notyf.min.css';
 import ProtectedRoute from "./Components/Utils/ProtectedRoute";
 import ForgotPassword from "./Components/Login_Components/ForgotPassword";
 import Login from "./Components/Login_Components/Login";
@@ -35,7 +34,6 @@ import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
-
 
 const Layout = ({ children }) => {
   const location = useLocation();
