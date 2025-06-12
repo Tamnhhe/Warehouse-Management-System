@@ -12,7 +12,8 @@ import Login from "./Components/Login_Components/Login";
 import ResetPassword from "./Components/Login_Components/ResetPassword";
 import ConfirmAccount from "./Components/Login_Components/ConfirmAccount";
 import CreateEmployee from "./Components/Manager_Components/CreateEmployee";
-import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse";
+// Bỏ import ProductWarehouse vì không thấy dùng trong Routes
+// import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse"; 
 import ViewProfile from "./Components/User_Components/ViewProfile";
 import EditProfile from "./Components/User_Components/EditProfile";
 import ChangePassword from "./Components/User_Components/ChangePassword";
@@ -25,7 +26,8 @@ import Dashboard from "./Components/DashBoard_Components/DashBoard";
 import ListAllUsers from "./Components/Manager_Components/ListAllUsers";
 import Header from "./Components/Utils/Header";
 import ListCategory from "./Components/Category_Components/ListCategory";
-import Sidebar from "./Components/Utils/Sidebar";
+// Bỏ import Sidebar vì không dùng nữa
+// import Sidebar from "./Components/Utils/Sidebar"; 
 import ProductList from "./Components/Product_Components/ProductList";
 import SupplierList from "./Components/Supplier_Components/SupplierList";
 import AddNewSuppliers from "./Components/Supplier_Components/AddNewSupplier";
@@ -34,7 +36,9 @@ import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
+import { Container } from "@mui/material"; // Import Container từ MUI
 
+// Layout component đã được đơn giản hóa
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
@@ -49,15 +53,21 @@ const Layout = ({ children }) => {
   const shouldHide = hidePaths.some((path) =>
     matchPath(path, location.pathname)
   );
+  
+  // Nếu là trang không cần Header, chỉ render nội dung trang
+  if (shouldHide) {
+    return <>{children}</>;
+  }
 
+  // Nếu là trang cần Header, render Header và nội dung bên dưới
   return (
-    <div>
-      {!shouldHide && <Header />}
-      <div className="d-flex">
-        {!shouldHide && <Sidebar />}
-        <div className="flex-grow-1 overflow-auto">{children}</div>
-      </div>
-    </div>
+    <>
+      <Header />
+      {/* Bọc nội dung trang trong một Container của MUI để có khoảng cách và căn lề đẹp */}
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        {children}
+      </Container>
+    </>
   );
 };
 
@@ -66,6 +76,7 @@ function App() {
     <Router>
       <Layout>
         <Routes>
+          {/* Các Routes vẫn giữ nguyên không thay đổi */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -218,7 +229,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
         </Routes>
       </Layout>
     </Router>
