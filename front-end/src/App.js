@@ -69,7 +69,7 @@ const Layout = ({ children }) => {
     <>
       <Header />
       {/* Bọc nội dung trang trong một Container của MUI để có khoảng cách và căn lề đẹp */}
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
         {children}
       </Container>
     </>

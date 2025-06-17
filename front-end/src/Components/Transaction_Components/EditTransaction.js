@@ -2,33 +2,30 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+// <-- KHU VỰC THAY ĐỔI: Import thêm component từ react-bootstrap -->
+import { Form, Button, Card, Row, Col, Alert } from "react-bootstrap";
 
 const EditTransaction = () => {
-  const { id } = useParams(); // Lấy ID giao dịch từ URL
+  const { id } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ products: [] });
+  const [error, setError] = useState('');
 
-  // Lấy thông tin giao dịch khi component được render
   useEffect(() => {
     axios
-      .get(
-        `http://localhost:9999/inventoryTransactions/getTransactionById/${id}`
-      )
+      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
       .then((res) => {
         if (res.data?.products) {
           setFormData({
             products: res.data.products.map((p) => ({
               supplierProductId: p.supplierProductId?._id || null,
-              productName:
-                p.supplierProductId?.product?.productName || "Không có tên", // Lấy tên sản phẩm
+              productName: p.supplierProductId?.product?.productName || "Không có tên",
               requestQuantity: p.requestQuantity ?? 0,
               receiveQuantity: p.receiveQuantity ?? 0,
               defectiveProduct: p.defectiveProduct ?? 0,
               achievedProduct: p.achievedProduct ?? 0,
               price: p.price ?? 0,
-              expiry: p.expiry
-                ? new Date(p.expiry).toISOString().split("T")[0]
-                : "",
+              expiry: p.expiry ? new Date(p.expiry).toISOString().split("T")[0] : "",
             })),
           });
         }
@@ -36,138 +33,144 @@ const EditTransaction = () => {
       .catch((err) => console.error("Lỗi khi lấy dữ liệu:", err));
   }, [id]);
 
-  // Xử lý thay đổi dữ liệu trong input
+  // <-- KHU VỰC THAY ĐỔI LỚN: Cập nhật hàm handleChange để tự động tính toán -->
   const handleChange = (e, index, field) => {
-    let value = e.target.value;
-
-    // Nếu là số, đảm bảo không âm và không có số 0 ở đầu
-    if (
-      [
-        "requestQuantity",
-        "receiveQuantity",
-        "defectiveProduct",
-        "achievedProduct",
-        "price",
-      ].includes(field)
-    ) {
-      value = value.replace(/^0+(?=\d)/, ""); // Loại bỏ số 0 ở đầu
-      value = value === "" ? "" : Math.max(0, Number(value));
-    }
+    const { value } = e.target;
 
     setFormData((prev) => {
       const updatedProducts = [...prev.products];
-      updatedProducts[index] = { ...updatedProducts[index], [field]: value };
+      const productToUpdate = { ...updatedProducts[index] };
+
+      // Cập nhật giá trị cho trường đang được thay đổi
+      if (field === "expiry") {
+        productToUpdate[field] = value;
+      } else {
+        // Xử lý cho các trường số
+        const numericValue = value === "" ? "" : Math.max(0, Number(value.replace(/^0+(?=\d)/, "")));
+        productToUpdate[field] = numericValue;
+      }
+
+      // Tự động tính toán "Số lượng lỗi" khi "Số lượng đạt" hoặc "Số lượng nhận" thay đổi
+      if (field === 'achievedProduct' || field === 'receiveQuantity') {
+        const receiveQty = (field === 'receiveQuantity') ? Number(productToUpdate.receiveQuantity) : Number(productToUpdate.receiveQuantity);
+        const achievedQty = (field === 'achievedProduct') ? Number(productToUpdate.achievedProduct) : Number(productToUpdate.achievedProduct);
+        
+        // Đảm bảo số lượng đạt không lớn hơn số lượng nhận
+        if (achievedQty > receiveQty) {
+            productToUpdate.achievedProduct = receiveQty; // Giới hạn giá trị
+            productToUpdate.defectiveProduct = 0;
+        } else {
+            productToUpdate.defectiveProduct = Math.max(0, receiveQty - achievedQty);
+        }
+      }
+
+      updatedProducts[index] = productToUpdate;
       return { products: updatedProducts };
     });
   };
 
-  // Xử lý khi người dùng bấm lưu thông tin giao dịch
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError(''); // Reset lỗi
 
-    // Kiểm tra tổng số lượng lỗi + đạt phải bằng số lượng nhận
-    const isValid = formData.products.every(
-      (p) => p.defectiveProduct + p.achievedProduct === p.receiveQuantity
+    const validationError = formData.products.find(
+      (p) => Number(p.defectiveProduct) + Number(p.achievedProduct) !== Number(p.receiveQuantity)
     );
 
-    if (!isValid) {
-      alert("Tổng số lượng lỗi và số lượng đạt phải bằng số lượng nhận!");
+    if (validationError) {
+      setError(`Lỗi dữ liệu ở sản phẩm "${validationError.productName}". Tổng số lượng Đạt và Lỗi không bằng Số lượng nhận.`);
       return;
     }
-
-    // Kiểm tra không có giá trị âm
-    const hasNegativeValues = formData.products.some(
-      (p) =>
-        p.requestQuantity < 0 ||
-        p.receiveQuantity < 0 ||
-        p.defectiveProduct < 0 ||
-        p.achievedProduct < 0 ||
-        p.price < 0
-    );
-
-    if (hasNegativeValues) {
-      alert("Không được nhập giá trị âm!");
-      return;
-    }
-
+    
     axios
-      .put(
-        `http://localhost:9999/inventoryTransactions/updateTransaction/${id}`,
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-      .then((response) => {
-        console.log("API Response:", response.data);
+      .put(`http://localhost:9999/inventoryTransactions/updateTransaction/${id}`, formData, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(() => {
         alert("Cập nhật thành công!");
-        navigate(-1);
+        navigate("/list-transaction");
       })
       .catch((err) =>
-        console.error("Lỗi khi cập nhật:", err.response?.data || err)
+        setError("Lỗi khi cập nhật: " + (err.response?.data?.message || err.message))
       );
   };
 
   return (
     <div className="container mt-4">
-      <h2>Chỉnh sửa sản phẩm</h2>
-      <form onSubmit={handleSubmit}>
-        <table className="table table-bordered mt-3">
-          <thead className="table-light">
-            <tr>
-              <th>Tên sản phẩm</th>
-              <th>Số lượng yêu cầu</th>
-              <th>Số lượng nhận</th>
-              <th>Số lượng lỗi</th>
-              <th>Số lượng đạt</th>
-              <th>Giá bán</th>
-              <th>Ngày hết hạn</th>
-            </tr>
-          </thead>
-          <tbody>
-            {formData.products.map((product, index) => (
-              <tr key={index}>
-                <td>{product.productName}</td> {/* Hiển thị tên sản phẩm */}
-                {[
-                  "requestQuantity",
-                  "receiveQuantity",
-                  "defectiveProduct",
-                  "achievedProduct",
-                  "price",
-                ].map((field) => (
-                  <td key={field}>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={product[field]}
-                      onChange={(e) => handleChange(e, index, field)}
-                    />
-                  </td>
-                ))}
-                <td>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={product.expiry}
-                    onChange={(e) => handleChange(e, index, "expiry")}
-                  />
-                </td>
+      <h2 className="mb-4">Rà soát sản phẩm trong phiếu nhập</h2>
+      <Form onSubmit={handleSubmit}>
+        {error && <Alert variant="danger">{error}</Alert>}
+        
+        {/* GIAO DIỆN BẢNG CHO DESKTOP */}
+        <div className="d-none d-md-block table-responsive">
+          <table className="table table-bordered align-middle">
+            <thead className="table-light">
+              <tr>
+                <th>Tên sản phẩm</th>
+                <th>SL Yêu cầu</th>
+                <th>SL Nhận</th>
+                <th>SL Đạt</th>
+                <th>SL Lỗi (Tự động)</th>
+                <th>Giá nhập</th>
+                <th>Ngày hết hạn</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {formData.products.map((product, index) => (
+                <tr key={index}>
+                  <td>{product.productName}</td>
+                  <td><Form.Control type="number" value={product.requestQuantity} readOnly disabled /></td>
+                  <td><Form.Control type="number" value={product.receiveQuantity} onChange={(e) => handleChange(e, index, "receiveQuantity")} /></td>
+                  <td><Form.Control type="number" value={product.achievedProduct} onChange={(e) => handleChange(e, index, "achievedProduct")} /></td>
+                  <td><Form.Control type="number" value={product.defectiveProduct} readOnly /></td>
+                  <td><Form.Control type="number" value={product.price} onChange={(e) => handleChange(e, index, "price")} /></td>
+                  <td><Form.Control type="date" value={product.expiry} onChange={(e) => handleChange(e, index, "expiry")} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        <button type="submit" className="btn btn-primary mt-3">
-          Lưu
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary mt-3 ms-2"
-          onClick={() => navigate(-1)}
-        >
-          Quay lại
-        </button>
-      </form>
+        {/* GIAO DIỆN CARD CHO MOBILE */}
+        <div className="d-md-none">
+          {formData.products.map((product, index) => (
+            <Card key={index} className="mb-3">
+              <Card.Header as="h5">{product.productName}</Card.Header>
+              <Card.Body>
+                <Form.Group as={Row} className="mb-2" controlId={`req-${index}`}>
+                  <Form.Label column sm="5">SL Yêu cầu</Form.Label>
+                  <Col sm="7"><Form.Control type="number" value={product.requestQuantity} readOnly disabled /></Col>
+                </Form.Group>
+                <Form.Group as={Row} className="mb-2" controlId={`rec-${index}`}>
+                  <Form.Label column sm="5">SL Nhận</Form.Label>
+                  <Col sm="7"><Form.Control type="number" value={product.receiveQuantity} onChange={(e) => handleChange(e, index, "receiveQuantity")} /></Col>
+                </Form.Group>
+                 <Form.Group as={Row} className="mb-2" controlId={`ach-${index}`}>
+                  <Form.Label column sm="5">SL Đạt</Form.Label>
+                  <Col sm="7"><Form.Control type="number" value={product.achievedProduct} onChange={(e) => handleChange(e, index, "achievedProduct")} /></Col>
+                </Form.Group>
+                <Form.Group as={Row} className="mb-2" controlId={`def-${index}`}>
+                  <Form.Label column sm="5">SL Lỗi</Form.Label>
+                  <Col sm="7"><Form.Control type="number" value={product.defectiveProduct} readOnly /></Col>
+                </Form.Group>
+                 <Form.Group as={Row} className="mb-2" controlId={`price-${index}`}>
+                  <Form.Label column sm="5">Giá nhập</Form.Label>
+                  <Col sm="7"><Form.Control type="number" value={product.price} onChange={(e) => handleChange(e, index, "price")} /></Col>
+                </Form.Group>
+                <Form.Group as={Row} className="mb-2" controlId={`exp-${index}`}>
+                  <Form.Label column sm="5">Hết hạn</Form.Label>
+                  <Col sm="7"><Form.Control type="date" value={product.expiry} onChange={(e) => handleChange(e, index, "expiry")} /></Col>
+                </Form.Group>
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="mt-4">
+          <Button type="submit" variant="primary">Lưu thay đổi</Button>
+          <Button type="button" variant="secondary" className="ms-2" onClick={() => navigate("/list-transaction")}>Quay lại</Button>
+        </div>
+      </Form>
     </div>
   );
 };
