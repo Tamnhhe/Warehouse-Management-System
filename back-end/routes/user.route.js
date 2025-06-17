@@ -1,7 +1,7 @@
 
 const express = require("express");
 const userRouter = express.Router();
-const {UserController} = require("../controllers");
+const { UserController } = require("../controllers");
 const multer = require("multer"); // Import Multer để upload file
 
 //config multer de xy ly filefile
@@ -17,16 +17,17 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 //Minh Phuong - Hàm View Profile
-userRouter.get("/view-profile",UserController.getProfile);
+userRouter.get("/view-profile", UserController.getProfile);
 //Minh Phuong - Hàm edit Profile
 //Multer lay file tu formdata(avatar la name cua input file), luu file vao uploads, va tra ve dg dan file trong req file
-userRouter.put("/edit-profile",upload.single("avatar"), UserController.editProfile);
+userRouter.put("/edit-profile", upload.single("avatar"), UserController.editProfile);
 //Minh Phuong - Ham get All User
-userRouter.get("/get-all-user",UserController.getAllUsers);
+userRouter.get("/get-all-user", UserController.getAllUsers);
 //MinhPhuong - Ham change Password
-userRouter.put("/change-password",UserController.changePassword);
+userRouter.put("/change-password", UserController.changePassword);
 //MinhPhuong - Ham updatedUser
-userRouter.put("/update-user/:userId",UserController.updatedUser);
+userRouter.put("/update-user/:userId", UserController.updatedUser);
 //MinhPhuong - Ham ban User
 userRouter.put("/banUser/:id", UserController.banUser);
+userRouter.post("/add-employee", UserController.addEmployee);
 module.exports = userRouter

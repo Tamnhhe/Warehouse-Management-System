@@ -8,16 +8,7 @@ const cors = require("cors");
 
 const app = express();
 const db = require("./models/index");
-const {
-  userRouter,
-  authenticationRouter,
-  notificationRouter,
-  productRouter,
-  inventoryTransactionRouter,
-  categoryRouter,
-  supplierRouter,
-  supplierProductRouter,
-} = require("./routes");
+const router = require("./routes");
 //Cung cấp URl công khai để lấy ảnh thông qua thư mục /uploads
 //cho phep truy cap anh bang url tren server 
 //hien thi bang url /../.. nho express staticstatic
@@ -38,17 +29,8 @@ app.get("/", async (req, res, next) => {
   res.status(200).json({ message: "Server is running" });
 });
 
-// Định tuyến theo các chức năng thực tế
-
-// ko tạo thêm app.use, làm đến đâu mở cmt ở dưới đến đấy, mở hết 1 lượt sẽ bị crash project
-app.use("/suppliers", supplierRouter);
-app.use("/authentication", authenticationRouter);
-// app.use("/notifications", notificationRouter);
-app.use("/products", productRouter);
-app.use("/inventoryTransactions", inventoryTransactionRouter);
-app.use("/categories", categoryRouter); // Nguyễn Đức Linh - HE170256 23/1/2025
-app.use("/users", userRouter);
-app.use("/supplierProducts", supplierProductRouter);
+// Đăng ký các router
+app.use("/", router);
 
 app.use(async (req, res, next) => {
   next(httpsErrors(404, "Bad Request"));

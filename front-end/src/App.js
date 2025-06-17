@@ -39,6 +39,10 @@ import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
 
 // Layout component đã được đơn giản hóa
+import VerifyEmail from "./Components/Login_Components/VerifyEmail";
+
+// Context
+import { NotyfProvider } from "./Contexts/NotyfContext";
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
@@ -47,6 +51,7 @@ const Layout = ({ children }) => {
     "/forgot-password",
     "/verify/:token",
     "/resetPassword/:id/:token",
+    "/verify-email/:user/:token",
     "/",
   ];
 
