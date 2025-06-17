@@ -56,6 +56,9 @@ function Header() {
   const [profile, setProfile] = useState(null);
   const [transactionMenuAnchor, setTransactionMenuAnchor] = useState(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
+  // <-- KHU VỰC THAY ĐỔI: Thêm state cho menu Đối tác
+  const [partnerMenuAnchor, setPartnerMenuAnchor] = useState(null);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -79,10 +82,17 @@ function Header() {
   const handleProfileMenuOpen = (event) => setProfileMenuAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileMenuAnchor(null);
 
+  // <-- KHU VỰC THAY ĐỔI: Thêm handlers cho menu Đối tác
+  const handlePartnerMenuClick = (event) => setPartnerMenuAnchor(event.currentTarget);
+  const handlePartnerMenuClose = () => setPartnerMenuAnchor(null);
+
+
   const handleNavigate = (path) => {
     navigate(path);
     handleTransactionMenuClose();
     handleProfileMenuClose();
+    // <-- KHU VỰC THAY ĐỔI: Đóng cả menu đối tác khi điều hướng
+    handlePartnerMenuClose();
   };
 
   const handleLogout = () => {
@@ -95,12 +105,13 @@ function Header() {
     ? `http://localhost:9999${profile.profile.avatar}`
     : "/images/avatar/default.png";
 
+  // <-- KHU VỰC THAY ĐỔI: Xóa "Nhà cung cấp" khỏi danh sách nav chính
   const navItems = [
     { label: 'Thống kê', path: '/dashboard', allowedRoles: ['manager'] },
     { label: 'Sản phẩm', path: '/product', allowedRoles: ['manager', 'employee'] },
     { label: 'Danh mục', path: '/category', allowedRoles: ['manager'] },
     { label: 'Nhân viên', path: '/manager/get-all-user', allowedRoles: ['manager'] },
-    { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] },
+    // { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] }, // Đã xóa dòng này
   ];
 
   const transactionMenuItems = [
@@ -108,10 +119,22 @@ function Header() {
     { label: 'Xuất Kho', path: '/export', allowedRoles: ['manager', 'employee'] },
     { label: 'Danh Sách Giao Dịch', path: '/list-transaction', allowedRoles: ['manager'] },
   ];
+
+  // <-- KHU VỰC THAY ĐỔI: Tạo danh sách các mục cho menu "Đối tác"
+  const partnerMenuItems = [
+    { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] },
+    { label: 'Khách hàng', path: '/listcustomer', allowedRoles: ['manager', 'employee'] },
+  ];
   
   const visibleTransactionItems = transactionMenuItems.filter(item =>
     userRole && item.allowedRoles.includes(userRole)
   );
+
+  // <-- KHU VỰC THAY ĐỔI: Lọc các mục hiển thị cho menu "Đối tác" dựa trên vai trò
+  const visiblePartnerItems = partnerMenuItems.filter(item =>
+    userRole && item.allowedRoles.includes(userRole)
+  );
+
 
   return (
     <AppBar position="sticky" sx={{ top: 0, zIndex: 1100, backgroundColor: palette.medium, color: palette.white }}>
@@ -130,6 +153,24 @@ function Header() {
                   </Button>
                 )
               )}
+
+              {/* <-- KHU VỰC THAY ĐỔI: Thêm menu dropdown "Đối tác" --> */}
+              {visiblePartnerItems.length > 0 && (
+                <>
+                  <Button color="inherit" onClick={handlePartnerMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>
+                    Đối tác
+                  </Button>
+                  <Menu anchorEl={partnerMenuAnchor} open={Boolean(partnerMenuAnchor)} onClose={handlePartnerMenuClose} PaperProps={{ sx: { mt: 1.5 } }}>
+                    {visiblePartnerItems.map(item => (
+                       <MenuItem key={item.path} onClick={() => handleNavigate(item.path)} sx={{ color: palette.dark, '&:hover': { backgroundColor: palette.light, color: palette.black }}}>
+                         {item.label}
+                       </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
+              {/* <-- Kết thúc khu vực thêm menu "Đối tác" --> */}
+
 
               {visibleTransactionItems.length > 0 && (
                 <>
@@ -174,19 +215,17 @@ function Header() {
                 </Menu>
               </>
             ) : (
-              // <-- KHU VỰC ĐÃ THAY ĐỔI
               // Nếu chưa đăng nhập, hiển thị nút Đăng nhập và Đăng ký
               <>
                 <Button variant="contained" sx={{ backgroundColor: palette.dark, '&:hover': { backgroundColor: '#104c50' } }} onClick={() => navigate("/login")}>
                   Đăng nhập
                 </Button>
                 
-                {/* <-- NÚT ĐĂNG KÝ MỚI */}
                 <Button
                   variant="outlined"
                   onClick={() => navigate("/register")}
                   sx={{
-                    ml: 2, // Tạo khoảng cách với nút Đăng nhập
+                    ml: 2,
                     color: palette.white,
                     borderColor: palette.white,
                     '&:hover': {
