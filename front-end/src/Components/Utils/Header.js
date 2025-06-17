@@ -1,9 +1,11 @@
+// Header.js
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 
-// MUI Imports
+// MUI Imports (Thêm các import cần thiết cho responsive)
 import {
   AppBar,
   Toolbar,
@@ -16,9 +18,17 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  useTheme, // Để truy cập theme mặc định của MUI
+  useMediaQuery, // Để check kích thước màn hình
+  Drawer, // Menu trượt ra ở giao diện mobile
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Divider,
 } from "@mui/material";
-import LogoutIcon from "@mui/icons-material/Logout";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import MenuIcon from '@mui/icons-material/Menu'; // Icon Hamburger
 
 // Bảng màu của bạn
 const palette = {
@@ -53,12 +63,18 @@ function Header() {
   const currentToken = localStorage.getItem("authToken");
   const userRole = getUserRole();
 
+  // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState(null);
   const [transactionMenuAnchor, setTransactionMenuAnchor] = useState(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
-  // <-- KHU VỰC THAY ĐỔI: Thêm state cho menu Đối tác
   const [partnerMenuAnchor, setPartnerMenuAnchor] = useState(null);
+  
+  // <-- KHU VỰC THAY ĐỔI: State cho mobile drawer -->
+  const [mobileOpen, setMobileOpen] = useState(false);
 
+  // <-- KHU VỰC THAY ĐỔI: Hooks để check màn hình mobile -->
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md")); // true nếu màn hình < 900px
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -73,31 +89,37 @@ function Header() {
         }
       }
     };
-
     fetchProfile();
   }, [currentToken]);
 
+  // --- HANDLERS ---
   const handleTransactionMenuClick = (event) => setTransactionMenuAnchor(event.currentTarget);
   const handleTransactionMenuClose = () => setTransactionMenuAnchor(null);
   const handleProfileMenuOpen = (event) => setProfileMenuAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileMenuAnchor(null);
-
-  // <-- KHU VỰC THAY ĐỔI: Thêm handlers cho menu Đối tác
   const handlePartnerMenuClick = (event) => setPartnerMenuAnchor(event.currentTarget);
   const handlePartnerMenuClose = () => setPartnerMenuAnchor(null);
-
-
+  
+  // <-- KHU VỰC THAY ĐỔI: Handler cho mobile drawer -->
+  const handleDrawerToggle = () => {
+    setMobileOpen((prevState) => !prevState);
+  };
+  
   const handleNavigate = (path) => {
     navigate(path);
     handleTransactionMenuClose();
     handleProfileMenuClose();
-    // <-- KHU VỰC THAY ĐỔI: Đóng cả menu đối tác khi điều hướng
     handlePartnerMenuClose();
+    // Đảm bảo drawer cũng đóng lại khi điều hướng
+    if (mobileOpen) {
+      handleDrawerToggle();
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     setProfile(null);
+    handleProfileMenuClose();
     navigate("/login");
   };
   
@@ -105,13 +127,17 @@ function Header() {
     ? `http://localhost:9999${profile.profile.avatar}`
     : "/images/avatar/default.png";
 
-  // <-- KHU VỰC THAY ĐỔI: Xóa "Nhà cung cấp" khỏi danh sách nav chính
+  // --- NAVIGATION ITEMS ---
   const navItems = [
     { label: 'Thống kê', path: '/dashboard', allowedRoles: ['manager'] },
     { label: 'Sản phẩm', path: '/product', allowedRoles: ['manager', 'employee'] },
     { label: 'Danh mục', path: '/category', allowedRoles: ['manager'] },
     { label: 'Nhân viên', path: '/manager/get-all-user', allowedRoles: ['manager'] },
-    // { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] }, // Đã xóa dòng này
+  ];
+
+  const partnerMenuItems = [
+    { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] },
+    { label: 'Khách hàng', path: '/listcustomer', allowedRoles: ['manager', 'employee'] },
   ];
 
   const transactionMenuItems = [
@@ -119,129 +145,164 @@ function Header() {
     { label: 'Xuất Kho', path: '/export', allowedRoles: ['manager', 'employee'] },
     { label: 'Danh Sách Giao Dịch', path: '/list-transaction', allowedRoles: ['manager'] },
   ];
-
-  // <-- KHU VỰC THAY ĐỔI: Tạo danh sách các mục cho menu "Đối tác"
-  const partnerMenuItems = [
-    { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] },
-    { label: 'Khách hàng', path: '/listcustomer', allowedRoles: ['manager', 'employee'] },
-  ];
   
-  const visibleTransactionItems = transactionMenuItems.filter(item =>
-    userRole && item.allowedRoles.includes(userRole)
+  const visibleNavItems = navItems.filter(item => userRole && item.allowedRoles.includes(userRole));
+  const visiblePartnerItems = partnerMenuItems.filter(item => userRole && item.allowedRoles.includes(userRole));
+  const visibleTransactionItems = transactionMenuItems.filter(item => userRole && item.allowedRoles.includes(userRole));
+  
+  // <-- KHU VỰC THAY ĐỔI LỚN: Nội dung cho Drawer trên mobile -->
+  const drawer = (
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+      <Typography variant="h6" sx={{ my: 2, color: palette.dark }}>
+        Movico Group
+      </Typography>
+      <Divider />
+      <List>
+        {/* Kết hợp tất cả các mục điều hướng vào một danh sách */}
+        {visibleNavItems.map((item) => (
+          <ListItem key={item.path} disablePadding>
+            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        {visiblePartnerItems.length > 0 && <Divider>Đối tác</Divider>}
+        {visiblePartnerItems.map((item) => (
+          <ListItem key={item.path} disablePadding>
+            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        {visibleTransactionItems.length > 0 && <Divider>Giao dịch</Divider>}
+        {visibleTransactionItems.map((item) => (
+          <ListItem key={item.path} disablePadding>
+            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </Box>
   );
-
-  // <-- KHU VỰC THAY ĐỔI: Lọc các mục hiển thị cho menu "Đối tác" dựa trên vai trò
-  const visiblePartnerItems = partnerMenuItems.filter(item =>
-    userRole && item.allowedRoles.includes(userRole)
-  );
-
 
   return (
-    <AppBar position="sticky" sx={{ top: 0, zIndex: 1100, backgroundColor: palette.medium, color: palette.white }}>
-      <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
-          <Typography variant="h6" onClick={() => navigate(userRole === 'manager' ? "/" : "/product")} sx={{ fontWeight: "bold", cursor: "pointer", "&:hover": { opacity: 0.9 } }}>
-            Movico Group
-          </Typography>
+    <>
+      <AppBar position="sticky" sx={{ top: 0, zIndex: 1100, backgroundColor: palette.medium, color: palette.white }}>
+        <Container maxWidth="xl">
+          <Toolbar disableGutters>
+             {/* --- Giao diện Mobile: Icon Hamburger --- */}
+            {isMobile && currentToken && (
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
 
-          {currentToken && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {navItems.map((item) =>
-                userRole && item.allowedRoles.includes(userRole) && (
+            {/* --- Logo (Căn giữa trên mobile) --- */}
+            <Typography
+              variant="h6"
+              onClick={() => navigate(userRole === 'manager' ? "/" : "/product")}
+              sx={{
+                fontWeight: "bold",
+                cursor: "pointer",
+                "&:hover": { opacity: 0.9 },
+                flexGrow: isMobile ? 1 : 0, // Đẩy logo ra giữa trên mobile
+                textAlign: isMobile ? 'center' : 'left',
+              }}
+            >
+              Movico Group
+            </Typography>
+
+            {/* --- Giao diện Desktop: Các nút điều hướng --- */}
+            {!isMobile && currentToken && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 3 }}>
+                {visibleNavItems.map((item) => (
                   <Button key={item.path} color="inherit" onClick={() => navigate(item.path)} sx={navButtonHoverStyle}>
                     {item.label}
                   </Button>
-                )
-              )}
+                ))}
+                
+                {visiblePartnerItems.length > 0 && (
+                  <>
+                    <Button color="inherit" onClick={handlePartnerMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>Đối tác</Button>
+                    <Menu anchorEl={partnerMenuAnchor} open={Boolean(partnerMenuAnchor)} onClose={handlePartnerMenuClose}>
+                      {visiblePartnerItems.map(item => (<MenuItem key={item.path} onClick={() => handleNavigate(item.path)}>{item.label}</MenuItem>))}
+                    </Menu>
+                  </>
+                )}
 
-              {/* <-- KHU VỰC THAY ĐỔI: Thêm menu dropdown "Đối tác" --> */}
-              {visiblePartnerItems.length > 0 && (
+                {visibleTransactionItems.length > 0 && (
+                  <>
+                    <Button color="inherit" onClick={handleTransactionMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>Giao Dịch</Button>
+                    <Menu anchorEl={transactionMenuAnchor} open={Boolean(transactionMenuAnchor)} onClose={handleTransactionMenuClose}>
+                       {visibleTransactionItems.map(item => (<MenuItem key={item.path} onClick={() => handleNavigate(item.path)}>{item.label}</MenuItem>))}
+                    </Menu>
+                  </>
+                )}
+              </Box>
+            )}
+            
+            {/* --- Box này để đẩy phần Profile/Login sang phảiสุด --- */}
+            {!isMobile && <Box sx={{ flexGrow: 1 }} />}
+
+            {/* --- Profile Avatar / Nút Login --- */}
+            <Box>
+              {currentToken ? (
                 <>
-                  <Button color="inherit" onClick={handlePartnerMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>
-                    Đối tác
-                  </Button>
-                  <Menu anchorEl={partnerMenuAnchor} open={Boolean(partnerMenuAnchor)} onClose={handlePartnerMenuClose} PaperProps={{ sx: { mt: 1.5 } }}>
-                    {visiblePartnerItems.map(item => (
-                       <MenuItem key={item.path} onClick={() => handleNavigate(item.path)} sx={{ color: palette.dark, '&:hover': { backgroundColor: palette.light, color: palette.black }}}>
-                         {item.label}
-                       </MenuItem>
-                    ))}
+                  <Tooltip title={profile?.fullName || "Tài khoản"}>
+                    <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0.5, borderRadius: '8px' }}>
+                      <Avatar alt={profile?.fullName} src={avatarUrl} sx={{ width: 32, height: 32 }}/>
+                      <ArrowDropDownIcon sx={{ color: palette.white }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Menu
+                    sx={{ mt: '45px' }}
+                    anchorEl={profileMenuAnchor}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    open={Boolean(profileMenuAnchor)}
+                    onClose={handleProfileMenuClose}
+                  >
+                    <MenuItem onClick={() => handleNavigate('/view-profile')}>Tài khoản</MenuItem>
+                    <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
                   </Menu>
                 </>
-              )}
-              {/* <-- Kết thúc khu vực thêm menu "Đối tác" --> */}
-
-
-              {visibleTransactionItems.length > 0 && (
-                <>
-                  <Button color="inherit" onClick={handleTransactionMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>
-                    Giao Dịch
+              ) : (
+                <Box sx={{ display: 'flex' }}>
+                  <Button variant="contained" sx={{ backgroundColor: palette.dark, '&:hover': { backgroundColor: '#104c50' }, fontSize: { xs: '0.75rem', sm: '0.875rem' } }} onClick={() => navigate("/login")}>
+                    Đăng nhập
                   </Button>
-                  <Menu anchorEl={transactionMenuAnchor} open={Boolean(transactionMenuAnchor)} onClose={handleTransactionMenuClose} PaperProps={{ sx: { mt: 1.5 } }}>
-                    {visibleTransactionItems.map(item => (
-                       <MenuItem key={item.path} onClick={() => handleNavigate(item.path)} sx={{ color: palette.dark, '&:hover': { backgroundColor: palette.light, color: palette.black }}}>
-                         {item.label}
-                       </MenuItem>
-                    ))}
-                  </Menu>
-                </>
+                  <Button variant="outlined" onClick={() => navigate("/register")} sx={{ ml: { xs: 1, sm: 2 }, color: palette.white, borderColor: palette.white, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }, fontSize: { xs: '0.75rem', sm: '0.875rem' }}}>
+                    Đăng ký
+                  </Button>
+                </Box>
               )}
             </Box>
-          )}
-          <Box>
-            {currentToken ? (
-              // Nếu đã đăng nhập, hiển thị avatar
-              <>
-                <Tooltip title={profile?.fullName || "Tài khoản"}>
-                  <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
-                    <Avatar alt={profile?.fullName} src={avatarUrl} />
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  sx={{ mt: '45px' }}
-                  anchorEl={profileMenuAnchor}
-                  anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                  keepMounted
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                  open={Boolean(profileMenuAnchor)}
-                  onClose={handleProfileMenuClose}
-                >
-                  <MenuItem onClick={() => handleNavigate('/view-profile')}>
-                    <Typography textAlign="center">Tài khoản</Typography>
-                  </MenuItem>
-                  <MenuItem onClick={handleLogout}>
-                    <Typography textAlign="center">Đăng xuất</Typography>
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
-              // Nếu chưa đăng nhập, hiển thị nút Đăng nhập và Đăng ký
-              <>
-                <Button variant="contained" sx={{ backgroundColor: palette.dark, '&:hover': { backgroundColor: '#104c50' } }} onClick={() => navigate("/login")}>
-                  Đăng nhập
-                </Button>
-                
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate("/register")}
-                  sx={{
-                    ml: 2,
-                    color: palette.white,
-                    borderColor: palette.white,
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      borderColor: palette.white,
-                    }
-                  }}
-                >
-                  Đăng ký
-                </Button>
-              </>
-            )}
-          </Box>
-        </Toolbar>
-      </Container>
-    </AppBar>
+          </Toolbar>
+        </Container>
+      </AppBar>
+
+      {/* --- Drawer cho Mobile --- */}
+      <nav>
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }} // Cải thiện SEO và performance trên mobile
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+          }}
+        >
+          {drawer}
+        </Drawer>
+      </nav>
+    </>
   );
 }
 
