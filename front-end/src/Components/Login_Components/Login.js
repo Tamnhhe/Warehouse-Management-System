@@ -7,11 +7,14 @@ import {
   Button,
   Alert,
   InputGroup,
-  Card, // <-- Import Card
+  Card,
 } from "react-bootstrap";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+
+// Import các thành phần cần thiết từ Framer Motion
+import { motion, AnimatePresence } from "framer-motion";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -41,93 +44,163 @@ const Login = () => {
     }
   };
 
-  // --- BẮT ĐẦU KHU VỰC THAY ĐỔI LỚN ---
+  // --- BẮT ĐẦU ĐỊNH NGHĨA ANIMATION ---
+
+  // Variants cho container chính để điều khiển stagger effect
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1, // Mỗi phần tử con sẽ xuất hiện cách nhau 0.1s
+      },
+    },
+  };
+
+  // Variants cho các phần tử con (tiêu đề, input, button)
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 }
+    },
+  };
+  
+  // Variants cho hình ảnh bên phải
+  const imageVariants = {
+      hidden: { x: 100, opacity: 0},
+      visible: { x: 0, opacity: 1, transition: { duration: 0.5, ease: "easeOut"}}
+  }
+  
+  // Variants cho thông báo lỗi/thành công
+  const alertVariants = {
+    initial: { opacity: 0, y: -20, scale: 0.9 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, x: -100 },
+    // Hiệu ứng rung cho lỗi
+    shake: {
+        x: [0, -10, 10, -10, 10, 0],
+        transition: { duration: 0.5 }
+    }
+  };
+
+
+  // --- KẾT THÚC ĐỊNH NGHĨA ANIMATION ---
+
   return (
     <Container
       fluid
-      className="vh-100 d-flex align-items-center justify-content-center p-3" // Thêm padding cho màn hình nhỏ
+      className="vh-100 d-flex align-items-center justify-content-center p-3"
       style={{
         background: "url('/images/backgroundLogin.jpg') no-repeat center center / cover",
       }}
     >
-      {/* Sử dụng Card để bọc toàn bộ, giúp quản lý shadow và border radius dễ dàng */}
-      <Card className="shadow-lg" style={{ maxWidth: '900px', width: '100%', border: 'none', overflow: 'hidden' }}>
-        <Row className="g-0"> {/* g-0 (no-gutters) để loại bỏ khoảng cách giữa các Col */}
-          
-          {/* Cột Form */}
-          <Col xs={12} md={6} className="d-flex flex-column justify-content-center">
-            <Card.Body className="p-4 p-md-5"> {/* Thêm padding responsive */}
-              <h2 className="text-center mb-4 fw-bold" style={{ color: '#155E64' }}>Đăng Nhập</h2>
-              
-              {error && <Alert variant="danger">{error}</Alert>}
-              {success && <Alert variant="success">Đăng nhập thành công! Chuyển hướng...</Alert>}
+      {/* Bọc Card trong motion.div để có hiệu ứng xuất hiện ban đầu */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        style={{ maxWidth: '900px', width: '100%' }}
+      >
+        <Card className="shadow-lg" style={{ border: 'none', overflow: 'hidden', borderRadius: '15px' }}>
+          <Row className="g-0">
+            {/* Cột Form */}
+            <Col xs={12} md={6} className="d-flex flex-column justify-content-center">
+              {/* Bọc Card.Body bằng motion.div để áp dụng stagger animation */}
+              <motion.div
+                className="p-4 p-md-5"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.h2 variants={itemVariants} className="text-center mb-4 fw-bold" style={{ color: '#155E64' }}>
+                  Đăng Nhập
+                </motion.h2>
 
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3">
-                  <InputGroup>
-                    <InputGroup.Text><FaEnvelope /></InputGroup.Text>
-                    <Form.Control
-                      type="email"
-                      placeholder="Nhập email đăng nhập"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </InputGroup>
-                </Form.Group>
+                {/* Sử dụng AnimatePresence để tạo hiệu ứng exit cho Alert */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      key="error"
+                      variants={alertVariants}
+                      initial="initial"
+                      animate={["animate", "shake"]}
+                      exit="exit"
+                    >
+                        <Alert variant="danger">{error}</Alert>
+                    </motion.div>
+                  )}
+                  {success && (
+                     <motion.div
+                      key="success"
+                      variants={alertVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                    >
+                        <Alert variant="success">Đăng nhập thành công! Chuyển hướng...</Alert>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                <Form.Group className="mb-4">
-                  <InputGroup>
-                    <InputGroup.Text><FaLock /></InputGroup.Text>
-                    <Form.Control
-                      type="password"
-                      placeholder="Nhập mật khẩu"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </InputGroup>
-                </Form.Group>
+                <Form onSubmit={handleSubmit}>
+                  <motion.div variants={itemVariants}>
+                    <Form.Group className="mb-3">
+                      <InputGroup>
+                        <InputGroup.Text><FaEnvelope /></InputGroup.Text>
+                        <Form.Control type="email" placeholder="Nhập email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      </InputGroup>
+                    </Form.Group>
+                  </motion.div>
 
-                {/* Làm cho các nút/link linh hoạt hơn trên mobile */}
-                <div className="d-flex flex-column flex-sm-row justify-content-sm-between align-items-center gap-3">
-                  <a href="/forgot-password" className="text-decoration-none" style={{ color: '#155E64' }}>
-                    Quên mật khẩu?
-                  </a>
-                  <Button
-                    type="submit"
-                    className="w-100 w-sm-auto" // Chiếm full width trên mobile, auto trên desktop
-                    style={{
-                      backgroundColor: "#48C1A6",
-                      border: "none",
-                      padding: '10px 25px',
-                    }}
-                  >
-                    Đăng nhập
-                  </Button>
-                </div>
-                <div className="text-center mt-4">
-                  <span className="text-muted">Chưa có tài khoản? </span>
-                  <a href="/register" className="text-decoration-none fw-bold" style={{ color: '#155E64' }}>
-                    Đăng ký ngay
-                  </a>
-                </div>
-              </Form>
-            </Card.Body>
-          </Col>
+                  <motion.div variants={itemVariants}>
+                    <Form.Group className="mb-4">
+                      <InputGroup>
+                        <InputGroup.Text><FaLock /></InputGroup.Text>
+                        <Form.Control type="password" placeholder="Nhập mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                      </InputGroup>
+                    </Form.Group>
+                  </motion.div>
 
-          {/* Cột Hình ảnh (vẫn ẩn trên mobile) */}
-          <Col md={6} className="d-none d-md-block">
-            <Card.Img
-              src={"/images/login_image.png"}
-              alt="Login"
-              style={{ objectFit: "cover", height: '100%' }}
-            />
-          </Col>
-        </Row>
-      </Card>
+                  <motion.div variants={itemVariants} className="d-flex flex-column flex-sm-row justify-content-sm-between align-items-center gap-3">
+                    <a href="/forgot-password" className="text-decoration-none" style={{ color: '#155E64' }}>Quên mật khẩu?</a>
+                    {/* Bọc Button trong motion.div để có hiệu ứng hover/tap */}
+                    <motion.div
+                      className="w-100 w-sm-auto"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button type="submit" className="w-100" style={{ backgroundColor: "#48C1A6", border: "none", padding: '10px 25px' }}>
+                        Đăng nhập
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants} className="text-center mt-4">
+                    <span className="text-muted">Chưa có tài khoản? </span>
+                    <a href="/register" className="text-decoration-none fw-bold" style={{ color: '#155E64' }}>Đăng ký ngay</a>
+                  </motion.div>
+                </Form>
+              </motion.div>
+            </Col>
+
+            {/* Cột Hình ảnh */}
+            <Col md={6} className="d-none d-md-block">
+                {/* Bọc Card.Img trong motion.div để tạo hiệu ứng */}
+              <motion.div
+                 variants={imageVariants}
+                 initial="hidden"
+                 animate="visible"
+                 style={{height: '100%'}}
+              >
+                <Card.Img src={"/images/login_image.png"} alt="Login" style={{ objectFit: "cover", height: '100%' }}/>
+              </motion.div>
+            </Col>
+          </Row>
+        </Card>
+      </motion.div>
     </Container>
-    // --- KẾT THÚC KHU VỰC THAY ĐỔI LỚN ---
   );
 };
 
