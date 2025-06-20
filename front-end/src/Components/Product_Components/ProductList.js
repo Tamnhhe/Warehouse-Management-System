@@ -10,12 +10,14 @@ import {
   Container, Box, Typography, Button, TextField, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, TableSortLabel, CircularProgress, Alert, Stack, Avatar,
   ButtonGroup, useMediaQuery, useTheme, Card, CardContent, CardActions, Grid, TableFooter,
-  // Thêm các import cần thiết cho AddProduct
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, FormControl,
   InputLabel, Select, FormHelperText,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { visuallyHidden } from "@mui/utils";
+
+// --- BƯỚC 1: IMPORT FRAMER MOTION ---
+import { motion, AnimatePresence } from "framer-motion";
 
 // Giả sử các component Modal còn lại đã được cập nhật
 import UpdateProductModal from "./UpdateProductModal";
@@ -24,11 +26,37 @@ import ProductDetails from "./ProductDetails";
 const DESKTOP_PAGE_SIZE = 20;
 const MOBILE_PAGE_SIZE = 10;
 
-// ====================================================================
-// ===== COMPONENT ADDPRODUCT ĐƯỢC TÍCH HỢP TRỰC TIẾP VÀO ĐÂY =====
-// ====================================================================
+// --- BƯỚC 2: ĐỊNH NGHĨA CÁC VARIANTS CHO ANIMATION ---
+const listContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05, // Thời gian trễ giữa các item con
+    },
+  },
+};
 
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+    },
+  },
+  exit: {
+    y: -20,
+    opacity: 0,
+  }
+};
+
+
+// Component AddProduct (giữ nguyên không đổi)
 const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
+    // ... code của AddProduct không thay đổi
   const [productData, setProductData] = useState({
     productName: "", categoryId: "", totalStock: 0,
     productImage: null, unit: "", location: "", status: "active",
@@ -171,13 +199,9 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   );
 };
 
-// ====================================================================
-// ====================================================================
-// ====================================================================
-
 
 const ProductList = () => {
-  // --- State Management ---
+  // ... state và các hàm khác giữ nguyên ...
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -323,53 +347,119 @@ const ProductList = () => {
   if (error) {
     return (<Container><Alert severity="error" sx={{ mt: 2 }}>{error}</Alert></Container>);
   }
+  
 
   return (
     <Container maxWidth={false} disableGutters sx={{ p: { xs: 1, sm: 2, md: 3 }, mt: 2 }}>
       <Typography variant="h4" component="h1" gutterBottom>Quản Lý Sản Phẩm</Typography>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddProductModal(true)} sx={{ width: { xs: '100%', md: 'auto' } }}>Thêm Sản Phẩm</Button>
-         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', md: 'auto' } }}>
-             <TextField label="Tìm kiếm sản phẩm..." variant="outlined" size="small" fullWidth value={filterText} onChange={(e) => setFilterText(e.target.value)} sx={{ minWidth: { sm: 300 } }} />
-             <ButtonGroup variant="outlined" fullWidth><Button onClick={() => setStatusFilter(true)} variant={statusFilter === true ? "contained" : "outlined"}>Đang Bán</Button><Button onClick={() => setStatusFilter(false)} variant={statusFilter === false ? "contained" : "outlined"}>Ngừng Bán</Button><Button onClick={() => setStatusFilter(null)} variant={statusFilter === null ? "contained" : "outlined"}>Tất Cả</Button></ButtonGroup>
-         </Stack>
+      
+      {/* --- BƯỚC 3: CẢI TIẾN THANH LỌC --- */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', md: 'center' }} // Stretch trên mobile, center trên desktop
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddProductModal(true)}>
+          Thêm Sản Phẩm
+        </Button>
+         
+        {/* Nhóm các control tìm kiếm và lọc vào một Stack */}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems="center"
+          sx={{ width: { xs: '100%', md: 'auto' } }}
+        >
+          <TextField
+            label="Tìm kiếm sản phẩm..."
+            variant="outlined"
+            size="small"
+            fullWidth
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            sx={{ minWidth: { sm: 250, md: 300 } }}
+          />
+          <ButtonGroup variant="outlined" fullWidth>
+            <Button onClick={() => setStatusFilter(true)} variant={statusFilter === true ? "contained" : "outlined"}>Đang Bán</Button>
+            <Button onClick={() => setStatusFilter(false)} variant={statusFilter === false ? "contained" : "outlined"}>Ngừng Bán</Button>
+            <Button onClick={() => setStatusFilter(null)} variant={statusFilter === null ? "contained" : "outlined"}>Tất Cả</Button>
+          </ButtonGroup>
+        </Stack>
       </Stack>
+      
       {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
 
       {isMobile ? (
+        // --- BƯỚC 4: ÁP DỤNG MOTION CHO MOBILE VIEW ---
         <>
-          <Stack spacing={2}>
-            {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
-                <Card key={product._id} elevation={2} onClick={() => handleOpenProductDetailsModal(product)} ref={index === arr.length - 1 ? lastItemElementRef : null}>
-                   <CardContent><Grid container spacing={2} alignItems="center"><Grid item xs={3}><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} /></Grid><Grid item xs={9}><Typography variant="h6" component="div" noWrap>{product.productName}</Typography><Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography><Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice.toLocaleString("vi-VN")} VND</Typography>{renderStatusChip(product.status)}</Grid></Grid></CardContent>
-                   <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}><Button size="small" color="warning" variant="outlined" onClick={(e) => { e.stopPropagation(); handleOpenUpdateModal(product); }}>Sửa</Button><Button size="small" color={product.status === "active" ? "error" : "success"} variant="outlined" onClick={(e) => { e.stopPropagation(); handleChangeStatus(product._id, product.status); }}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></CardActions>
-                </Card>
-            ))}
-          </Stack>
+          <Box
+            component={motion.div}
+            variants={listContainerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <AnimatePresence>
+                {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
+                    <Box component={motion.div} key={product._id} variants={itemVariants} exit="exit">
+                         <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                            <Card
+                              elevation={2}
+                              onClick={() => handleOpenProductDetailsModal(product)}
+                              sx={{ mb: 2 }} // Thêm margin bottom cho mỗi card
+                              ref={index === arr.length - 1 ? lastItemElementRef : null}
+                            >
+                              <CardContent><Grid container spacing={2} alignItems="center"><Grid item xs={3}><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} /></Grid><Grid item xs={9}><Typography variant="h6" component="div" noWrap>{product.productName}</Typography><Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography><Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice.toLocaleString("vi-VN")} VND</Typography>{renderStatusChip(product.status)}</Grid></Grid></CardContent>
+                              <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}><Button size="small" color="warning" variant="outlined" onClick={(e) => { e.stopPropagation(); handleOpenUpdateModal(product); }}>Sửa</Button><Button size="small" color={product.status === "active" ? "error" : "success"} variant="outlined" onClick={(e) => { e.stopPropagation(); handleChangeStatus(product._id, product.status); }}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></CardActions>
+                            </Card>
+                         </motion.div>
+                    </Box>
+                ))}
+            </AnimatePresence>
+          </Box>
           {isLoadingMore && <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
         </>
       ) : (
+        // --- BƯỚC 5: ÁP DỤNG MOTION CHO DESKTOP VIEW ---
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
           <TableContainer sx={{ maxHeight: 'calc(100vh - 280px)' }}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 <TableRow>{headCells.map((headCell) => ( <TableCell key={headCell.id} align={headCell.align || 'left'} sortDirection={sortBy === headCell.id ? sortDirection : false}>{headCell.sortable ? (<TableSortLabel active={sortBy === headCell.id} direction={sortBy === headCell.id ? sortDirection : 'asc'} onClick={() => handleSort(headCell.id)}>{headCell.label}{sortBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{sortDirection === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}</TableSortLabel>) : (headCell.label)}</TableCell>))}</TableRow>
               </TableHead>
-              <TableBody>
-                {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
-                  <TableRow hover key={product._id} onClick={() => handleOpenProductDetailsModal(product)} sx={{ cursor: 'pointer' }} ref={index === arr.length - 1 ? lastItemElementRef : null}>
-                    <TableCell><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} /></TableCell>
-                    <TableCell><Typography variant="body2" fontWeight="medium">{product.productName}</Typography></TableCell>
-                    <TableCell align="center">{product.totalStock}</TableCell>
-                    <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
-                    <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
-                    <TableCell>{product.unit}</TableCell>
-                    <TableCell>{product.location}</TableCell>
-                    <TableCell>{renderStatusChip(product.status)}</TableCell>
-                    <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <Box
+                component={motion.tbody}
+                variants={listContainerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <AnimatePresence>
+                    {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
+                      <TableRow
+                        component={motion.tr}
+                        key={product._id}
+                        variants={itemVariants}
+                        exit="exit"
+                        layout // Prop quan trọng giúp animation mượt mà khi lọc/sắp xếp
+                        hover
+                        onClick={() => handleOpenProductDetailsModal(product)}
+                        sx={{ cursor: 'pointer' }}
+                        ref={index === arr.length - 1 ? lastItemElementRef : null}
+                      >
+                        <TableCell><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} /></TableCell>
+                        <TableCell><Typography variant="body2" fontWeight="medium">{product.productName}</Typography></TableCell>
+                        <TableCell align="center">{product.totalStock}</TableCell>
+                        <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
+                        <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
+                        <TableCell>{product.unit}</TableCell>
+                        <TableCell>{product.location}</TableCell>
+                        <TableCell>{renderStatusChip(product.status)}</TableCell>
+                        <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
+                      </TableRow>
+                    ))}
+                </AnimatePresence>
+              </Box>
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={headCells.length} sx={{ textAlign: 'center', borderBottom: 'none' }}>
@@ -382,14 +472,11 @@ const ProductList = () => {
         </Paper>
       )}
 
-      {/* --- Modals --- */}
       {selectedProduct && (<>
-          {/* Giả sử các modal này cũng đã được chuyển sang MUI Dialog */}
           <ProductDetails open={showProductDetailsModal} handleClose={() => setShowProductDetailsModal(false)} product={selectedProduct} />
           <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchAllProducts} />
       </>)}
       
-      {/* ===== SỬA ĐỔI CHÍNH: CẬP NHẬT CÁCH GỌI ADDPRODUCT ===== */}
       <AddProduct
         open={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
