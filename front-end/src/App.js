@@ -37,10 +37,12 @@ import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
+
+// Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
 // Context
-import { NotyfProvider } from "./Contexts/NotyfContext";// Layout component đã được đơn giản hóa
+import { NotyfProvider } from "./Contexts/NotyfContext";
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
@@ -67,7 +69,7 @@ const Layout = ({ children }) => {
     <>
       <Header />
       {/* Bọc nội dung trang trong một Container của MUI để có khoảng cách và căn lề đẹp */}
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
         {children}
       </Container>
     </>

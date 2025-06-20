@@ -3,6 +3,7 @@ const db = require("../models/index");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { sendMail } = require("../utils/Mailer");
+const { verifyAccessToken } = require("../utils/Jwt");
 // - Hàm View Profile
 async function getProfile(req, res, next) {
   try {
@@ -12,7 +13,7 @@ async function getProfile(req, res, next) {
       return res.status(401).json({ message: "Không tồn tại token" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyAccessToken(token);
 
     console.log("Decoded token:", decoded);
 
@@ -37,7 +38,7 @@ async function editProfile(req, res, next) {
       return res.status(401).json({ message: "Không tồn tại token" });
     }
     //lay token tu header
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyAccessToken(token);
     const userId = decoded.id;
 
     const user = await db.User.findById(userId);
@@ -130,7 +131,7 @@ async function changePassword(req, res) {
     if (!token) {
       return res.status(401).json({ message: "Không tồn tại token" });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyAccessToken(token);
     const user = await db.User.findById(decoded.id);
     if (!user) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });

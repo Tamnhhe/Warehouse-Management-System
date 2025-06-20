@@ -1,25 +1,146 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Table, Button, Alert } from "react-bootstrap";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
-import useProduct from "./useProduct";
-import FilterProduct from "./FilterProduct";
+import {
+  Container,
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TableSortLabel,
+  CircularProgress,
+  Alert,
+  Stack,
+  Avatar,
+  ButtonGroup,
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import { visuallyHidden } from "@mui/utils";
+
+// Giả sử các component Modal này đã được cập nhật để dùng MUI Dialog
 import UpdateProductModal from "./UpdateProductModal";
-import ProductDetails from "./ProductDetails"; // Import ProductDetails component
-import AddProduct from "./AddProduct"; // Import AddProduct Modal
-import style from "./style.css"; // Nếu bạn có style.css, thêm vào đây
+import ProductDetails from "./ProductDetails";
+import AddProduct from "./AddProduct";
 
 const ProductList = () => {
-  const { loading, error, fetchAllProducts } = useProduct();
+  // --- State Management ---
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
+
+  // States for filtering and sorting
   const [filterText, setFilterText] = useState("");
-  const [sortBy, setSortBy] = useState("name");
+  const [statusFilter, setStatusFilter] = useState(null); // null: all, true: active, false: inactive
+  const [sortBy, setSortBy] = useState("productName");
   const [sortDirection, setSortDirection] = useState("asc");
+
+  // States for modals
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showProductDetailsModal, setShowProductDetailsModal] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [statusFilter, setStatusFilter] = useState(null); // State to filter products by status
-  const [showAddProductModal, setShowAddProductModal] = useState(false); // State to show Add Product modal
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+
+  // --- Data Fetching ---
+  const fetchAllProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [productsRes, supplierProductsRes] = await Promise.all([
+        axios.get("http://localhost:9999/products/getAllProducts"),
+        axios.get(
+          "http://localhost:9999/supplierProducts/getAllSupplierProducts"
+        ),
+      ]);
+
+      const productsData = productsRes.data;
+      const supplierProducts = supplierProductsRes.data;
+
+      const latestPrices = {};
+      const priceMap = {};
+
+      supplierProducts.forEach((sp) => {
+        const productId = sp.product?._id;
+        if (!productId) return;
+
+        if (!latestPrices[productId]) {
+          latestPrices[productId] = sp.price;
+        }
+        if (!priceMap[productId]) priceMap[productId] = [];
+        priceMap[productId].push(sp.price);
+      });
+
+      const avgPrices = Object.entries(priceMap).reduce(
+        (acc, [productId, prices]) => {
+          const sum = prices.reduce((total, price) => total + price, 0);
+          acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
+          return acc;
+        },
+        {}
+      );
+
+      const updatedProducts = productsData.map((p) => ({
+        ...p,
+        latestPrice: latestPrices[p._id] || 0,
+        avgPrice: avgPrices[p._id] || 0,
+      }));
+
+      setProducts(updatedProducts);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllProducts();
+  }, [fetchAllProducts]);
+
+  // --- Memoized Filtering and Sorting ---
+  const filteredProducts = useMemo(() => {
+    let updatedProducts = [...products];
+
+    if (filterText) {
+      updatedProducts = updatedProducts.filter((product) =>
+        product.productName.toLowerCase().includes(filterText.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== null) {
+      const targetStatus = statusFilter ? "active" : "inactive";
+      updatedProducts = updatedProducts.filter(
+        (product) => product.status === targetStatus
+      );
+    }
+
+    updatedProducts.sort((a, b) => {
+      const isAsc = sortDirection === "asc";
+      const aVal = a[sortBy] || '';
+      const bVal = b[sortBy] || '';
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return isAsc ? aVal - bVal : bVal - aVal;
+    });
+
+    return updatedProducts;
+  }, [products, filterText, sortBy, sortDirection, statusFilter]);
+
+  // --- Handlers ---
+  const handleSort = (column) => {
+    const isAsc = sortBy === column && sortDirection === "asc";
+    setSortDirection(isAsc ? "desc" : "asc");
+    setSortBy(column);
+  };
 
   const handleOpenUpdateModal = (product) => {
     setSelectedProduct(product);
@@ -31,354 +152,249 @@ const ProductList = () => {
     setShowProductDetailsModal(true);
   };
 
-  useEffect(() => {
-    const fetchAllProducts = async () => {
-      try {
-        const [productsRes, supplierProductsRes] = await Promise.all([
-          axios.get("http://localhost:9999/products/getAllProducts"),
-          axios.get(
-            "http://localhost:9999/supplierProducts/getAllSupplierProducts"
-          ),
-        ]);
+  const handleChangeStatus = async (productId, currentStatus) => {
+    if (!window.confirm("Bạn có chắc chắn muốn thay đổi trạng thái của sản phẩm không?")) return;
 
-        const products = productsRes.data;
-        const supplierProducts = supplierProductsRes.data;
-
-        const latestPrices = {};
-        const avgPrices = {};
-        const priceMap = {};
-
-        supplierProducts.forEach((sp) => {
-          const productId = sp.product?._id;
-          if (!productId) return;
-
-          // Lấy giá mới nhất (lấy bản ghi đầu tiên)
-          if (!latestPrices[productId]) {
-            latestPrices[productId] = sp.price;
-          }
-
-          // Gom giá để tính trung bình
-          if (!priceMap[productId]) priceMap[productId] = [];
-          priceMap[productId].push(sp.price);
-        });
-
-        // Tính giá trung bình cho từng sản phẩm
-        Object.entries(priceMap).forEach(([productId, prices]) => {
-          const sum = prices.reduce((acc, price) => acc + price, 0);
-          avgPrices[productId] =
-            prices.length > 0 ? Math.round(sum / prices.length) : 0;
-        });
-
-        const updated = products.map((p) => ({
-          ...p,
-          latestPrice: latestPrices[p._id] || 0,
-          avgPrice: avgPrices[p._id] || 0,
-        }));
-
-        setProducts(updated);
-      } catch (error) {
-        console.error("Error fetching product or price info:", error);
-      }
-    };
-
-    fetchAllProducts();
-  }, []);
-
-  const handleSort = (column) => {
-    setSortBy(column);
-    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-  };
-
-  const filteredProducts = useMemo(() => {
-    let updatedProducts = [...products];
-
-    if (filterText) {
-      updatedProducts = updatedProducts.filter((product) =>
-        product.productName.toLowerCase().includes(filterText.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== null) {
-      updatedProducts = updatedProducts.filter((product) =>
-        statusFilter
-          ? product.status === "active"
-          : product.status === "inactive"
-      );
-    }
-
-    updatedProducts.sort((a, b) => {
-      if (sortBy === "name") {
-        return sortDirection === "asc"
-          ? a.productName.localeCompare(b.productName)
-          : b.productName.localeCompare(a.productName);
-      } else if (sortBy === "stock") {
-        return sortDirection === "asc"
-          ? a.totalStock - b.totalStock
-          : b.totalStock - a.totalStock;
-      } else if (sortBy === "unit") {
-        return sortDirection === "asc"
-          ? a.unit.localeCompare(b.unit)
-          : b.unit.localeCompare(a.unit);
-      } else if (sortBy === "location") {
-        return sortDirection === "asc"
-          ? a.location.localeCompare(b.location)
-          : b.location.localeCompare(a.location);
-      }
-      return 0;
-    });
-
-    return updatedProducts;
-  }, [products, filterText, sortBy, sortDirection, statusFilter]);
-
-  const handleChangeStatus = async (productId, newStatus) => {
-    if (
-      !window.confirm(
-        "Bạn có chắc chắn muốn thay đổi trạng thái của sản phẩm không?"
-      )
-    )
-      return;
-
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
       await axios.put(
         `http://localhost:9999/products/inactivateProduct/${productId}`,
         { status: newStatus }
       );
-
-      setProducts((prevProducts) =>
-        prevProducts.map((product) =>
-          product._id === productId
-            ? { ...product, status: newStatus }
-            : product
-        )
-      );
+      // Refresh data to get the latest state
+      fetchAllProducts();
     } catch (err) {
       setDeleteError("Có lỗi xảy ra khi thay đổi trạng thái sản phẩm.");
       console.error("Change Status Error:", err);
     }
   };
 
-  const handleFilter = ({ filterText }) => {
-    setFilterText(filterText);
-  };
+  // --- Render Logic ---
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  const handleStatusFilter = (status) => {
-    setStatusFilter(status);
-  };
+  if (error) {
+    return (
+      <Container>
+        <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+      </Container>
+    );
+  }
 
-  if (loading) return <p>Đang tải...</p>;
-  if (error) return <p>Có lỗi xảy ra: {error.message}</p>;
+  const headCells = [
+    { id: 'productImage', label: 'Hình Ảnh', sortable: false },
+    { id: 'productName', label: 'Tên Sản Phẩm', sortable: true },
+    { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' },
+    { id: 'avgPrice', label: 'Giá TB', sortable: true, align: 'right' },
+    { id: 'latestPrice', label: 'Giá Mới', sortable: true, align: 'right' },
+    { id: 'unit', label: 'Đơn Vị', sortable: true },
+    { id: 'location', label: 'Vị Trí', sortable: true },
+    { id: 'status', label: 'Trạng Thái', sortable: true },
+    { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },
+  ];
 
   return (
-    <div className="product-list-container">
-      <div>
-        {/* Add Product Button */}
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Quản Lý Sản Phẩm
+      </Typography>
+
+      {/* --- Filter and Actions Bar --- */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
         <Button
-          variant="success"
+          variant="contained"
+          startIcon={<AddIcon />}
           onClick={() => setShowAddProductModal(true)}
-          style={{ marginBottom: "20px" }}
+          sx={{ width: { xs: '100%', md: 'auto' } }}
         >
           Thêm Sản Phẩm
         </Button>
-      </div>
-      {deleteError && <Alert variant="danger">{deleteError}</Alert>}
-      <FilterProduct onFilter={handleFilter} />
-
-      <div className="filter-buttons">
-        <Button
-          variant={statusFilter === true ? "primary" : "light"}
-          onClick={() => handleStatusFilter(true)}
-          className={statusFilter === true ? "active" : ""}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems="flex-start" // Align items to the left
+          justifyContent="flex-start" // Move sorting menu to the left
+          sx={{ width: { xs: '100%', md: 'auto' } }}
         >
-          Đang Bán
-        </Button>
-        <Button
-          variant={statusFilter === false ? "primary" : "light"}
-          onClick={() => handleStatusFilter(false)}
-          className={statusFilter === false ? "active" : ""}
-        >
-          Ngừng Bán
-        </Button>
-        <Button
-          variant={statusFilter === null ? "primary" : "light"}
-          onClick={() => setStatusFilter(null)}
-          className={statusFilter === null ? "active" : ""}
-        >
-          Tất Cả
-        </Button>
-      </div>
+          <TextField
+            label="Tìm kiếm sản phẩm..."
+            variant="outlined"
+            size="small"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 300 } }}
+          />
+          <ButtonGroup variant="outlined" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <Button
+              onClick={() => setStatusFilter(true)}
+              variant={statusFilter === true ? "contained" : "outlined"}
+            >
+              Đang Bán
+            </Button>
+            <Button
+              onClick={() => setStatusFilter(false)}
+              variant={statusFilter === false ? "contained" : "outlined"}
+            >
+              Ngừng Bán
+            </Button>
+            <Button
+              onClick={() => setStatusFilter(null)}
+              variant={statusFilter === null ? "contained" : "outlined"}
+            >
+              Tất Cả
+            </Button>
+          </ButtonGroup>
+        </Stack>
+      </Stack>
 
-      <div className="scrollable-table">
-        <Table striped bordered hover responsive>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", verticalAlign: "middle" }}>
-                Hình Ảnh
-              </th>
-              <th
-                style={{
-                  cursor: "pointer",
-                  textAlign: "left",
-                  verticalAlign: "middle",
-                }}
-                onClick={() => handleSort("name")}
-              >
-                Tên Sản Phẩm{" "}
-                {sortBy === "name" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th
-                style={{
-                  width: "100px",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
-                Tổng SL
-              </th>
-              <th
-                style={{
-                  width: "120px",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
-                Giá TB
-              </th>
-              <th
-                style={{
-                  width: "120px",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                }}
-              >
-                Giá mới
-              </th>
-              <th
-                style={{
-                  cursor: "pointer",
-                  textAlign: "left",
-                  verticalAlign: "middle",
-                }}
-                onClick={() => handleSort("unit")}
-              >
-                Đơn Vị{" "}
-                {sortBy === "unit" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th
-                style={{
-                  cursor: "pointer",
-                  textAlign: "left",
-                  verticalAlign: "middle",
-                }}
-                onClick={() => handleSort("location")}
-              >
-                Vị Trí{" "}
-                {sortBy === "location" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th style={{ textAlign: "left", verticalAlign: "middle" }}>
-                Trạng Thái
-              </th>
-              <th style={{ textAlign: "left", verticalAlign: "middle" }}>
-                Hành Động
-              </th>
-            </tr>
-          </thead>
+      {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
 
-          <tbody>
-            {filteredProducts.map((product) => (
-              <tr
-                key={product._id}
-                onClick={(e) => {
-                  // Kiểm tra xem người dùng có nhấn vào nút "Chỉnh sửa" hoặc "Vô hiệu hóa" không
-                  if (e.target.closest(".action-buttons") === null) {
-                    handleOpenProductDetailsModal(product);
-                  }
-                }}
-              >
-                <td>
-                  <img
-                    src={
-                      product.productImage
-                        ? `http://localhost:9999${product.productImage}`
-                        : "http://localhost:9999/uploads/default-product.png"
-                    }
-                    alt="Product Image"
-                    width="50"
-                  />
-                </td>
-                <td>
-                  <Button
-                    variant="link"
-                    style={{ textDecoration: "none", color: "inherit" }}
-                    onClick={() => handleOpenProductDetailsModal(product)}
+      {/* --- Products Table --- */}
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                {headCells.map((headCell) => (
+                  <TableCell
+                    key={headCell.id}
+                    align={headCell.align || 'left'}
+                    sortDirection={sortBy === headCell.id ? sortDirection : false}
                   >
-                    {product.productName}
-                  </Button>
-                </td>
-                <td style={{ textAlign: "center" }}>{product.totalStock}</td>
-                <td style={{ textAlign: "right" }}>
-                  {(product.avgPrice || 0).toLocaleString("en-US")} VND
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  {(product.latestPrice || 0).toLocaleString("en-US")} VND
-                </td>
-                <td>{product.unit}</td>
-                <td>{product.location}</td>
-                <td>
-                  {product.status === "active" ? "Có sẵn" : "Không có sẵn"}
-                </td>
-                <td className="action-buttons">
-                  <Button
-                    className="fixed-button"
-                    variant="warning"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Ngăn sự kiện click truyền ra ngoài
-                      handleOpenUpdateModal(product);
-                    }}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                  <Button
-                    className="fixed-button"
-                    variant={product.status === "active" ? "danger" : "success"}
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Ngăn sự kiện click truyền ra ngoài
-                      handleChangeStatus(
-                        product._id,
-                        product.status === "active" ? "inactive" : "active"
-                      );
-                    }}
-                  >
-                    {product.status === "active" ? "Vô hiệu hóa" : "Kích hoạt"}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+                    {headCell.sortable ? (
+                      <TableSortLabel
+                        active={sortBy === headCell.id}
+                        direction={sortBy === headCell.id ? sortDirection : 'asc'}
+                        onClick={() => handleSort(headCell.id)}
+                      >
+                        {headCell.label}
+                        {sortBy === headCell.id ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {sortDirection === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    ) : (
+                      headCell.label
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredProducts.map((product) => (
+                <TableRow
+                  hover
+                  key={product._id}
+                  onClick={() => handleOpenProductDetailsModal(product)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell>
+                    <Avatar
+                      variant="rounded"
+                      src={
+                        product.productImage
+                          ? `http://localhost:9999${product.productImage}`
+                          : "http://localhost:9999/uploads/default-product.png"
+                      }
+                      alt={product.productName}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight="medium">
+                      {product.productName}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">{product.totalStock}</TableCell>
+                  <TableCell align="right">
+                    {product.avgPrice.toLocaleString("vi-VN")} VND
+                  </TableCell>
+                  <TableCell align="right">
+                    {product.latestPrice.toLocaleString("vi-VN")} VND
+                  </TableCell>
+                  <TableCell>{product.unit}</TableCell>
+                  <TableCell>{product.location}</TableCell>
+                  <TableCell>
+                    <Box
+                      component="span"
+                      sx={{
+                        color: 'white', // Set text color to white
+                        bgcolor: product.status === 'active' ? 'success.light' : 'error.light',
+                        p: '4px 8px',
+                        borderRadius: '12px',
+                        display: 'inline-block',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {product.status === "active" ? "Đang Bán" : "Ngừng Bán"}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Stack 
+                      direction="row" 
+                      spacing={1} 
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        size="small"
+                        onClick={() => handleOpenUpdateModal(product)}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color={product.status === "active" ? "error" : "success"}
+                        size="small"
+                        onClick={() => handleChangeStatus(product._id, product.status)}
+                      >
+                        {product.status === "active" ? "Vô hiệu" : "Kích hoạt"}
+                      </Button>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-      <ProductDetails
-        show={showProductDetailsModal}
-        handleClose={() => setShowProductDetailsModal(false)}
-        product={selectedProduct}
-      />
+      {/* --- Modals --- */}
+      {selectedProduct && (
+        <>
+          <ProductDetails
+            show={showProductDetailsModal}
+            handleClose={() => setShowProductDetailsModal(false)}
+            product={selectedProduct}
+          />
+          <UpdateProductModal
+            show={showUpdateModal}
+            handleClose={() => setShowUpdateModal(false)}
+            product={selectedProduct}
+            onUpdateSuccess={fetchAllProducts} // Thay đổi prop để dễ hiểu hơn
+          />
+        </>
+      )}
 
-      <UpdateProductModal
-        show={showUpdateModal}
-        handleClose={() => setShowUpdateModal(false)}
-        product={selectedProduct}
-        handleUpdate={fetchAllProducts}
-      />
-
-      {/* Modal Thêm Sản Phẩm */}
       <AddProduct
         show={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
-        handleSave={fetchAllProducts}
+        onSaveSuccess={fetchAllProducts} // Thay đổi prop để dễ hiểu hơn
       />
-    </div>
+    </Container>
   );
 };
 

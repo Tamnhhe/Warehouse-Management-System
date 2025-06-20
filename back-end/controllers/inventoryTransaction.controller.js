@@ -159,7 +159,7 @@ const updateTransactionStatus = async (req, res) => {
           await
             Product.findByIdAndUpdate(
               productId,
-              { $inc: { totalStock: product.receiveQuantity } }
+              { $inc: { totalStock: product.achievedProduct } }
             );
         }
       }
