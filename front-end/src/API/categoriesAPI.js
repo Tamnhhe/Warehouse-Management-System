@@ -1,11 +1,14 @@
-import authorApi from "./baseAPI/authorAPI";
+import axios from "axios";
+const API_URL = "http://localhost:9999/categories";
 
-const categoriesAPI = {
-    getAll: () => authorApi.get('/categories/getAllCategories').then(response => response.data),
-    getById: (id) => authorApi.get(`/categories/${id}`).then(response => response.data),
-    create: (category) => authorApi.post('/categories', category).then(response => response.data),
-    update: (id, category) => authorApi.put(`/categories/${id}`, category).then(response => response.data),
-    delete: (id) => authorApi.delete(`/categories/${id}`).then(response => response.data),
+const categoryAPI = {
+    getAll: () => axios.get(`${API_URL}/getAllCategories`),
+    add: (data) => axios.post(`${API_URL}/addCategory`, data),
+    update: (id, data) => axios.put(`${API_URL}/updateCategory/${id}`, data),
+    inactivate: (id) => axios.put(`${API_URL}/inactivateCategory/${id}`),
+    addSub: (categoryId, data) => axios.post(`${API_URL}/${categoryId}/sub/add`, data),
+    updateSub: (categoryId, subId, data) => axios.put(`${API_URL}/${categoryId}/sub/update/${subId}`, data),
+    deleteSub: (categoryId, subId) => axios.delete(`${API_URL}/${categoryId}/sub/delete/${subId}`),
 };
 
-export default categoriesAPI;
+export default categoryAPI;

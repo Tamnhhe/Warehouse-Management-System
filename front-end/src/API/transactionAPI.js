@@ -1,11 +1,13 @@
-import authAPI from "./authAPI";
+import axios from "axios";
+const API_URL = "http://localhost:9999/inventoryTransactions";
 
 const transactionAPI = {
-    getAll: () => authAPI.get('/transactions').then(response => response.data),
-    getById: (id) => authAPI.get(`/transactions/${id}`).then(response => response.data),
-    create: (transaction) => authAPI.post('/transactions', transaction).then(response => response.data),
-    update: (id, transaction) => authAPI.put(`/transactions/${id}`, transaction).then(response => response.data),
-    delete: (id) => authAPI.delete(`/transactions/${id}`).then(response => response.data),
+    getAll: () => axios.get(`${API_URL}/getAllTransactions`),
+    getById: (id) => axios.get(`${API_URL}/getTransactionById/${id}`),
+    update: (id, data) => axios.put(`${API_URL}/updateTransaction/${id}`, data),
+    updateStatus: (id, data) => axios.put(`${API_URL}/updateTransactionStatus/${id}`, data),
+    create: (data) => axios.post(`${API_URL}/createTransaction`, data),
+    createReceipt: (data) => axios.post(`${API_URL}/create-receipts`, data),
 };
 
 export default transactionAPI;
