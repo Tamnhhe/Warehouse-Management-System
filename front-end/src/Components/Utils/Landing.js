@@ -38,7 +38,7 @@ const fashionProducts = [
         description: 'Thiết kế tinh tế trên nền chất liệu cao cấp, mang lại vẻ ngoài chuyên nghiệp và tự tin cho phái mạnh.',
     },
     {
-        img: 'https://images.unsplash.com/photo-1581044777550-4cfa6ce67c40?q=80&w=1935&auto=format&fit=crop',
+        img: 'https://i.pinimg.com/736x/a2/52/db/a252db76a66b77632e4a8e3ae8b43f93.jpg',
         title: 'Váy Đầm Dạo Phố Sang Trọng',
         description: 'Nét thanh lịch và quyến rũ được thể hiện qua từng đường cắt may, giúp bạn tỏa sáng trong mọi khoảnh khắc.',
     },

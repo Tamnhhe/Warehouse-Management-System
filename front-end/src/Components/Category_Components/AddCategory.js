@@ -1,147 +1,139 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Alert, Table } from 'react-bootstrap';
-import { RiDeleteBack2Line } from "react-icons/ri";
-import { IoAddCircleOutline } from "react-icons/io5";
+// File: AddCategory.js
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  Stack, Box, Typography, IconButton, Alert, CircularProgress,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-function AddCategory() {
-    const [categoryName, setCategoryName] = useState('');
-    const [description, setDescription] = useState('');
-    const [subcategories, setSubcategories] = useState([]);
-    const [message, setMessage] = useState(null);
-    const [error, setError] = useState(null);
+const AddCategoryDialog = ({ open, onClose, onCategoryAdded }) => {
+  const [categoryName, setCategoryName] = useState('');
+  const [description, setDescription] = useState('');
+  const [subcategories, setSubcategories] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    // Kiểm tra nếu tất cả các subcategory được điền thông tin
-    const isAllSubcategoriesFilled = () => {
-        return subcategories.every(sub => sub.name.trim() !== "" && sub.description.trim() !== "");
-    };
+  // Hàm để reset form khi dialog đóng hoặc sau khi lưu thành công
+  const resetForm = () => {
+    setCategoryName('');
+    setDescription('');
+    setSubcategories([]);
+    setError('');
+    setLoading(false);
+  };
 
-    // Thêm danh mục
-    const handleAddCategory = async (e) => {
-        e.preventDefault();
-        if (!categoryName.trim() || !description.trim() || !isAllSubcategoriesFilled()) {
-            setError("Vui lòng điền đầy đủ thông tin trước khi thêm danh mục.");
-            return;
-        }
-        try {
-            const response = await axios.post('http://localhost:9999/categories/addCategory', {
-                categoryName,
-                description,
-                classifications: subcategories,
-            });
-            // Xuất ra thống báo thêm danh mục thanh cong
-            setMessage(response.data.message);
-            setError(null);
-            setCategoryName('');
-            setDescription('');
-            setSubcategories([]);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Lỗi khi thêm danh mục. Vui lòng thử lại.');
-            setMessage(null);
-        }
-    };
+  useEffect(() => {
+    if (!open) {
+      // Đảm bảo form luôn được reset khi dialog đóng lại
+      const timer = setTimeout(() => resetForm(), 300); // Thêm delay nhỏ để tránh giật
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
-    // Thêm subcategory
-    const handleAddSubcategory = () => {
-        if (!isAllSubcategoriesFilled()) {
-            setError("Vui lòng điền đầy đủ thông tin subcategory trước khi thêm mới.");
-            return;
-        }
-        setSubcategories([...subcategories, { name: '', description: '' }]);
-        setError(null);
-    };
+  const handleAddSubcategory = () => {
+    // Kiểm tra xem có danh mục con nào chưa điền tên không
+    if (subcategories.some(sub => !sub.name.trim())) {
+      setError("Vui lòng điền tên cho các danh mục con hiện có trước khi thêm mới.");
+      return;
+    }
+    setSubcategories([...subcategories, { name: '', description: '' }]);
+    setError(''); // Xóa lỗi nếu có
+  };
 
-    // Cập nhật dữ liệu subcategory
-    const handleUpdateSubcategory = (index, key, value) => {
-        const updatedSubcategories = [...subcategories];
-        updatedSubcategories[index][key] = value;
-        setSubcategories(updatedSubcategories);
-    };
-    // Xóa subcategory
-    const handleRemoveSubcategory = (index) => {
-        const updatedSubcategories = subcategories.filter((_, i) => i !== index);
-        setSubcategories(updatedSubcategories);
-    };
+  const handleUpdateSubcategory = (index, key, value) => {
+    const updated = [...subcategories];
+    updated[index][key] = value;
+    setSubcategories(updated);
+  };
 
-    return (
-        <Container fluid >
-            <Row className="justify-content-md-center">
-                <Col md={6}
-                    style={{ backgroundColor: "#A8E6CF", margin: "20px", borderRadius: "10px", padding: "20px" }}
-                >
-                    <h2 className="mt-4">Thêm danh mục</h2>
-                    {message && <Alert variant="success">{message}</Alert>}
-                    {error && <Alert variant="danger">{error}</Alert>}
-                    <Form onSubmit={handleAddCategory}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Tên danh mục</Form.Label>
-                            <Form.Control
-                                type="text"
-                                value={categoryName}
-                                onChange={(e) => setCategoryName(e.target.value)}
-                            />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Mô tả</Form.Label>
-                            <Form.Control
-                                as="textarea"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                            />
-                        </Form.Group>
-                        <h5>Thêm danh mục con</h5>
-                        <Button variant="success" onClick={handleAddSubcategory} className="mb-3">
-                            <IoAddCircleOutline style={{ fontSize: "1.5rem" }} />
-                        </Button>
-                        <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '10px' }}>
-                            <Table bordered>
-                                <thead>
-                                    <tr>
-                                        <th>Tên</th>
-                                        <th>Mô tả</th>
-                                        <th>Xóa</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {subcategories.map((sub, index) => (
-                                        <tr key={index}>
-                                            <td>
-                                                <Form.Control
-                                                    type="text"
-                                                    value={sub.name}
-                                                    onChange={(e) => handleUpdateSubcategory(index, 'name', e.target.value)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <Form.Control
-                                                    type="text"
-                                                    value={sub.description}
-                                                    onChange={(e) => handleUpdateSubcategory(index, 'description', e.target.value)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <Button variant="danger" size="sm" onClick={() => handleRemoveSubcategory(index)}>
-                                                    <RiDeleteBack2Line />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        </div>
+  const handleRemoveSubcategory = (index) => {
+    setSubcategories(subcategories.filter((_, i) => i !== index));
+  };
 
+  const handleSave = async () => {
+    if (!categoryName.trim()) {
+      setError("Tên danh mục không được để trống.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await axios.post('http://localhost:9999/categories/addCategory', {
+        categoryName,
+        description,
+        // Chỉ gửi các danh mục con có tên, loại bỏ các dòng trống
+        classifications: subcategories.filter(sub => sub.name.trim()),
+      });
+      onCategoryAdded(); // Gọi callback để component cha refresh lại danh sách
+      onClose(); // Đóng dialog
+    } catch (err) {
+      setError(err.response?.data?.message || 'Lỗi khi thêm danh mục. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                        <br />
-                        <div className="d-flex justify-content-end">
-                            <Button variant="primary" type="submit">
-                                Thêm danh mục
-                            </Button>
-                        </div>
-                    </Form>
-                </Col>
-            </Row>
-        </Container>
-    );
-}
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>Thêm Danh Mục Mới</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={3} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField
+            autoFocus
+            label="Tên danh mục"
+            fullWidth
+            required
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+          />
+          <TextField
+            label="Mô tả"
+            fullWidth
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Box>
+            <Typography variant="h6" gutterBottom>Danh mục con</Typography>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tên danh mục con</TableCell>
+                    <TableCell>Mô tả</TableCell>
+                    <TableCell align="right">Hành động</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {subcategories.map((sub, index) => (
+                    <TableRow key={index}>
+                      <TableCell><TextField variant="standard" fullWidth placeholder="Tên" value={sub.name} onChange={(e) => handleUpdateSubcategory(index, 'name', e.target.value)} /></TableCell>
+                      <TableCell><TextField variant="standard" fullWidth placeholder="Mô tả ngắn" value={sub.description} onChange={(e) => handleUpdateSubcategory(index, 'description', e.target.value)} /></TableCell>
+                      <TableCell align="right"><IconButton size="small" color="error" onClick={() => handleRemoveSubcategory(index)}><DeleteIcon /></IconButton></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Button startIcon={<AddIcon />} onClick={handleAddSubcategory} sx={{ mt: 1 }}>
+              Thêm dòng
+            </Button>
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: '16px 24px' }}>
+        <Button onClick={onClose} disabled={loading} color="inherit">Hủy</Button>
+        <Button onClick={handleSave} variant="contained" disabled={loading}>
+          {loading ? <CircularProgress size={24} /> : "Lưu"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
-export default AddCategory;
+export default AddCategoryDialog;

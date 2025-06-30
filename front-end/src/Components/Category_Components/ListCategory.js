@@ -1,260 +1,273 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Form, Button, Table, Modal } from 'react-bootstrap';
-import { AiOutlineSortDescending, AiOutlineSortAscending } from "react-icons/ai";
-import { CiSquareMore } from "react-icons/ci";
+// File: ListCategory.js
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
-import EditCategory from './EditCategory';
-import { useNavigate } from 'react-router-dom';
+import {
+  Container, Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Checkbox, IconButton, Stack, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel,
+} from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
+
+// MUI Icons
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+
+// Import các dialog đã tạo
+import AddCategoryDialog from './AddCategory';
+import EditCategoryDialog from './EditCategory';
+
 function ListCategory() {
-    const [cate, setCate] = useState([]);
-    const [filterCate, setFilterCate] = useState("");
-    const [isActiveFirst, setIsActiveFirst] = useState(true);
-    const [sortDirection, setSortDirection] = useState("asc");
-    const [error, setError] = useState(null);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState(null);
-    const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [filterText, setFilterText] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: 'categoryName', direction: 'asc' });
+  const [statusFirst, setStatusFirst] = useState('active'); // 'active' hoặc 'inactive'
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchCate = async () => {
-            try {
-                const response = await axios.get("http://localhost:9999/categories/getAllCategories");
-                setCate(response.data);
-            } catch (error) {
-                setError("Unable to load category list.");
-            }
-        };
-        fetchCate();
-    }, []);
+  // States để quản lý các dialog
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSubcategoryDialogOpen, setIsSubcategoryDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
-    const handleNavigate = () => {
-        navigate('/category/add-category');
-    };
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await axios.get("http://localhost:9999/categories/getAllCategories");
+      setCategories(response.data);
+      setError(null); // Clear previous errors on success
+    } catch (error) {
+      setError("Không thể tải danh sách danh mục. Vui lòng thử lại.");
+    }
+  }, []);
 
-    //xắp xếp tên theo bảng chữ cái
-    const handleSort = () => {
-        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    };
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
-    //xắp xếp theo status
-    const handleCheckboxChange = () => {
-        setIsActiveFirst(!isActiveFirst);
-    };
+  const handleSort = (key) => {
+    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
+    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
+  };
 
-    // Mở cửa sổ chỉnh sửa danh mục
-    const handleEditClick = (category) => {
-        setSelectedCategory(category);
-        setShowEditModal(true);
-    };
+  const handleUpdateStatus = async (id, currentStatus) => {
+    if (!window.confirm(`Bạn có chắc muốn ${currentStatus === 'active' ? 'vô hiệu hóa' : 'kích hoạt'} danh mục này?`)) return;
+    
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      await axios.put(`http://localhost:9999/categories/inactivateCategory/${id}`, { status: newStatus });
+      await fetchCategories(); // Tải lại danh sách để đảm bảo dữ liệu mới nhất
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái:", error);
+      setError("Không thể cập nhật trạng thái danh mục.");
+    }
+  };
 
-    // Đóng cửa sổ chỉnh sửa danh mục
-    const handleCloseModal = () => {
-        setShowEditModal(false);
-        setSelectedCategory(null);
-    };
+  const filteredCategories = useMemo(() => {
+    let sortableItems = [...categories];
 
-    // Mở cửa sổ xem danh sách subcategory
-    const handleShowSubcategories = (category) => {
-        setSelectedCategory(category);
-        setShowSubcategoryModal(true);  // Modal cho subcategory
-    };
+    // Lọc theo text
+    if (filterText) {
+      sortableItems = sortableItems.filter(item =>
+        item.categoryName.toLowerCase().includes(filterText.toLowerCase())
+      );
+    }
+    
+    // Sắp xếp theo cột
+    sortableItems.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
 
-    // Đóng cửa sổ xem danh sách subcategory
-    const handleCloseSubcategoryModal = () => {
-        setShowSubcategoryModal(false);
-        setSelectedCategory(null);
-    };
+    // Sắp xếp ưu tiên trạng thái
+    sortableItems.sort((a, b) => {
+      if (a.status === statusFirst && b.status !== statusFirst) return -1;
+      if (a.status !== statusFirst && b.status === statusFirst) return 1;
+      return 0;
+    });
 
+    return sortableItems;
+  }, [categories, filterText, sortConfig, statusFirst]);
 
-    //render lại
-    const updateCategoryList = (updatedCategory) => {
-        setCate(cate.map(c => c._id === updatedCategory._id ? updatedCategory : c));
-    };
+  const handleOpenEditDialog = (category) => {
+    setSelectedCategory(category);
+    setIsEditDialogOpen(true);
+  };
 
-    //cập nhật trạng thái
-    const handleUpdateStatus = async (id, newStatus) => {
-        try {
-            await axios.put(`http://localhost:9999/categories/inactivateCategory/${id}`, { status: newStatus });
-            const newCate = cate.map(c => c._id === id ? { ...c, status: newStatus } : c);
-            setCate(newCate);
-        } catch (error) {
-            console.log("Lỗi khi cập nhật trạng thái:", error);
-        }
-    };
-    //cập nhật danh mục theo filter hoặc searh
-    const filteredCate = [...cate]
-        .filter((f) =>
-            f.categoryName.toLowerCase().includes(filterCate.toLowerCase())
-        )
-        .sort((a, b) => {
-            // Sắp xếp theo tên danh mục
-            if (sortDirection === "asc") {
-                return a.categoryName.localeCompare(b.categoryName);
-            } else {
-                return b.categoryName.localeCompare(a.categoryName);
-            }
-        })
-        .sort((a, b) => {
-            // Sắp xếp theo trạng thái
-            if (isActiveFirst) {
-                return a.status === "active" ? -1 : 1;
-            } else {
-                return a.status === "inactive" ? -1 : 1;
-            }
-        });
+  const handleOpenSubcategoryDialog = (category) => {
+    setSelectedCategory(category);
+    setIsSubcategoryDialogOpen(true);
+  };
 
-    return (
-        <Container fluid style={{ backgroundColor: "#A8E6CF", margin: "20px", borderRadius: "10px", maxWidth: "97%" }}>
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Stack direction={{xs: 'column', sm: 'row'}} justifyContent="space-between" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Quản Lý Danh Mục
+        </Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsAddDialogOpen(true)}>
+          Tạo mới
+        </Button>
+      </Stack>
 
-            <Row className="justify-content-end" style={{ margin: "0px 10px" }}>
-                <Button
-                    style={{ width: '150px', margin: '5px 0px' }}
-                    onClick={handleNavigate}
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          label="Tìm theo tên danh mục"
+          variant="outlined"
+          size="small"
+          fullWidth
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+        />
+      </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <TableContainer component={Paper}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell sortDirection={sortConfig.key === 'categoryName' ? sortConfig.direction : false}>
+                <TableSortLabel
+                  active={sortConfig.key === 'categoryName'}
+                  direction={sortConfig.key === 'categoryName' ? sortConfig.direction : 'asc'}
+                  onClick={() => handleSort('categoryName')}
                 >
-                    Tạo danh mục
-                </Button>
-            </Row>
-            <Row>
-                <Col md={12} style={{ marginBottom: "10px" }}>
-                    <Form.Control
-                        type="text"
-                        value={filterCate}
-                        onChange={(e) => setFilterCate(e.target.value)}
-                        placeholder="Tìm theo tên danh mục"
+                  Tên danh mục
+                  {sortConfig.key === 'categoryName' ? (<Box component="span" sx={visuallyHidden}>{sortConfig.direction}</Box>) : null}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Danh mục con</TableCell>
+              <TableCell>
+                 <Stack direction="row" alignItems="center">
+                    <Typography variant="body2" sx={{ mr: 1 }}>Trạng thái</Typography>
+                    <Checkbox
+                        checked={statusFirst === 'active'}
+                        onChange={(e) => setStatusFirst(e.target.checked ? 'active' : 'inactive')}
+                        title={statusFirst === 'active' ? "Ưu tiên Kích hoạt" : "Ưu tiên Vô hiệu"}
                     />
-                </Col>
-            </Row>
-            <Row>
-                <Col md={12} >
-                    <div style={{ overflowY: 'auto', maxHeight: '550px' }}>
-                        {filteredCate.length > 0 ? (
-                            <Table striped bordered hover style={{ width: "100%", tableLayout: "fixed", borderRadius: "10px" }}>
-                                <thead style={{ position: "sticky", top: 0, backgroundColor: "#fff", zIndex: 1 }}>
-                                    <tr>
-                                        <th onClick={handleSort}>
-                                            Tên danh mục {sortDirection === "asc" ? <AiOutlineSortDescending /> : <AiOutlineSortAscending />}
-                                        </th>
-                                        <th>Danh mục con</th>
-                                        <th style={{ display: "flex", alignItems: "center" }}>
-                                            Trạng thái
-                                            <Form.Check
-                                                type="checkbox"
-                                                checked={isActiveFirst}
-                                                onChange={handleCheckboxChange}
-                                                style={{ marginLeft: "10px" }}
-                                            />
-                                        </th>
-                                        <th>Mô tả</th>
-                                        <th>Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredCate.map((f) => (
-                                        <tr key={f._id}>
-                                            <td>{f.categoryName}</td>
-                                            <td>
-                                                {f.classifications.length > 0 ? (
-                                                    <>
-                                                        {f.classifications.slice(0, 1).map((classification) => (
-                                                            <div key={classification._id}>
-                                                                {classification.name}
-                                                            </div>
-                                                        ))}
-                                                        {f.classifications.length > 1 && (
-                                                            <span
-                                                                style={{ color: 'blue', cursor: 'pointer' }}
-                                                                onClick={() => handleShowSubcategories(f)}
-                                                            >
-                                                                <CiSquareMore />
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <span>Không có danh mục con</span>
-                                                )}
-                                            </td>
-                                            <td>{f.status === "active" ? "Kích hoạt" : "Vô hiệu hóa"}</td>
-                                            <td>{f.description}</td>
-                                            <td>
-                                                <Button
-                                                    variant="warning"
-                                                    size="sm"
-                                                    onClick={() => handleEditClick(f)}
-                                                >
-                                                    Chỉnh sửa
-                                                </Button>{' '}
-                                                {f.status === 'active' ? (
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleUpdateStatus(f._id, "inactive")}
-                                                    >
-                                                        Vô hiệu hóa
-                                                    </Button>
-                                                ) : (
-                                                    <Button
-                                                        variant="success"
-                                                        size="sm"
-                                                        onClick={() => handleUpdateStatus(f._id, "active")}
-                                                    >
-                                                        Kích hoạt
-                                                    </Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        ) : (
-                            <p style={{ fontSize: '18px', marginLeft: '30px' }}>Không tìm thấy danh mục có tên "{filterCate}", vui lòng nhập lại tên danh mục</p>
-                        )}
+                 </Stack>
+              </TableCell>
+              <TableCell>Mô tả</TableCell>
+              <TableCell align="center">Hành động</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredCategories.map((cat) => (
+              <TableRow key={cat._id} hover>
+                <TableCell component="th" scope="row">
+                  <Typography variant="body1" fontWeight="medium">{cat.categoryName}</Typography>
+                </TableCell>
+                <TableCell>
+                  {cat.classifications.length > 0 ? (
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="body2">{cat.classifications[0].name}</Typography>
+                        {cat.classifications.length > 1 &&
+                            <IconButton size="small" onClick={() => handleOpenSubcategoryDialog(cat)} title="Xem tất cả">
+                                <VisibilityIcon fontSize='small' />
+                            </IconButton>
+                        }
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">Không có</Typography>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Box
+                    sx={{
+                      bgcolor: cat.status === 'active' ? 'success.light' : 'error.light',
+                      color: 'white',
+                      p: '4px 8px',
+                      borderRadius: '12px',
+                      display: 'inline-block',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {cat.status === "active" ? "Kích hoạt" : "Vô hiệu"}
+                  </Box>
+                </TableCell>
+                <TableCell sx={{maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}} title={cat.description}>
+                  {cat.description}
+                </TableCell>
+                <TableCell align="center">
+                  <Stack direction="row" spacing={1} justifyContent="center">
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={() => handleOpenEditDialog(cat)}
+                    >
+                      Sửa
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color={cat.status === 'active' ? "error" : "success"}
+                      size="small"
+                      onClick={() => handleUpdateStatus(cat._id, cat.status)}
+                    >
+                      {cat.status === 'active' ? "Vô hiệu" : "Kích hoạt"}
+                    </Button>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-                    </div>
+      {/* --- Dialogs --- */}
+      <AddCategoryDialog
+        open={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onCategoryAdded={fetchCategories}
+      />
 
-                </Col>
-            </Row>
-            {showEditModal && (
-                <EditCategory
-                    show={showEditModal}
-                    handleClose={handleCloseModal}
-                    category={selectedCategory}
-                    updateCategoryList={updateCategoryList}
-                />
-            )}
-            {showSubcategoryModal && (
-                <Modal
-                    show={showSubcategoryModal}
-                    onHide={handleCloseSubcategoryModal}
-                    centered
-                    size="lg"
-                >
-                    <Modal.Header closeButton >
-                        <Modal.Title>Danh sách danh mục con</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body style={{ backgroundColor: "#A8E6CF" }}>
-                        <Table striped bordered hover style={{ borderRadius: "10px", overflow: "hidden" }}>
-                            <thead>
-                                <tr>
-                                    <th>Tên</th>
-                                    <th>Mô tả</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {selectedCategory?.classifications?.map((sub, index) => (
-                                    <tr key={sub._id}>
-                                        <td>{sub.name}</td>
-                                        <td>{sub.description}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+      {selectedCategory && (
+        <EditCategoryDialog
+          open={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          category={selectedCategory}
+          onCategoryUpdated={fetchCategories}
+        />
+      )}
 
-                    </Modal.Body>
-                </Modal>
-            )}
-        </Container>
-    );
+      {selectedCategory && (
+         <Dialog open={isSubcategoryDialogOpen} onClose={() => setIsSubcategoryDialogOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Danh mục con của "{selectedCategory.name}"</DialogTitle>
+            <DialogContent dividers>
+                <TableContainer>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Tên</TableCell>
+                                <TableCell>Mô tả</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {selectedCategory.classifications.map((sub) => (
+                                <TableRow key={sub._id}>
+                                    <TableCell>{sub.name}</TableCell>
+                                    <TableCell>{sub.description}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setIsSubcategoryDialogOpen(false)}>Đóng</Button>
+            </DialogActions>
+        </Dialog>
+      )}
+    </Container>
+  );
 }
 
 export default ListCategory;

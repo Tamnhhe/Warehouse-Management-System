@@ -1,340 +1,265 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Alert } from "react-bootstrap";
-import axios from "axios";
+// AddProduct.js - Phiên bản Material-UI
 
-const AddProduct = ({ show, handleClose, handleSave }) => {
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Box,
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
+} from "@mui/material";
+
+// Đổi tên prop cho phù hợp với MUI: show -> open, handleSave -> onSaveSuccess
+const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   const [productData, setProductData] = useState({
     productName: "",
     categoryId: "",
-    totalStock: 0, // Mặc định là 0, không cho phép nhập
-    thresholdStock: 0,
-    productImage: "", // Ban đầu là chuỗi rỗng, sẽ thay bằng file khi chọn
+    totalStock: 0,
+    productImage: null, // Dùng null thay vì chuỗi rỗng cho file
     unit: "",
     location: "",
     status: "active",
   });
-
+  const [imagePreview, setImagePreview] = useState(null); // State riêng cho ảnh preview
   const [categories, setCategories] = useState([]);
-  const [error, setError] = useState({
-    productName: "",
-    categoryId: "",
-    productImage: "",
-    unit: "",
-    location: "",
-    general: "",
-  });
+  const [errors, setErrors] = useState({}); // Đổi tên để tránh nhầm lẫn
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:9999/categories/getAllCategories")
-      .then((response) => setCategories(response.data))
-      .catch((error) => console.error("Error fetching categories:", error));
-  }, []);
+    if (open) {
+      // Chỉ fetch khi dialog mở
+      axios
+        .get("http://localhost:9999/categories/getAllCategories")
+        .then((response) => setCategories(response.data))
+        .catch((error) => console.error("Error fetching categories:", error));
+    } else {
+      // Reset form khi dialog đóng
+      setProductData({
+        productName: "", categoryId: "", totalStock: 0,
+        productImage: null, unit: "", location: "", status: "active",
+      });
+      setErrors({});
+      setImagePreview(null);
+      setLoading(false);
+    }
+  }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setProductData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-    setError((prevError) => ({
-      ...prevError,
-      [name]: "",
-    }));
+    setProductData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProductData((prevData) => ({
-        ...prevData,
-        productImage: file, // Lưu file vào productData
-      }));
-      validateProductImage(file); // Validate ngay khi chọn file
+      setProductData((prev) => ({ ...prev, productImage: file }));
+      // Tạo URL để preview ảnh
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      // Clean up URL object sau khi component unmount để tránh memory leak
+      // (useEffect sẽ xử lý việc này khi dialog đóng)
     } else {
-      setProductData((prevData) => ({
-        ...prevData,
-        productImage: "", // Reset nếu không chọn file
-      }));
-      validateProductImage(""); // Validate khi không có file
+      setProductData((prev) => ({ ...prev, productImage: null }));
+      setImagePreview(null);
+    }
+    if (errors.productImage) {
+        setErrors((prev) => ({ ...prev, productImage: "" }));
     }
   };
 
-  const validateProductName = () => {
-    if (!productData.productName) {
-      setError((prevError) => ({
-        ...prevError,
-        productName: "Tên sản phẩm không được bỏ trống.",
-      }));
-      return false;
+  const validate = async () => {
+    let tempErrors = {};
+    tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
+    tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
+    tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
+    tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
+    
+    if (!productData.productImage) {
+        tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
+    } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
+        tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
+    } else {
+        tempErrors.productImage = "";
     }
-    return true;
-  };
+    
+    setErrors(tempErrors);
 
-  const validateCategory = () => {
-    if (!productData.categoryId) {
-      setError((prevError) => ({
-        ...prevError,
-        categoryId: "Danh mục không được bỏ trống.",
-      }));
-      return false;
-    }
-    return true;
-  };
+    // Kiểm tra xem tất cả các giá trị trong tempErrors có rỗng không
+    const isValid = Object.values(tempErrors).every((x) => x === "");
 
-  const validateProductImage = (value = productData.productImage) => {
-    if (!value) {
-      setError((prevError) => ({
-        ...prevError,
-        productImage: "Hình ảnh sản phẩm không được bỏ trống.",
-      }));
-      return false;
-    }
-    if (value && typeof value !== "string" && !["image/jpeg", "image/png"].includes(value.type)) {
-      setError((prevError) => ({
-        ...prevError,
-        productImage: "Hình ảnh phải là định dạng JPEG hoặc PNG.",
-      }));
-      return false;
-    }
-    setError((prevError) => ({
-      ...prevError,
-      productImage: "",
-    }));
-    return true;
-  };
-
-  const validateUnit = () => {
-    if (!productData.unit) {
-      setError((prevError) => ({
-        ...prevError,
-        unit: "Đơn vị không được bỏ trống.",
-      }));
-      return false;
-    }
-    return true;
-  };
-
-  const validateLocation = () => {
-    if (!productData.location) {
-      setError((prevError) => ({
-        ...prevError,
-        location: "Vị trí không được bỏ trống.",
-      }));
-      return false;
-    }
-    return true;
-  };
-
-  const checkProductNameExistence = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:9999/products/checkProductName?name=${productData.productName}`
-      );
-      return response.data.exists;
-    } catch (error) {
-      console.error("Error checking product name:", error);
-      setError((prevError) => ({
-        ...prevError,
-        general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm.",
-      }));
-      return false;
-    }
-  };
-
- const onSave = async () => {
-  const isProductNameValid = validateProductName();
-  const isCategoryValid = validateCategory();
-  const isProductImageValid = validateProductImage();
-  const isUnitValid = validateUnit();
-  const isLocationValid = validateLocation();
-
-  const productNameExists = await checkProductNameExistence();
-  if (productNameExists) {
-    setError((prevError) => ({
-      ...prevError,
-      productName: "Sản phẩm đã tồn tại trong kho.",
-    }));
-    return;
-  }
-
-  if (
-    isProductNameValid &&
-    isCategoryValid &&
-    isProductImageValid &&
-    isUnitValid &&
-    isLocationValid
-  ) {
-    setLoading(true);
-    setError((prevError) => ({ ...prevError, general: "" }));
-
-    const formData = new FormData();
-    formData.append("productName", productData.productName);
-    formData.append("categoryId", productData.categoryId);
-    formData.append("totalStock", productData.totalStock); // Mặc định là 0
-    formData.append("productImage", productData.productImage); // Gửi file ảnh
-    formData.append("unit", productData.unit);
-    formData.append("location", productData.location);
-    formData.append("status", productData.status);
-
-    try {
-      const response = await axios.post(
-        "http://localhost:9999/products/createProduct",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+    if (isValid) {
+        // Chỉ kiểm tra tên khi các trường khác đã hợp lệ
+        try {
+            const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
+            if(response.data.exists) {
+                setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
+                return false;
+            }
+        } catch (error) {
+            console.error("Error checking product name:", error);
+            setErrors(prev => ({ ...prev, general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm." }));
+            return false;
         }
-      );
-      handleSave(); // Gọi lại hàm fetchAllProducts để cập nhật sản phẩm mới
-      setProductData({
-        productName: "",
-        categoryId: "",
-        totalStock: 0,
-        productImage: "",
-        unit: "",
-        location: "",
-        status: "active",
-      });
-      handleClose();
-    } catch (error) {
-      console.error("Error creating product:", error);
-      setError((prevError) => ({
-        ...prevError,
-        general: error.response?.data?.message || "Có lỗi xảy ra khi thêm sản phẩm.",
-      }));
-    } finally {
-      setLoading(false);
     }
-  }
-};
+    
+    return isValid;
+  };
 
+  const handleSave = async () => {
+    setErrors(prev => ({ ...prev, general: "" })); // Xóa lỗi chung cũ
+    const isValid = await validate();
+    
+    if (isValid) {
+      setLoading(true);
+      const formData = new FormData();
+      Object.entries(productData).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+
+      try {
+        await axios.post(
+          "http://localhost:9999/products/createProduct",
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+        onSaveSuccess(); // Gọi lại hàm fetchAllProducts
+        handleClose(); // Tự động đóng dialog
+      } catch (error) {
+        console.error("Error creating product:", error);
+        setErrors((prev) => ({
+          ...prev,
+          general: error.response?.data?.message || "Có lỗi xảy ra khi thêm sản phẩm.",
+        }));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
-    <Modal show={show} onHide={handleClose}>
-      <Modal.Header closeButton>
-        <Modal.Title>Thêm Sản Phẩm Mới</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error.general && <Alert variant="danger">{error.general}</Alert>}
-        <Form>
-          <Form.Group controlId="productName">
-            <Form.Label>Tên Sản Phẩm</Form.Label>
-            <Form.Control
-              type="text"
-              name="productName"
-              value={productData.productName}
-              onChange={handleChange}
-              onBlur={validateProductName}
-              isInvalid={!!error.productName}
-            />
-            <Form.Control.Feedback type="invalid">
-              {error.productName}
-            </Form.Control.Feedback>
-          </Form.Group>
+    // Dialog sẽ tự động quản lý zIndex và vị trí
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          {errors.general && <Alert severity="error">{errors.general}</Alert>}
 
-          <Form.Group controlId="categoryId">
-            <Form.Label>Danh Mục</Form.Label>
-            <Form.Control
-              as="select"
-              name="categoryId"
-              value={productData.categoryId}
-              onChange={handleChange}
-              onBlur={validateCategory}
-              isInvalid={!!error.categoryId}
+          <TextField
+            autoFocus
+            name="productName"
+            label="Tên Sản Phẩm"
+            value={productData.productName}
+            onChange={handleChange}
+            error={!!errors.productName}
+            helperText={errors.productName}
+            fullWidth
+          />
+          
+          <FormControl fullWidth error={!!errors.categoryId}>
+            <InputLabel id="category-select-label">Danh Mục</InputLabel>
+            <Select
+                labelId="category-select-label"
+                name="categoryId"
+                value={productData.categoryId}
+                label="Danh Mục"
+                onChange={handleChange}
             >
-              <option value="">Chọn danh mục</option>
-              {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.categoryName}
-                </option>
-              ))}
-            </Form.Control>
-            <Form.Control.Feedback type="invalid">
-              {error.categoryId}
-            </Form.Control.Feedback>
-          </Form.Group>
+                <MenuItem value="">
+                    <em>Chọn danh mục</em>
+                </MenuItem>
+                {categories.map((cat) => (
+                    <MenuItem key={cat._id} value={cat._id}>
+                        {cat.categoryName}
+                    </MenuItem>
+                ))}
+            </Select>
+            {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
+          </FormControl>
+          
+          <TextField
+            name="unit"
+            label="Đơn Vị (ví dụ: cái, hộp, kg)"
+            value={productData.unit}
+            onChange={handleChange}
+            error={!!errors.unit}
+            helperText={errors.unit}
+            fullWidth
+          />
 
-          {/* Bỏ phần Ngưỡng Tồn Kho */}
+          <TextField
+            name="location"
+            label="Vị Trí (ví dụ: Kệ A1, Kho B)"
+            value={productData.location}
+            onChange={handleChange}
+            error={!!errors.location}
+            helperText={errors.location}
+            fullWidth
+          />
 
-          <Form.Group controlId="productImage">
-            <Form.Label>Hình Ảnh Sản Phẩm</Form.Label>
-            <Form.Control
+          <FormControl fullWidth>
+            <InputLabel id="status-select-label">Trạng Thái</InputLabel>
+            <Select
+                labelId="status-select-label"
+                name="status"
+                value={productData.status}
+                label="Trạng Thái"
+                onChange={handleChange}
+            >
+                <MenuItem value="active">Đang bán</MenuItem>
+                <MenuItem value="inactive">Ngừng bán</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="outlined"
+            component="label"
+            color={errors.productImage ? "error" : "primary"}
+          >
+            Chọn Hình Ảnh
+            <input
               type="file"
-              name="productImage"
+              hidden
+              accept="image/png, image/jpeg"
               onChange={handleFileChange}
-              isInvalid={!!error.productImage}
             />
-            <Form.Control.Feedback type="invalid">
-              {error.productImage}
-            </Form.Control.Feedback>
+          </Button>
+          {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
+          
+          {imagePreview && (
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <img
+                src={imagePreview}
+                alt="Xem trước sản phẩm"
+                style={{ maxWidth: "200px", height: "auto", borderRadius: '8px' }}
+              />
+            </Box>
+          )}
 
-            {productData.productImage && typeof productData.productImage !== "string" && (
-              <div className="mt-3">
-                <img
-                  src={URL.createObjectURL(productData.productImage)}
-                  alt="Product Preview"
-                  style={{ maxWidth: "100%", height: "auto" }}
-                />
-              </div>
-            )}
-          </Form.Group>
-
-          <Form.Group controlId="unit">
-            <Form.Label>Đơn Vị</Form.Label>
-            <Form.Control
-              type="text"
-              name="unit"
-              value={productData.unit}
-              onChange={handleChange}
-              onBlur={validateUnit}
-              isInvalid={!!error.unit}
-            />
-            <Form.Control.Feedback type="invalid">
-              {error.unit}
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          <Form.Group controlId="location">
-            <Form.Label>Vị Trí</Form.Label>
-            <Form.Control
-              type="text"
-              name="location"
-              value={productData.location}
-              onChange={handleChange}
-              onBlur={validateLocation}
-              isInvalid={!!error.location}
-            />
-            <Form.Control.Feedback type="invalid">
-              {error.location}
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          <Form.Group controlId="status">
-            <Form.Label>Trạng Thái</Form.Label>
-            <Form.Control
-              as="select"
-              name="status"
-              value={productData.status}
-              onChange={handleChange}
-            >
-              <option value="active">Hoạt động</option>
-              <option value="inactive">Không hoạt động</option>
-            </Form.Control>
-          </Form.Group>
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          Đóng
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: '16px 24px' }}>
+        <Button onClick={handleClose} disabled={loading} color="secondary">
+          Hủy
         </Button>
-        <Button variant="primary" onClick={onSave} disabled={loading}>
-          {loading ? "Đang lưu..." : "Lưu"}
+        <Button onClick={handleSave} variant="contained" disabled={loading}>
+          {loading ? <CircularProgress size={24} /> : "Lưu Sản Phẩm"}
         </Button>
-      </Modal.Footer>
-    </Modal>
+      </DialogActions>
+    </Dialog>
   );
 };
 
