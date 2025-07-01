@@ -1,13 +1,15 @@
-import axios from "axios";
-const API_URL = "http://localhost:9999/products";
+import authorApi from "./baseAPI/authorAPI";
+import formDataApi from "./baseAPI/formDataAPI";
+
+const API_URL = "/products";
 
 const productAPI = {
-    getAll: () => axios.get(`${API_URL}/getAllProducts`),
-    getById: (id) => axios.get(`${API_URL}/getProductById/${id}`),
-    create: (formData) => axios.post(`${API_URL}/createProduct`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
-    update: (id, formData) => axios.put(`${API_URL}/updateProduct/${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
-    inactivate: (id) => axios.put(`${API_URL}/inactivateProduct/${id}`),
-    checkProductName: (name) => axios.get(`${API_URL}/checkProductName?name=${encodeURIComponent(name)}`),
+    getAll: () => authorApi.get(`${API_URL}/getAllProducts`),
+    getById: (id) => authorApi.get(`${API_URL}/getProductById/${id}`),
+    create: (formData) => formDataApi.post(`${API_URL}/createProduct`, formData),
+    update: (id, formData) => formDataApi.put(`${API_URL}/updateProduct/${id}`, formData),
+    inactivate: (id) => authorApi.put(`${API_URL}/inactivateProduct/${id}`),
+    checkProductName: (name) => authorApi.get(`${API_URL}/checkProductName?name=${encodeURIComponent(name)}`),
 };
 
 export default productAPI;

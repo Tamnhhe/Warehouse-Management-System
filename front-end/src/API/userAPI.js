@@ -1,13 +1,15 @@
-import axios from "axios";
-const API_URL = "http://localhost:9999/users";
+import authorApi from "./baseAPI/authorAPI";
+import formDataApi from "./baseAPI/formDataAPI";
+
+const API_URL = "/users";
 
 const userAPI = {
-    getProfile: (token) => axios.get(`${API_URL}/view-profile`, { headers: { Authorization: token } }),
-    editProfile: (formData, token) => axios.put(`${API_URL}/edit-profile`, formData, { headers: { Authorization: token, "Content-Type": "multipart/form-data" } }),
-    getAllUsers: (token) => axios.get(`${API_URL}/get-all-user`, { headers: { Authorization: token } }),
-    changePassword: (data, token) => axios.put(`${API_URL}/change-password`, data, { headers: { Authorization: token } }),
-    updateUser: (userId, data, token) => axios.put(`${API_URL}/update-user/${userId}`, data, { headers: { Authorization: token } }),
-    banUser: (id, token) => axios.put(`${API_URL}/banUser/${id}`, {}, { headers: { Authorization: token } }),
+    getProfile: () => authorApi.get(`${API_URL}/view-profile`),
+    editProfile: (formData) => formDataApi.put(`${API_URL}/edit-profile`, formData),
+    getAllUsers: () => authorApi.get(`${API_URL}/get-all-user`),
+    changePassword: (data) => authorApi.put(`${API_URL}/change-password`, data),
+    updateUser: (userId, data) => authorApi.put(`${API_URL}/update-user/${userId}`, data),
+    banUser: (id) => authorApi.put(`${API_URL}/banUser/${id}`),
 };
 
 export default userAPI;
