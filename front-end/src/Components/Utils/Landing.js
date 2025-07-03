@@ -20,7 +20,7 @@ import MoveToInboxIcon from "@mui/icons-material/MoveToInbox";
 import OutputIcon from "@mui/icons-material/Output";
 import BadgeIcon from "@mui/icons-material/Badge";
 import HandshakeIcon from "@mui/icons-material/Handshake";
-
+import AnalyticsIcon from "@mui/icons-material/Analytics";
 import Header from "./Header"; // Đảm bảo đường dẫn chính xác
 import Footer from "./Footer"; // Đảm bảo đường dẫn chính xác
 
@@ -30,6 +30,12 @@ const mainFunctions = [
     title: "Sản phẩm",
     icon: <Inventory2Icon />,
     path: "/product",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Thống kê",
+    icon: <AnalyticsIcon />,
+    path: "/dashboard",
     allowedRoles: ["manager", "employee"],
   },
   {
@@ -57,7 +63,7 @@ const mainFunctions = [
     allowedRoles: ["manager"],
   },
   {
-    title: "Đối tác",
+    title: "Nhà cung cấp",
     icon: <HandshakeIcon />,
     path: "/get-list-suppliers",
     allowedRoles: ["manager", "employee"],
@@ -201,6 +207,7 @@ function Landing() {
             <Typography
               variant="h2"
               component="h1"
+              color="#155E64"
               sx={{ fontWeight: "bold", mb: 2 }}
             >
               Movico Group
