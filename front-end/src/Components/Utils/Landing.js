@@ -1,169 +1,262 @@
-import React from 'react';
-import { Box, Container, Typography, Grid, Card, CardContent, CardMedia, Button, Paper } from '@mui/material';
-import Header from './Header'; // Đảm bảo đường dẫn chính xác
-import Footer from './Footer'; // Đảm bảo đường dẫn chính xác
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Paper,
+  Button,
+  TextField,
+  InputAdornment,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
-// Bảng màu để tiện sử dụng
-const palette = {
-  dark: '#155E64',
-  medium: '#75B39C',
-  light: '#A0E4D0',
+// Icons cho các chức năng
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import MoveToInboxIcon from "@mui/icons-material/MoveToInbox";
+import OutputIcon from "@mui/icons-material/Output";
+import BadgeIcon from "@mui/icons-material/Badge";
+import HandshakeIcon from "@mui/icons-material/Handshake";
+
+import Header from "./Header"; // Đảm bảo đường dẫn chính xác
+import Footer from "./Footer"; // Đảm bảo đường dẫn chính xác
+
+// --- DỮ LIỆU CHỨC NĂNG ---
+const mainFunctions = [
+  {
+    title: "Sản phẩm",
+    icon: <Inventory2Icon />,
+    path: "/product",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Kiểm kê",
+    icon: <FactCheckIcon />,
+    path: "/inventory-check",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Nhập hàng",
+    icon: <MoveToInboxIcon />,
+    path: "/create-receipt",
+    allowedRoles: ["manager"],
+  },
+  {
+    title: "Xuất hàng",
+    icon: <OutputIcon />,
+    path: "/export",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Nhân viên",
+    icon: <BadgeIcon />,
+    path: "/manager/get-all-user",
+    allowedRoles: ["manager"],
+  },
+  {
+    title: "Đối tác",
+    icon: <HandshakeIcon />,
+    path: "/get-list-suppliers",
+    allowedRoles: ["manager", "employee"],
+  },
+];
+
+// Helper function để lấy vai trò người dùng
+const getUserRole = () => {
+  const token = localStorage.getItem("authToken");
+  if (!token) return null;
+  try {
+    return jwtDecode(token).role;
+  } catch (error) {
+    return null;
+  }
 };
 
-// --- DỮ LIỆU GIỚI THIỆU SẢN PHẨM ---
-// Bạn hãy thay thế bằng sản phẩm thực tế của Movico Group
-
-const techProducts = [
-    {
-        img: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?q=80&w=1964&auto=format&fit=crop',
-        title: 'Laptop Hiệu Năng Cao',
-        description: 'Dòng laptop mới nhất với cấu hình mạnh mẽ, thiết kế mỏng nhẹ, đáp ứng mọi nhu cầu từ công việc đến giải trí.',
-    },
-    {
-        img: 'https://images.unsplash.com/photo-1604881991720-f91add269612?q=80&w=2070&auto=format&fit=crop',
-        title: 'Tai Nghe Khử Ồn Chủ Động',
-        description: 'Trải nghiệm âm thanh tinh khiết, đắm chìm trong không gian riêng tư với công nghệ khử ồn hàng đầu.',
-    },
-    {
-        img: 'https://images.unsplash.com/photo-1593305523952-62641a8777a8?q=80&w=2070&auto=format&fit=crop',
-        title: 'Đồng Hồ Thông Minh Thế Hệ Mới',
-        description: 'Không chỉ là một chiếc đồng hồ, mà còn là trợ lý sức khỏe và công việc tin cậy ngay trên cổ tay bạn.',
-    },
-];
-
-const fashionProducts = [
-    {
-        img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop',
-        title: 'Bộ Sưu Tập Áo Sơ Mi Lịch Lãm',
-        description: 'Thiết kế tinh tế trên nền chất liệu cao cấp, mang lại vẻ ngoài chuyên nghiệp và tự tin cho phái mạnh.',
-    },
-    {
-        img: 'https://i.pinimg.com/736x/a2/52/db/a252db76a66b77632e4a8e3ae8b43f93.jpg',
-        title: 'Váy Đầm Dạo Phố Sang Trọng',
-        description: 'Nét thanh lịch và quyến rũ được thể hiện qua từng đường cắt may, giúp bạn tỏa sáng trong mọi khoảnh khắc.',
-    },
-    {
-        img: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?q=80&w=1974&auto=format&fit=crop',
-        title: 'Quần Jeans & Phụ Kiện Năng Động',
-        description: 'Sự kết hợp hoàn hảo giữa phong cách và sự thoải mái, khẳng định cá tính riêng của bạn.',
-    },
-];
-
+// --- COMPONENT CON CHO MỘT "APP" THEO PHONG CÁCH ODOO ---
+const OdooAppButton = ({ title, icon, onClick }) => {
+  return (
+    <Box
+      onClick={onClick}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        cursor: "pointer",
+        p: { xs: 1, md: 2 },
+        borderRadius: "8px",
+        transition: "background-color 0.2s ease-in-out",
+        "&:hover": {
+          backgroundColor: "rgba(0, 0, 0, 0.04)",
+        },
+      }}
+    >
+      <Box
+        sx={{
+          width: { xs: 60, md: 72 },
+          height: { xs: 60, md: 72 },
+          borderRadius: "12px",
+          backgroundColor: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mb: 1,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          color: "#155E64", // Màu icon từ palette
+        }}
+      >
+        {React.cloneElement(icon, { sx: { fontSize: { xs: 32, md: 40 } } })}
+      </Box>
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: "500",
+          color: "text.secondary",
+          width: { xs: "70px", md: "90px" }, // Giới hạn chiều rộng của text
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {title}
+      </Typography>
+    </Box>
+  );
+};
 
 function Landing() {
-    return (
-        <Box sx={{ minHeight: '100vh', backgroundColor: '#fff' }}>
+  const navigate = useNavigate();
+  const userRole = getUserRole();
+  const [searchTerm, setSearchTerm] = React.useState("");
 
-            {/* --- Hero Section --- */}
-            <Paper elevation={0} sx={{
-                background: `linear-gradient(to right, ${palette.light}, ${palette.medium})`,
-                pb: 8,
-            }}>
-                <Header />
-                <Container>
-                    <Grid container alignItems="center" spacing={4} sx={{ pt: { xs: 4, md: 10 }, color: palette.dark }}>
-                        <Grid item md={7} xs={12}>
-                            <Typography variant="h2" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                                Movico Group
-                            </Typography>
-                            <Typography variant="h5" component="p" sx={{ mb: 4 }}>
-                                Nơi công nghệ đỉnh cao gặp gỡ phong cách thời thượng.
-                            </Typography>
-                            <Typography variant="body1" sx={{ maxWidth: '550px', mb: 4 }}>
-                                Chúng tôi tự hào mang đến những sản phẩm công nghệ tiên tiến và các bộ sưu tập thời trang đẳng cấp, tất cả được vận hành bởi một hệ thống kho vận thông minh và hiệu quả.
-                            </Typography>
-                            <Button variant="contained" size="large" sx={{ 
-                                backgroundColor: palette.dark,
-                                '&:hover': { backgroundColor: '#104c50' },
-                                px: 4,
-                                py: 1.5
-                            }}>
-                                Khám Phá Ngay
-                            </Button>
-                        </Grid>
-                        <Grid item md={5} xs={12} sx={{ textAlign: 'center', display: { xs: 'none', md: 'block' } }}>
-                            <Box
-                                component="img"
-                                src="/images/287930.png" // Gợi ý: Dùng ảnh ghép sản phẩm tech và fashion
-                                alt="Movico Group Products"
-                                sx={{ maxWidth: '100%', height: 'auto' }}
-                            />
-                        </Grid>
-                    </Grid>
-                </Container>
-            </Paper>
-
-            {/* --- Section giới thiệu Sản phẩm Công nghệ --- */}
-            <Container sx={{ py: 8 }}>
-                <Typography variant="h4" component="h2" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    Sản Phẩm Công Nghệ
-                </Typography>
-                <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 6 }}>
-                    Tiên phong trong đổi mới, mang đến những trải nghiệm vượt trội.
-                </Typography>
-                <Grid container spacing={4}>
-                    {techProducts.map((product, index) => (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
-                            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.3s', '&:hover': { boxShadow: 6 } }}>
-                                <CardMedia component="img" height="240" image={product.img} alt={product.title} />
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                    <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: '600' }}>
-                                        {product.title}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {product.description}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Container>
-            
-            {/* --- Section giới thiệu Thời trang --- */}
-            <Box sx={{ backgroundColor: '#f7f9fc', py: 8 }}>
-                <Container>
-                     <Typography variant="h4" component="h2" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
-                        Thời Trang Đẳng Cấp
-                    </Typography>
-                    <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 6 }}>
-                        Khẳng định phong cách, dẫn đầu xu hướng.
-                    </Typography>
-                    <Grid container spacing={4}>
-                        {fashionProducts.map((product, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.3s', '&:hover': { boxShadow: 6 } }}>
-                                    <CardMedia component="img" height="240" image={product.img} alt={product.title} />
-                                    <CardContent sx={{ flexGrow: 1 }}>
-                                        <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: '600' }}>
-                                            {product.title}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {product.description}
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
-                    </Grid>
-                </Container>
-            </Box>
-
-            {/* --- Section Nền tảng Vững chắc --- */}
-            <Container sx={{ py: 8 }}>
-                <Typography variant="h4" component="h2" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    Nền Tảng Vững Chắc
-                </Typography>
-                <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 6, maxWidth: '700px', mx: 'auto' }}>
-                    Thành công của chúng tôi được xây dựng trên nền tảng quản lý kho vận tối ưu, đảm bảo mỗi sản phẩm đến tay bạn đều nhanh chóng, chính xác và an toàn.
-                </Typography>
-                 {/* Bạn có thể thêm 1-2 hình ảnh về kho bãi ở đây nếu muốn */}
-            </Container>
-
-
-            <Footer />
-        </Box>
+  const accessibleFunctions = mainFunctions
+    .filter((func) => userRole && func.allowedRoles.includes(userRole))
+    .filter((func) =>
+      func.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
-}
 
+  // --- RENDER GIAO DIỆN KIỂU ODOO ---
+  const renderOdooStyleDashboard = () => (
+    <Box
+      sx={{
+        flexGrow: 1,
+        backgroundColor: "#f7f9fc", // Màu nền sáng giống Odoo
+        overflowY: "auto",
+        p: { xs: 2, md: 4 },
+      }}
+    >
+      <Container maxWidth="lg">
+        {/* Thanh tìm kiếm */}
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Tìm kiếm ứng dụng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            mb: 4,
+            maxWidth: "500px",
+            display: "block",
+            mx: "auto",
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "20px",
+              backgroundColor: "#fff",
+            },
+          }}
+        />
+
+        {/* Lưới các ứng dụng */}
+        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+          {accessibleFunctions.map((func) => (
+            // Bố cục responsive: 4 cột trên mobile (xs), 6 cột trên desktop (md)
+            <Grid item key={func.title} xs={3} md={2}>
+              <OdooAppButton
+                title={func.title}
+                icon={func.icon}
+                onClick={() => navigate(func.path)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+
+  // --- RENDER GIAO DIỆN MARKETING KHI CHƯA ĐĂNG NHẬP ---
+  const renderMarketingPage = () => (
+    <Paper elevation={0} sx={{ py: 8 }}>
+      <Container>
+        <Grid container alignItems="center" spacing={4}>
+          <Grid item md={7} xs={12}>
+            <Typography
+              variant="h2"
+              component="h1"
+              sx={{ fontWeight: "bold", mb: 2 }}
+            >
+              Movico Group
+            </Typography>
+            <Typography
+              variant="h5"
+              component="p"
+              sx={{ mb: 4, color: "#155E64" }}
+            >
+              Nơi công nghệ gặp gỡ phong cách.
+            </Typography>
+            <Typography variant="body1" sx={{ maxWidth: "550px", mb: 4 }}>
+              Hệ thống quản lý kho vận thông minh, hiệu quả cho mọi ngành hàng.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={() => navigate("/login")}
+              sx={{
+                backgroundColor: "#155E64",
+                "&:hover": { backgroundColor: "#104c50" },
+                px: 4,
+                py: 1.5,
+              }}
+            >
+              Đăng Nhập Hệ Thống
+            </Button>
+          </Grid>
+          <Grid
+            item
+            md={5}
+            xs={12}
+            sx={{ textAlign: "center", display: { xs: "none", md: "block" } }}
+          >
+            <Box
+              component="img"
+              src="/images/287930.png"
+              alt="Movico Group"
+              sx={{ maxWidth: "100%", height: "auto" }}
+            />
+          </Grid>
+        </Grid>
+      </Container>
+    </Paper>
+  );
+  return (
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      <Header />
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+      >
+        {userRole ? renderOdooStyleDashboard() : renderMarketingPage()}
+      </Box>
+      {!userRole && <Footer />}
+    </Box>
+  );
+}
 export default Landing;

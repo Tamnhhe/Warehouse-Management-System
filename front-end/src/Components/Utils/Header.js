@@ -1,7 +1,7 @@
 // Header.js
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 
@@ -26,21 +26,24 @@ import {
   ListItemButton,
   ListItemText,
   Divider,
+  Badge,
 } from "@mui/material";
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import MenuIcon from '@mui/icons-material/Menu'; // Icon Hamburger
+import NotificationsIcon from "@mui/icons-material/Notifications";
+
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import MenuIcon from "@mui/icons-material/Menu"; // Icon Hamburger
 
 // Bảng màu của bạn
 const palette = {
-  dark: '#155E64',
-  medium: '#75B39C',
-  light: '#A0E4D0',
-  white: '#FFFFFF',
-  black: '#000000'
+  dark: "#155E64",
+  medium: "#75B39C",
+  light: "#A0E4D0",
+  white: "#FFFFFF",
+  black: "#000000",
 };
 
 const navButtonHoverStyle = {
-  '&:hover': {
+  "&:hover": {
     backgroundColor: palette.dark,
     color: palette.white,
   },
@@ -60,15 +63,16 @@ const getUserRole = () => {
 
 function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentToken = localStorage.getItem("authToken");
   const userRole = getUserRole();
-
+  const isHomePage = location.pathname === "/";
   // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState(null);
   const [transactionMenuAnchor, setTransactionMenuAnchor] = useState(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
   const [partnerMenuAnchor, setPartnerMenuAnchor] = useState(null);
-  
+
   // <-- KHU VỰC THAY ĐỔI: State cho mobile drawer -->
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -80,9 +84,12 @@ function Header() {
     const fetchProfile = async () => {
       if (currentToken) {
         try {
-          const response = await axios.get("http://localhost:9999/users/view-profile", {
-            headers: { Authorization: currentToken },
-          });
+          const response = await axios.get(
+            "http://localhost:9999/users/view-profile",
+            {
+              headers: { Authorization: currentToken },
+            }
+          );
           setProfile(response.data);
         } catch (err) {
           console.error("Không thể tải thông tin người dùng cho header:", err);
@@ -93,18 +100,21 @@ function Header() {
   }, [currentToken]);
 
   // --- HANDLERS ---
-  const handleTransactionMenuClick = (event) => setTransactionMenuAnchor(event.currentTarget);
+  const handleTransactionMenuClick = (event) =>
+    setTransactionMenuAnchor(event.currentTarget);
   const handleTransactionMenuClose = () => setTransactionMenuAnchor(null);
-  const handleProfileMenuOpen = (event) => setProfileMenuAnchor(event.currentTarget);
+  const handleProfileMenuOpen = (event) =>
+    setProfileMenuAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileMenuAnchor(null);
-  const handlePartnerMenuClick = (event) => setPartnerMenuAnchor(event.currentTarget);
+  const handlePartnerMenuClick = (event) =>
+    setPartnerMenuAnchor(event.currentTarget);
   const handlePartnerMenuClose = () => setPartnerMenuAnchor(null);
-  
+
   // <-- KHU VỰC THAY ĐỔI: Handler cho mobile drawer -->
   const handleDrawerToggle = () => {
     setMobileOpen((prevState) => !prevState);
   };
-  
+
   const handleNavigate = (path) => {
     navigate(path);
     handleTransactionMenuClose();
@@ -122,37 +132,67 @@ function Header() {
     handleProfileMenuClose();
     navigate("/login");
   };
-  
+
   const avatarUrl = profile?.profile?.avatar
     ? `http://localhost:9999${profile.profile.avatar}`
     : "/images/avatar/default.png";
 
   // --- NAVIGATION ITEMS ---
   const navItems = [
-    { label: 'Thống kê', path: '/dashboard', allowedRoles: ['manager'] },
-    { label: 'Sản phẩm', path: '/product', allowedRoles: ['manager', 'employee'] },
-    { label: 'Danh mục', path: '/category', allowedRoles: ['manager'] },
-    { label: 'Nhân viên', path: '/manager/get-all-user', allowedRoles: ['manager'] },
+    { label: "Thống kê", path: "/dashboard", allowedRoles: ["manager"] },
+    {
+      label: "Sản phẩm",
+      path: "/product",
+      allowedRoles: ["manager", "employee"],
+    },
+    { label: "Danh mục", path: "/category", allowedRoles: ["manager"] },
+    {
+      label: "Nhân viên",
+      path: "/manager/get-all-user",
+      allowedRoles: ["manager"],
+    },
   ];
 
   const partnerMenuItems = [
-    { label: 'Nhà cung cấp', path: '/get-list-suppliers', allowedRoles: ['manager', 'employee'] },
-    { label: 'Khách hàng', path: '/listcustomer', allowedRoles: ['manager', 'employee'] },
+    {
+      label: "Nhà cung cấp",
+      path: "/get-list-suppliers",
+      allowedRoles: ["manager", "employee"],
+    },
+    {
+      label: "Khách hàng",
+      path: "/listcustomer",
+      allowedRoles: ["manager", "employee"],
+    },
   ];
 
   const transactionMenuItems = [
-    { label: 'Nhập Kho', path: '/create-receipt', allowedRoles: ['manager'] },
-    { label: 'Xuất Kho', path: '/export', allowedRoles: ['manager', 'employee'] },
-    { label: 'Danh Sách Giao Dịch', path: '/list-transaction', allowedRoles: ['manager'] },
+    { label: "Nhập Kho", path: "/create-receipt", allowedRoles: ["manager"] },
+    {
+      label: "Xuất Kho",
+      path: "/export",
+      allowedRoles: ["manager", "employee"],
+    },
+    {
+      label: "Danh Sách Giao Dịch",
+      path: "/list-transaction",
+      allowedRoles: ["manager"],
+    },
   ];
-  
-  const visibleNavItems = navItems.filter(item => userRole && item.allowedRoles.includes(userRole));
-  const visiblePartnerItems = partnerMenuItems.filter(item => userRole && item.allowedRoles.includes(userRole));
-  const visibleTransactionItems = transactionMenuItems.filter(item => userRole && item.allowedRoles.includes(userRole));
-  
+
+  const visibleNavItems = navItems.filter(
+    (item) => userRole && item.allowedRoles.includes(userRole)
+  );
+  const visiblePartnerItems = partnerMenuItems.filter(
+    (item) => userRole && item.allowedRoles.includes(userRole)
+  );
+  const visibleTransactionItems = transactionMenuItems.filter(
+    (item) => userRole && item.allowedRoles.includes(userRole)
+  );
+
   // <-- KHU VỰC THAY ĐỔI LỚN: Nội dung cho Drawer trên mobile -->
   const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: "center" }}>
       <Typography variant="h6" sx={{ my: 2, color: palette.dark }}>
         Movico Group
       </Typography>
@@ -161,7 +201,10 @@ function Header() {
         {/* Kết hợp tất cả các mục điều hướng vào một danh sách */}
         {visibleNavItems.map((item) => (
           <ListItem key={item.path} disablePadding>
-            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+            <ListItemButton
+              sx={{ textAlign: "left" }}
+              onClick={() => handleNavigate(item.path)}
+            >
               <ListItemText primary={item.label} />
             </ListItemButton>
           </ListItem>
@@ -169,7 +212,10 @@ function Header() {
         {visiblePartnerItems.length > 0 && <Divider>Đối tác</Divider>}
         {visiblePartnerItems.map((item) => (
           <ListItem key={item.path} disablePadding>
-            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+            <ListItemButton
+              sx={{ textAlign: "left" }}
+              onClick={() => handleNavigate(item.path)}
+            >
               <ListItemText primary={item.label} />
             </ListItemButton>
           </ListItem>
@@ -177,7 +223,10 @@ function Header() {
         {visibleTransactionItems.length > 0 && <Divider>Giao dịch</Divider>}
         {visibleTransactionItems.map((item) => (
           <ListItem key={item.path} disablePadding>
-            <ListItemButton sx={{ textAlign: 'left' }} onClick={() => handleNavigate(item.path)}>
+            <ListItemButton
+              sx={{ textAlign: "left" }}
+              onClick={() => handleNavigate(item.path)}
+            >
               <ListItemText primary={item.label} />
             </ListItemButton>
           </ListItem>
@@ -188,11 +237,19 @@ function Header() {
 
   return (
     <>
-      <AppBar position="sticky" sx={{ top: 0, zIndex: 1100, backgroundColor: palette.medium, color: palette.white }}>
+      <AppBar
+        position="sticky"
+        sx={{
+          top: 0,
+          zIndex: 1100,
+          backgroundColor: palette.medium,
+          color: palette.white,
+        }}
+      >
         <Container maxWidth="xl">
           <Toolbar disableGutters>
-             {/* --- Giao diện Mobile: Icon Hamburger --- */}
-            {isMobile && currentToken && (
+            {/* --- Giao diện Mobile: Icon Hamburger --- */}
+            {isMobile && currentToken && !isHomePage && (
               <IconButton
                 color="inherit"
                 aria-label="open drawer"
@@ -206,47 +263,92 @@ function Header() {
             {/* --- Logo (Căn giữa trên mobile) --- */}
             <Typography
               variant="h6"
-              onClick={() => navigate(userRole === 'manager' ? "/" : "/product")}
+              onClick={() =>
+                navigate(userRole === "manager" ? "/" : "/product")
+              }
               sx={{
                 fontWeight: "bold",
                 cursor: "pointer",
                 "&:hover": { opacity: 0.9 },
                 flexGrow: isMobile ? 1 : 0, // Đẩy logo ra giữa trên mobile
-                textAlign: isMobile ? 'center' : 'left',
+                textAlign: isMobile ? "center" : "left",
               }}
             >
               Movico Group
             </Typography>
 
             {/* --- Giao diện Desktop: Các nút điều hướng --- */}
-            {!isMobile && currentToken && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 3 }}>
+            {!isMobile && currentToken && !isHomePage && (
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, ml: 3 }}
+              >
                 {visibleNavItems.map((item) => (
-                  <Button key={item.path} color="inherit" onClick={() => navigate(item.path)} sx={navButtonHoverStyle}>
+                  <Button
+                    key={item.path}
+                    color="inherit"
+                    onClick={() => navigate(item.path)}
+                    sx={navButtonHoverStyle}
+                  >
                     {item.label}
                   </Button>
                 ))}
-                
+
                 {visiblePartnerItems.length > 0 && (
                   <>
-                    <Button color="inherit" onClick={handlePartnerMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>Đối tác</Button>
-                    <Menu anchorEl={partnerMenuAnchor} open={Boolean(partnerMenuAnchor)} onClose={handlePartnerMenuClose}>
-                      {visiblePartnerItems.map(item => (<MenuItem key={item.path} onClick={() => handleNavigate(item.path)}>{item.label}</MenuItem>))}
+                    <Button
+                      color="inherit"
+                      onClick={handlePartnerMenuClick}
+                      endIcon={<ArrowDropDownIcon />}
+                      sx={navButtonHoverStyle}
+                    >
+                      Đối tác
+                    </Button>
+                    <Menu
+                      anchorEl={partnerMenuAnchor}
+                      open={Boolean(partnerMenuAnchor)}
+                      onClose={handlePartnerMenuClose}
+                    >
+                      {visiblePartnerItems.map((item) => (
+                        <MenuItem
+                          key={item.path}
+                          onClick={() => handleNavigate(item.path)}
+                        >
+                          {item.label}
+                        </MenuItem>
+                      ))}
                     </Menu>
                   </>
                 )}
 
                 {visibleTransactionItems.length > 0 && (
                   <>
-                    <Button color="inherit" onClick={handleTransactionMenuClick} endIcon={<ArrowDropDownIcon />} sx={navButtonHoverStyle}>Giao Dịch</Button>
-                    <Menu anchorEl={transactionMenuAnchor} open={Boolean(transactionMenuAnchor)} onClose={handleTransactionMenuClose}>
-                       {visibleTransactionItems.map(item => (<MenuItem key={item.path} onClick={() => handleNavigate(item.path)}>{item.label}</MenuItem>))}
+                    <Button
+                      color="inherit"
+                      onClick={handleTransactionMenuClick}
+                      endIcon={<ArrowDropDownIcon />}
+                      sx={navButtonHoverStyle}
+                    >
+                      Giao Dịch
+                    </Button>
+                    <Menu
+                      anchorEl={transactionMenuAnchor}
+                      open={Boolean(transactionMenuAnchor)}
+                      onClose={handleTransactionMenuClose}
+                    >
+                      {visibleTransactionItems.map((item) => (
+                        <MenuItem
+                          key={item.path}
+                          onClick={() => handleNavigate(item.path)}
+                        >
+                          {item.label}
+                        </MenuItem>
+                      ))}
                     </Menu>
                   </>
                 )}
               </Box>
             )}
-            
+
             {/* --- Box này để đẩy phần Profile/Login sang phảiสุด --- */}
             {!isMobile && <Box sx={{ flexGrow: 1 }} />}
 
@@ -254,30 +356,68 @@ function Header() {
             <Box>
               {currentToken ? (
                 <>
+                  <Tooltip title="Thông báo">
+                    <IconButton color="inherit" aria-label="show notifications">
+                      <Badge badgeContent={4} color="error">
+                        <NotificationsIcon
+                          sx={{ color: isHomePage ? "action" : "inherit" }}
+                        />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title={profile?.fullName || "Tài khoản"}>
-                    <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0.5, borderRadius: '8px' }}>
-                      <Avatar alt={profile?.fullName} src={avatarUrl} sx={{ width: 32, height: 32 }}/>
+                    <IconButton
+                      onClick={handleProfileMenuOpen}
+                      sx={{ p: 0.5, borderRadius: "8px" }}
+                    >
+                      <Avatar
+                        alt={profile?.fullName}
+                        src={avatarUrl}
+                        sx={{ width: 32, height: 32 }}
+                      />
                       <ArrowDropDownIcon sx={{ color: palette.white }} />
                     </IconButton>
                   </Tooltip>
                   <Menu
-                    sx={{ mt: '45px' }}
+                    sx={{ mt: "45px" }}
                     anchorEl={profileMenuAnchor}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "right" }}
                     open={Boolean(profileMenuAnchor)}
                     onClose={handleProfileMenuClose}
                   >
-                    <MenuItem onClick={() => handleNavigate('/view-profile')}>Tài khoản</MenuItem>
+                    <MenuItem onClick={() => handleNavigate("/view-profile")}>
+                      Tài khoản
+                    </MenuItem>
                     <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
                   </Menu>
                 </>
               ) : (
-                <Box sx={{ display: 'flex' }}>
-                  <Button variant="contained" sx={{ backgroundColor: palette.dark, '&:hover': { backgroundColor: '#104c50' }, fontSize: { xs: '0.75rem', sm: '0.875rem' } }} onClick={() => navigate("/login")}>
+                <Box sx={{ display: "flex" }}>
+                  <Button
+                    variant="contained"
+                    sx={{
+                      backgroundColor: palette.dark,
+                      "&:hover": { backgroundColor: "#104c50" },
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                    }}
+                    onClick={() => navigate("/login")}
+                  >
                     Đăng nhập
                   </Button>
-                  <Button variant="outlined" onClick={() => navigate("/register")} sx={{ ml: { xs: 1, sm: 2 }, color: palette.white, borderColor: palette.white, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }, fontSize: { xs: '0.75rem', sm: '0.875rem' }}}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate("/register")}
+                    sx={{
+                      ml: { xs: 1, sm: 2 },
+                      color: palette.white,
+                      borderColor: palette.white,
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      },
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                    }}
+                  >
                     Đăng ký
                   </Button>
                 </Box>
@@ -295,8 +435,8 @@ function Header() {
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }} // Cải thiện SEO và performance trên mobile
           sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": { boxSizing: "border-box", width: 240 },
           }}
         >
           {drawer}
