@@ -13,7 +13,7 @@ import ResetPassword from "./Components/Login_Components/ResetPassword";
 import ConfirmAccount from "./Components/Login_Components/ConfirmAccount";
 import CreateEmployee from "./Components/Manager_Components/CreateEmployee";
 // Bỏ import ProductWarehouse vì không thấy dùng trong Routes
-// import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse"; 
+// import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse";
 import ViewProfile from "./Components/User_Components/ViewProfile";
 import EditProfile from "./Components/User_Components/EditProfile";
 import ChangePassword from "./Components/User_Components/ChangePassword";
@@ -27,7 +27,7 @@ import ListAllUsers from "./Components/Manager_Components/ListAllUsers";
 import Header from "./Components/Utils/Header";
 import ListCategory from "./Components/Category_Components/ListCategory";
 // Bỏ import Sidebar vì không dùng nữa
-// import Sidebar from "./Components/Utils/Sidebar"; 
+// import Sidebar from "./Components/Utils/Sidebar";
 import ProductList from "./Components/Product_Components/ProductList";
 import SupplierList from "./Components/Supplier_Components/SupplierList";
 import AddNewSuppliers from "./Components/Supplier_Components/AddNewSupplier";
@@ -37,7 +37,7 @@ import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
-
+import ListReceipts from "./Components/Transaction_Components/ListReceipts";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
@@ -58,7 +58,7 @@ const Layout = ({ children }) => {
   const shouldHide = hidePaths.some((path) =>
     matchPath(path, location.pathname)
   );
-  
+
   // Nếu là trang không cần Header, chỉ render nội dung trang
   if (shouldHide) {
     return <>{children}</>;
@@ -139,13 +139,23 @@ function App() {
             }
           />
           <Route
-            path="/create-receipt"
+            path="/receipts"
             element={
               <ProtectedRoute allowedRoles={["manager"]}>
+                <ListReceipts />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/receipt/create"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
                 <CreateReceipt />
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/list-transaction"
             element={

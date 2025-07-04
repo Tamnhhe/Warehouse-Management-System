@@ -167,7 +167,7 @@ function Header() {
   ];
 
   const transactionMenuItems = [
-    { label: "Nhập Kho", path: "/create-receipt", allowedRoles: ["manager"] },
+    { label: "Phiếu Nhập Kho", path: "/receipts", allowedRoles: ["manager"] },
     {
       label: "Xuất Kho",
       path: "/export",
