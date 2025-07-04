@@ -23,7 +23,7 @@ import HandshakeIcon from "@mui/icons-material/Handshake";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import Header from "./Header"; // Đảm bảo đường dẫn chính xác
 import Footer from "./Footer"; // Đảm bảo đường dẫn chính xác
-
+import Palette from "@mui/icons-material/Palette"; // <-- ĐÚNG
 // --- DỮ LIỆU CHỨC NĂNG ---
 const mainFunctions = [
   {
@@ -49,6 +49,12 @@ const mainFunctions = [
     icon: <MoveToInboxIcon />,
     path: "/create-receipt",
     allowedRoles: ["manager"],
+  },
+  {
+    title: "Kệ hàng",
+    icon: <Palette />,
+    path: "/",
+    allowedRoles: ["manager", "employee"],
   },
   {
     title: "Xuất hàng",
