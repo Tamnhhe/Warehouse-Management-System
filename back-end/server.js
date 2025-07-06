@@ -9,6 +9,8 @@ const cors = require("cors");
 const app = express();
 const db = require("./models/index");
 const router = require("./routes");
+const inventoryRouter = require('./routes/inventory.router');
+const categoryRouter = require('./routes/category.route');
 //Cung cấp URl công khai để lấy ảnh thông qua thư mục /uploads
 //cho phep truy cap anh bang url tren server 
 //hien thi bang url /../.. nho express staticstatic
@@ -24,7 +26,8 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(bodyParser.json());
-
+app.use('/inventory', inventoryRouter);
+app.use('/category', categoryRouter); 
 app.get("/", async (req, res, next) => {
   res.status(200).json({ message: "Server is running" });
 });

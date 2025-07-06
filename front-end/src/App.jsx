@@ -38,6 +38,7 @@ import ExportDetail from "./Components/Transaction_Components/ExportDetail";
 import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
 import ListReceipts from "./Components/Transaction_Components/ListReceipts";
+import InventoryCheck from "./Components/Inventory_Components/InventoryCheck";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
@@ -236,6 +237,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+         <Route
+  path="/inventory-check"
+  element={
+    <ProtectedRoute allowedRoles={["manager", "employee"]}>
+      <InventoryCheck />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/dashboard"
             element={
