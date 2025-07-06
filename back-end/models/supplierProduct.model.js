@@ -23,7 +23,35 @@ const SupplierProductSchema = new mongoose.Schema({
     },
     expiry: { // Hạn sử dụng (nếu có)
         type: Date
-    }
+    },
+    Category: { // Danh mục sản phẩm
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: true
+    },
+    productImage: { // Hình ảnh sản phẩm
+        type: String,
+        required: true
+    },
+    productName: { // Tên sản phẩm
+        type: String,
+        required: true,
+        trim: true
+    },
+    quantitative:{
+        type: Number, // Đơn vị đo lường (ví dụ: kg, lít, cái, v.v.)
+        required: true,
+        trim: true
+    },
+    createdAt: { // Ngày tạo bản ghi
+        type: Date,
+        default: Date.now
+    },
+    unit: { // Đơn vị tính của sản phẩm
+        type: String,
+        required: true,
+        trim: true
+    },
 });
 
 const SupplierProduct = mongoose.model('SupplierProduct', SupplierProductSchema);

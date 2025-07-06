@@ -17,8 +17,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddCategoryDialog from './AddCategory';
 import EditCategoryDialog from './EditCategory';
 
+import useCategory from '../../Hooks/useCategory';
 function ListCategory() {
-  const [categories, setCategories] = useState([]);
+  const { categories, getAllCategories, createCategory } = useCategory();
   const [filterText, setFilterText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'categoryName', direction: 'asc' });
   const [statusFirst, setStatusFirst] = useState('active'); // 'active' hoặc 'inactive'
@@ -31,13 +32,7 @@ function ListCategory() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const fetchCategories = useCallback(async () => {
-    try {
-      const response = await axios.get("http://localhost:9999/categories/getAllCategories");
-      setCategories(response.data);
-      setError(null); // Clear previous errors on success
-    } catch (error) {
-      setError("Không thể tải danh sách danh mục. Vui lòng thử lại.");
-    }
+    await getAllCategories();
   }, []);
 
   useEffect(() => {

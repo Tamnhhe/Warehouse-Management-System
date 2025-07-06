@@ -4,6 +4,7 @@ const API_URL = "/categories";
 
 const categoryAPI = {
     getAll: () => authorApi.get(`${API_URL}/getAllCategories`),
+    get: (id) => authorApi.get(`${API_URL}/getCategoryById/${id}`),
     add: (data) => authorApi.post(`${API_URL}/addCategory`, data),
     update: (id, data) => authorApi.put(`${API_URL}/updateCategory/${id}`, data),
     inactivate: (id) => authorApi.put(`${API_URL}/inactivateCategory/${id}`),
