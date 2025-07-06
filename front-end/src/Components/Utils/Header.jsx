@@ -160,6 +160,11 @@ function Header() {
       allowedRoles: ["manager", "employee"],
     },
     {
+      label: "Quản lý Nhà cung cấp - Sản phẩm",
+      path: "/manager/manage-supplier-products",
+      allowedRoles: ["manager"],
+    },
+    {
       label: "Khách hàng",
       path: "/listcustomer",
       allowedRoles: ["manager", "employee"],

@@ -32,6 +32,7 @@ import ProductList from "./Components/Product_Components/ProductList";
 import SupplierList from "./Components/Supplier_Components/SupplierList";
 import AddNewSuppliers from "./Components/Supplier_Components/AddNewSupplier";
 import EditSuppliers from "./Components/Supplier_Components/EditSuppliers";
+import ManageSupplierProducts from "./Components/Supplier_Components/ManageSupplierProducts";
 import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
@@ -225,6 +226,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["manager"]}>
                 <EditSuppliers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/manage-supplier-products"
+            element={
+              <ProtectedRoute allowedRoles={["manager"]}>
+                <ManageSupplierProducts />
               </ProtectedRoute>
             }
           />
