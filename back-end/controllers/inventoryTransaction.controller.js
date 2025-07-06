@@ -46,21 +46,22 @@ const createTransaction = async (req, res, next) => {
   await newTransaction.save();
 
   // Nếu là giao dịch xuất kho, cập nhật tồn kho
-if (transactionType === "export") {
-  for (const p of products) {
-    const supplierProduct = await SupplierProduct.findById(p.supplierProductId).populate("product");
+  // if (transactionType === "export") {
+  //   for (const p of products) {
+  //     const supplierProduct = await SupplierProduct.findById(p.supplierProductId).populate("product");
 
-    if (supplierProduct && supplierProduct.product) {
-      const productId = supplierProduct.product._id;
+  //     if (supplierProduct && supplierProduct.product) {
+  //       const productId = supplierProduct.product._id;
 
-      // Trừ đi số lượng hàng xuất
-      await Product.findByIdAndUpdate(
-        productId,
-        { $inc: { totalStock: -p.requestQuantity } }
-      );
-    }
-  }
-}
+  //       // Trừ đi số lượng hàng xuất
+  //       await Product.findByIdAndUpdate(
+  //         productId,
+  //         { $inc: { totalStock: -p.requestQuantity } }
+  //       );
+  //     }
+  //   }
+  // }
+
   return res
     .status(201)
     .json({ message: "Giao dịch được tạo thành công", newTransaction });
@@ -71,16 +72,6 @@ if (transactionType === "export") {
 };
 
 // Lấy tất cả giao dịch xuất/nhập kho
-// const getAllTransactions = async (req, res) => {
-//   try {
-//     const transactions = await InventoryTransaction.find()
-//       .populate("products.productId")
-//       .populate("operator");
-//     res.status(200).json(transactions);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 const getAllTransactions = async (req, res) => {
   try {
     const transactions = await InventoryTransaction.find()
@@ -129,7 +120,70 @@ const updateTransactionStatus = async (req, res) => {
     const { status } = req.body;
     const transactionId = req.params.id;
 
-    console.log("Cập nhật trạng thái:", transactionId, status);
+    const transaction = await InventoryTransaction.findById(transactionId)
+      .populate({
+        path: "products.supplierProductId",
+        model: "SupplierProduct",
+        populate: {
+          path: "product",
+          model: "Product",
+          select: "productName",
+        },
+      })
+      .populate("operator");
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Giao dịch không tồn tại!" });
+    }
+
+    //Extract products from the transaction
+    const products = transaction.products.map((p) => ({
+      supplierProductId: p.supplierProductId._id,
+      requestQuantity: p.requestQuantity,
+      receiveQuantity: p.receiveQuantity,
+      defectiveProduct: p.defectiveProduct,
+      achievedProduct: p.achievedProduct,
+      price: p.price,
+      expiry: p.expiry,
+    }));
+
+    //Update product when status is 'completed' and transaction type is 'import'
+    if (status === "completed" && transaction.transactionType === "import") {
+      for (const product of products) {
+        const supplierProduct = await SupplierProduct.findById(
+          product.supplierProductId
+        ).populate("product");
+        if (supplierProduct && supplierProduct.product) {
+          const productId = supplierProduct.product._id;
+          // Cập nhật tồn kho của sản phẩm
+          await
+            Product.findByIdAndUpdate(
+              productId,
+              { $inc: { totalStock: product.achievedProduct } }
+            );
+        }
+      }
+    }
+
+
+    //Update product when status is 'completed' and transaction type is 'export'
+    if (status === "completed" && transaction.transactionType === "export") {
+      for (const product of products) {
+        const supplierProduct = await SupplierProduct.findById(
+          product.supplierProductId
+        ).populate("product");
+        if (supplierProduct && supplierProduct.product) {
+          const productId = supplierProduct.product._id;
+          // Cập nhật tồn kho của sản phẩm
+          await
+            Product.findByIdAndUpdate(
+              productId,
+              { $inc: { totalStock: -product.requestQuantity } }
+            );
+        }
+      }
+    }
+
 
     const updatedTransaction1 = await InventoryTransaction.findByIdAndUpdate(
       transactionId,
@@ -244,6 +298,7 @@ const updateTransaction = async (req, res) => {
 const createReceipt = async (req, res) => {
   try {
     const { supplierName, products } = req.body;
+    console.log("Received data:", req.body);
 
     // Validate required fields
     if (
@@ -282,8 +337,7 @@ const createReceipt = async (req, res) => {
           !product.price
         ) {
           throw new Error(
-            `Missing required fields for product ${
-              product.productName || "unknown"
+            `Missing required fields for product ${product.productName || "unknown"
             }`
           );
         }
@@ -367,16 +421,6 @@ const createReceipt = async (req, res) => {
       status: "pending", // Trạng thái mặc định là pending
       branch: "Main Branch",
     });
-
-    // Update product stock
-    for (const product of processedProducts) {
-      const supplierProduct = await SupplierProduct.findById(
-        product.supplierProductId
-      );
-      await Product.findByIdAndUpdate(supplierProduct.product, {
-        $inc: { totalStock: product.receiveQuantity },
-      });
-    }
 
     res.status(201).json({
       success: true,
