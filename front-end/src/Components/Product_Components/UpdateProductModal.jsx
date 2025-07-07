@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 import axios from "axios";
 
-const UpdateProductModal = ({ show, handleClose, product, handleUpdate }) => {
+const UpdateProductModal = ({
+  open,
+  handleClose,
+  product,
+  onUpdateSuccess,
+}) => {
   const [productData, setProductData] = useState({
     productName: "",
     categoryId: "",
@@ -146,7 +151,7 @@ const UpdateProductModal = ({ show, handleClose, product, handleUpdate }) => {
           },
         }
       );
-      handleUpdate(response.data);
+      onUpdateSuccess(); // Gọi callback để refresh danh sách sản phẩm
       handleClose();
     } catch (error) {
       console.error("Error updating product:", error);
@@ -157,7 +162,7 @@ const UpdateProductModal = ({ show, handleClose, product, handleUpdate }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={open} onHide={handleClose}>
       <Modal.Header closeButton>
         <Modal.Title>Cập Nhật Sản Phẩm</Modal.Title>
       </Modal.Header>

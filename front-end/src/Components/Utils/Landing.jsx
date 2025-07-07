@@ -53,7 +53,7 @@ const mainFunctions = [
   {
     title: "Kệ hàng",
     icon: <Palette />,
-    path: "/",
+    path: "/inventory-check",
     allowedRoles: ["manager", "employee"],
   },
   {
