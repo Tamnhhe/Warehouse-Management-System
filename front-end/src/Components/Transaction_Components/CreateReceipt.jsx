@@ -27,6 +27,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
+// Import API modules
+import supplierProductAPI from "../../API/supplierProductAPI";
+import categoriesAPI from "../../API/categoriesAPI";
+import supplierAPI from "../../API/supplierAPI";
+
 // Bảng màu tham khảo
 const palette = {
   dark: "#155E64",
@@ -61,19 +66,39 @@ const CreateReceipt = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch dữ liệu cần thiết cho form
+    // Fetch dữ liệu cần thiết cho form bằng API modules
     const fetchInitialData = async () => {
       try {
+        console.log("=== CreateReceipt fetchInitialData ===");
         const [categoriesRes, suppliersRes] = await Promise.all([
-          axios.get("http://localhost:9999/categories/getAllCategories"),
-          axios.get("http://localhost:9999/suppliers/getAllSuppliers"),
+          categoriesAPI.getAll(),
+          supplierAPI.getAll(),
         ]);
-        setCategories(categoriesRes.data || []);
-        setSuppliers(
-          suppliersRes.data.filter((s) => s.status === "active") || []
+
+        console.log("Categories response:", categoriesRes);
+        console.log("Suppliers response:", suppliersRes);
+
+        // Handle different response structures
+        const categoriesData =
+          categoriesRes.data?.data || categoriesRes.data || [];
+        const suppliersData =
+          suppliersRes.data?.data || suppliersRes.data || [];
+
+        setCategories(categoriesData);
+        setSuppliers(suppliersData.filter((s) => s.status === "active"));
+
+        console.log("Categories set to:", categoriesData);
+        console.log(
+          "Suppliers set to:",
+          suppliersData.filter((s) => s.status === "active")
         );
+        console.log("=== End fetchInitialData ===");
       } catch (err) {
-        setError("Không thể tải dữ liệu cần thiết.");
+        console.error("Error fetching initial data:", err);
+        setError(
+          "Không thể tải dữ liệu cần thiết: " +
+            (err.response?.data?.message || err.message)
+        );
       }
     };
     fetchInitialData();
@@ -126,16 +151,65 @@ const CreateReceipt = () => {
     formik.setFieldValue("products", [
       { productName: "", categoryName: "", quantity: "", price: "" },
     ]);
+
     if (value) {
       try {
-        const response = await axios.get(
-          `http://localhost:9999/supplierProducts/getProductsBySupplier/${value._id}`
+        console.log("=== CreateReceipt handleSupplierChange Debug ===");
+        console.log("Selected supplier:", value);
+        console.log("Supplier ID:", value._id);
+        console.log("Supplier name:", value.name);
+        console.log("Fetching products using supplierProductAPI...");
+
+        // Use the standardized API
+        const response = await supplierProductAPI.getProductsBySupplier(
+          value._id
         );
-        setFilteredProducts(
-          response.data.filter((p) => p.status === "active") || []
-        );
+
+        console.log("Full API Response:", response);
+        console.log("Response status:", response.status);
+        console.log("Response data:", response.data);
+        console.log("Products array:", response.data?.data);
+        console.log("Products count:", response.data?.data?.length || 0);
+        console.log("API success flag:", response.data?.success);
+        console.log("API total:", response.data?.total);
+
+        // Backend trả về {success: true, data: [...], total: number}
+        const products = response.data?.data || [];
+        setFilteredProducts(products);
+
+        console.log("Filtered products set to:", products);
+
+        // Show alert if no products found
+        if (products.length === 0) {
+          alert(
+            "Nhà cung cấp này chưa có sản phẩm nào. Vui lòng thêm sản phẩm trước khi tạo phiếu nhập."
+          );
+        }
+
+        console.log("=== End handleSupplierChange Debug ===");
       } catch (error) {
+        console.error("=== CreateReceipt handleSupplierChange Error ===");
+        console.error("Error fetching products by supplier:", error);
+        console.error("Error response:", error.response);
+        console.error("Error status:", error.response?.status);
+        console.error("Error data:", error.response?.data);
+        console.error("=== End Error ===");
+
         setFilteredProducts([]);
+
+        // Thông báo lỗi chi tiết cho user
+        if (error.response?.status === 404) {
+          alert(
+            "Nhà cung cấp này chưa có sản phẩm nào. Vui lòng thêm sản phẩm cho nhà cung cấp trước."
+          );
+        } else if (error.response?.status === 500) {
+          alert("Lỗi server khi tải danh sách sản phẩm. Vui lòng thử lại sau.");
+        } else {
+          alert(
+            "Không thể tải danh sách sản phẩm: " +
+              (error.response?.data?.message || error.message)
+          );
+        }
       }
     } else {
       setFilteredProducts([]);
@@ -235,6 +309,21 @@ const CreateReceipt = () => {
           <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: "bold" }}>
             Chi tiết sản phẩm
           </Typography>
+
+          {/* Thông báo khi supplier chưa có sản phẩm */}
+          {selectedSupplier && filteredProducts.length === 0 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Nhà cung cấp "{selectedSupplier.name}" chưa có sản phẩm nào. Vui
+              lòng thêm sản phẩm cho nhà cung cấp này trước khi tạo phiếu nhập.
+            </Alert>
+          )}
+
+          {!selectedSupplier && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Vui lòng chọn nhà cung cấp để xem danh sách sản phẩm có thể nhập.
+            </Alert>
+          )}
+
           <TableContainer>
             <Table>
               <TableHead>
