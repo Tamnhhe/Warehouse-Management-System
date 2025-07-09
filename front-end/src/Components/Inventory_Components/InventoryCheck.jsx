@@ -141,6 +141,15 @@ function InventoryCheck() {
       )
     : inventories;
 
+  // SẮP XẾP: Kệ nào 100% lên đầu
+  const sortedInventories = [...filteredInventories].sort((a, b) => {
+    const percentA = a.maxQuantitative > 0 ? Math.round((a.currentQuantitative / a.maxQuantitative) * 100) : 0;
+    const percentB = b.maxQuantitative > 0 ? Math.round((b.currentQuantitative / b.maxQuantitative) * 100) : 0;
+    if (percentA === 100 && percentB !== 100) return -1;
+    if (percentB === 100 && percentA !== 100) return 1;
+    return 0;
+  });
+
   const usedCategoryIds = Array.from(
     new Set(
       (inventories || []).map((inv) => inv.category?._id || inv.categoryId)
@@ -195,7 +204,7 @@ function InventoryCheck() {
         </Button>
       </Box>
       <Grid container spacing={4}>
-        {filteredInventories.map((inv) => {
+        {sortedInventories.map((inv) => {
           const percent =
             inv.maxQuantitative > 0
               ? Math.round(
