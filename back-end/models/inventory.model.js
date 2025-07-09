@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const InventorySchema = new Schema({
   name: { type: String, required: true }, // Tên kệ
   categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
-  creator: { type: String, required: true }, // Đổi từ ObjectId sang String
+  // Đã bỏ trường creator
   maxQuantitative: { type: Number, required: true },
   currentQuantitative: { type: Number, default: 0 },
   maxWeight: { type: Number, required: true },

@@ -182,17 +182,16 @@ exports.importProductAutoDistribute = async (req, res) => {
   }
 };
 
+
 // Thêm kệ mới
 exports.createInventory = async (req, res) => {
   try {
-    const { name, categoryId, creator, maxQuantitative, maxWeight, status } = req.body;
+    // ĐÃ BỎ creator khỏi destructuring
+    const { name, categoryId, maxQuantitative, maxWeight, status } = req.body;
 
     if (
       !name ||
       !categoryId ||
-      !creator ||
-      typeof creator !== "string" ||
-      !creator.trim() ||
       !maxQuantitative ||
       !maxWeight
     ) {
@@ -205,11 +204,10 @@ exports.createInventory = async (req, res) => {
       return res.status(400).json({ message: "Tên kệ đã tồn tại, vui lòng chọn tên khác!" });
     }
 
-    // Tạo kệ mới với số lượng hiện tại = 0
+    // Tạo kệ mới với số lượng hiện tại = 0, KHÔNG có trường creator
     const newInventory = new Inventory({
       name,
       categoryId,
-      creator: String(creator),
       maxQuantitative,
       maxWeight,
       currentQuantitative: 0,
@@ -228,6 +226,8 @@ exports.createInventory = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
 
 // Hàm phân bổ lại tồn kho cho tất cả kệ cùng category
 async function redistributeStockForCategory(categoryId) {
@@ -310,14 +310,78 @@ exports.addProductWithQuantityToInventory = async (req, res) => {
 
 exports.getAllInventories = async (req, res) => {
   try {
-    // Populate chi tiết sản phẩm trong từng products
-    const inventories = await Inventory.find().populate("products.productId");
-    res.json(inventories);
+    // Lấy tất cả kệ và sản phẩm
+    const inventories = await Inventory.find().populate("categoryId").sort({ createdAt: 1 });
+    const allProducts = await Product.find();
+
+    // Gom kệ theo categoryId
+    const categoryMap = {};
+    inventories.forEach(inv => {
+      const catId = inv.categoryId._id.toString();
+      if (!categoryMap[catId]) categoryMap[catId] = [];
+      categoryMap[catId].push(inv);
+    });
+
+    // Kết quả trả về
+    let result = [];
+
+    // Duyệt từng category
+    for (const catId in categoryMap) {
+      // Lấy tất cả sản phẩm thuộc category này
+      const productsInCategory = allProducts.filter(p => p.categoryId.toString() === catId);
+
+      // Tạo bản sao số lượng tồn kho từng sản phẩm
+      let productRemain = {};
+      productsInCategory.forEach(p => {
+        productRemain[p._id.toString()] = p.totalStock;
+      });
+
+      // Duyệt từng kệ trong category này
+      const invs = categoryMap[catId];
+      for (let inv of invs) {
+        let invProducts = [];
+        let invCurrent = 0;
+
+        // Duyệt từng sản phẩm, phân bổ vào kệ này
+        for (let p of productsInCategory) {
+          if (invCurrent >= inv.maxQuantitative) break;
+          let remain = productRemain[p._id.toString()];
+          if (!remain || remain <= 0) continue;
+
+          // Số lượng có thể thêm vào kệ này
+          let canAdd = Math.min(remain, inv.maxQuantitative - invCurrent);
+          if (canAdd > 0) {
+            invProducts.push({
+              productId: p._id,
+              productName: p.productName,
+              quantity: canAdd,
+              totalStock: p.totalStock,
+              unit: p.unit
+            });
+            invCurrent += canAdd;
+            productRemain[p._id.toString()] -= canAdd;
+          }
+        }
+
+        result.push({
+          _id: inv._id,
+          name: inv.name,
+          category: inv.categoryId,
+          maxQuantitative: inv.maxQuantitative,
+          currentQuantitative: invCurrent,
+          maxWeight: inv.maxWeight,
+          currentWeight: inv.currentWeight,
+          status: inv.status,
+          products: invProducts
+        });
+      }
+    }
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 exports.deleteInventory = async (req, res) => {
   try {
     const { id } = req.params;
