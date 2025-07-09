@@ -43,7 +43,8 @@ const useCategory = () => {
         setError(null);
         try {
             const res = await categoryAPI.add(data);
-            setCategories(prev => [...prev, res.data || res]); // Update local state with new category
+            // Update the local state to include the new category
+            setCategories(prev => [...prev, res.data.newCategory]);
             setLoading(false);
             return res;
         } catch (err) {
@@ -67,11 +68,13 @@ const useCategory = () => {
         }
     };
 
-    const deleteCategory = async (id) => {
+    const inactivateCategory = async (id, data) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await categoryAPI.inactivate(id);
+            const res = await categoryAPI.inactivate(id, data);
+            // Update the local state to reflect the change
+            setCategories(prev => prev.map(cat => cat._id === id ? { ...cat, status: data.status } : cat));
             setLoading(false);
             return res;
         } catch (err) {
@@ -81,6 +84,6 @@ const useCategory = () => {
         }
     };
 
-    return { loading, error, categories, category, getAllCategories, getCategoryById, createCategory, updateCategory, deleteCategory };
+    return { loading, error, categories, category, getAllCategories, getCategoryById, createCategory, updateCategory, inactivateCategory };
 }
 export default useCategory;

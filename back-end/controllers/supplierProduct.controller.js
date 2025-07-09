@@ -1,7 +1,6 @@
 const db = require("../models/index");
 const mongoose = require("mongoose");
-
-const SupplierProduct = db.SupplierProduct;
+const SupplierProduct = require("../models/supplierProduct.model");
 
 // Lấy danh sách sản phẩm theo nhà cung cấp (chi tiết đầy đủ cho màn quản lý)
 const getProductsBySupplier = async (req, res) => {
@@ -9,6 +8,7 @@ const getProductsBySupplier = async (req, res) => {
     // Add cache-busting headers
     res.set({
       "Cache-Control": "no-cache, no-store, must-revalidate",
+      
       Pragma: "no-cache",
       Expires: "0",
       "Last-Modified": new Date().toUTCString(),
@@ -131,67 +131,41 @@ const getAllSupplierProducts = async (req, res) => {
 // Tạo quan hệ supplier-product
 const createSupplierProduct = async (req, res) => {
   try {
-    const { supplierId, productId, price, stock, expiry } = req.body;
+    const {
+      supplier,
+      stock,
+      expiry,
+      categoryId,
+      productImage,
+      productName,
+      quantitative,
+      unit
+    } = req.body;
 
-    if (!supplierId || !productId || !price) {
-      return res.status(400).json({
-        message: "Thiếu thông tin bắt buộc: supplierId, productId, price",
-      });
-    }
-
-    // Kiểm tra supplier và product có tồn tại không
-    const [supplier, product] = await Promise.all([
-      db.Supplier.findById(supplierId),
-      db.Product.findById(productId),
-    ]);
-
-    if (!supplier) {
-      return res.status(404).json({ message: "Nhà cung cấp không tồn tại" });
-    }
-    if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-    }
-
-    // Kiểm tra quan hệ đã tồn tại chưa
-    const existingRelation = await SupplierProduct.findOne({
-      supplier: supplierId,
-      product: productId,
-    });
-
-    if (existingRelation) {
-      return res.status(400).json({
-        message: "Quan hệ nhà cung cấp - sản phẩm đã tồn tại",
-      });
-    }
+    // Validate required fields
+    if (!supplier) return res.status(400).json({ message: 'Supplier is required.' });
+    if (typeof stock !== 'number' || stock < 0) return res.status(400).json({ message: 'Stock must be a non-negative number.' });
+    if (!productImage || typeof productImage !== 'string') return res.status(400).json({ message: 'Product image is required and must be a string.' });
+    if (!productName || typeof productName !== 'string' || !productName.trim()) return res.status(400).json({ message: 'Product name is required and must be a non-empty string.' });
+    if (typeof quantitative !== 'number' || quantitative <= 0) return res.status(400).json({ message: 'Quantitative must be a positive number.' });
+    if (!unit || typeof unit !== 'string' || !unit.trim()) return res.status(400).json({ message: 'Unit is required and must be a non-empty string.' });
+    if (categoryId && !/^[0-9a-fA-F]{24}$/.test(categoryId)) return res.status(400).json({ message: 'Category must be a valid ObjectId.' });
+    if (expiry && isNaN(Date.parse(expiry))) return res.status(400).json({ message: 'Expiry must be a valid date.' });
 
     const newSupplierProduct = new SupplierProduct({
-      supplier: supplierId,
-      product: productId,
-      price: price,
-      stock: stock || 0,
-      expiry: expiry || null,
+      supplier,
+      stock,
+      expiry,
+      categoryId,
+      productImage,
+      productName: productName.trim(),
+      quantitative,
+      unit: unit.trim()
     });
-
-    await newSupplierProduct.save();
-
-    const populatedData = await SupplierProduct.findById(newSupplierProduct._id)
-      .populate("supplier", "name email")
-      .populate({
-        path: "product",
-        populate: {
-          path: "categoryId",
-          model: "Category",
-          select: "categoryName",
-        },
-      });
-
-    return res.status(201).json({
-      message: "Tạo quan hệ nhà cung cấp - sản phẩm thành công",
-      data: populatedData,
-    });
+    const savedProduct = await newSupplierProduct.save();
+    res.status(201).json({ success: true, data: savedProduct });
   } catch (error) {
-    console.error("Lỗi khi tạo quan hệ supplier-product:", error);
-    return res.status(500).json({ message: "Lỗi máy chủ nội bộ" });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -199,39 +173,38 @@ const createSupplierProduct = async (req, res) => {
 const updateSupplierProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { price, stock, expiry } = req.body;
-
-    const supplierProduct = await SupplierProduct.findById(id);
-    if (!supplierProduct) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy quan hệ nhà cung cấp - sản phẩm" });
+    const updateFields = {};
+    const allowedFields = [
+      'supplier', 'stock', 'expiry', 'categoryId', 'productImage', 'productName', 'quantitative', 'unit'
+    ];
+    for (const key of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        updateFields[key] = req.body[key];
+      }
     }
+    // Validation for each field if present
+    if ('supplier' in updateFields && !updateFields.supplier) return res.status(400).json({ message: 'Supplier is required.' });
+    if ('stock' in updateFields && (typeof updateFields.stock !== 'number' || updateFields.stock < 0)) return res.status(400).json({ message: 'Stock must be a non-negative number.' });
+    if ('productImage' in updateFields && (!updateFields.productImage || typeof updateFields.productImage !== 'string')) return res.status(400).json({ message: 'Product image is required and must be a string.' });
+    if ('productName' in updateFields && (!updateFields.productName || typeof updateFields.productName !== 'string' || !updateFields.productName.trim())) return res.status(400).json({ message: 'Product name is required and must be a non-empty string.' });
+    if ('quantitative' in updateFields && (typeof updateFields.quantitative !== 'number' || updateFields.quantitative <= 0)) return res.status(400).json({ message: 'Quantitative must be a positive number.' });
+    if ('unit' in updateFields && (!updateFields.unit || typeof updateFields.unit !== 'string' || !updateFields.unit.trim())) return res.status(400).json({ message: 'Unit is required and must be a non-empty string.' });
+    if ('categoryId' in updateFields && updateFields.categoryId && !/^[0-9a-fA-F]{24}$/.test(updateFields.categoryId)) return res.status(400).json({ message: 'Category must be a valid ObjectId.' });
+    if ('expiry' in updateFields && updateFields.expiry && isNaN(Date.parse(updateFields.expiry))) return res.status(400).json({ message: 'Expiry must be a valid date.' });
+    if ('productName' in updateFields) updateFields.productName = updateFields.productName.trim();
+    if ('unit' in updateFields) updateFields.unit = updateFields.unit.trim();
 
-    if (price !== undefined) supplierProduct.price = price;
-    if (stock !== undefined) supplierProduct.stock = stock;
-    if (expiry !== undefined) supplierProduct.expiry = expiry;
-
-    await supplierProduct.save();
-
-    const populatedData = await SupplierProduct.findById(id)
-      .populate("supplier", "name email")
-      .populate({
-        path: "product",
-        populate: {
-          path: "categoryId",
-          model: "Category",
-          select: "categoryName",
-        },
-      });
-
-    return res.json({
-      message: "Cập nhật quan hệ nhà cung cấp - sản phẩm thành công",
-      data: populatedData,
-    });
+    const updatedProduct = await SupplierProduct.findByIdAndUpdate(
+      id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    );
+    if (!updatedProduct) {
+      return res.status(404).json({ message: 'Supplier product not found' });
+    }
+    res.status(200).json({ success: true, data: updatedProduct });
   } catch (error) {
-    console.error("Lỗi khi cập nhật quan hệ supplier-product:", error);
-    return res.status(500).json({ message: "Lỗi máy chủ nội bộ" });
+    res.status(400).json({ message: error.message });
   }
 };
 
