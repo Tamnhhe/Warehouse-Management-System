@@ -3,7 +3,7 @@ const supplierRouter = express.Router();
 const { SupplierController } = require("../controllers");
 const supplierController = require("../controllers/supplier.controller");
 
-// Lấy danh sách tất cả nhà cung cấp (có hỗ trợ tìm kiếm)
+// Lấy danh sách tất cả nhà cung cấp (có hỗ trợ tìm kiếm).
 supplierRouter.get("/getAllSuppliers", supplierController.getSuppliers);
 
 // Lấy thông tin chi tiết nhà cung cấp kèm danh sách sản phẩm
