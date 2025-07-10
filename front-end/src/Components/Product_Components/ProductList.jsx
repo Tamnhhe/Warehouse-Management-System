@@ -235,24 +235,26 @@ const ProductList = () => {
         axios.get("http://localhost:9999/supplierProducts/getAllSupplierProducts"),
       ]);
       const productsData = productsRes.data;
-      const supplierProducts = supplierProductsRes.data;
-      const latestPrices = {}, priceMap = {};
-      supplierProducts.forEach((sp) => {
-        const productId = sp.product?._id;
-        if (!productId) return;
-        if (!latestPrices[productId]) latestPrices[productId] = sp.price;
-        if (!priceMap[productId]) priceMap[productId] = [];
-        priceMap[productId].push(sp.price);
-      });
-      const avgPrices = Object.entries(priceMap).reduce((acc, [productId, prices]) => {
-        const sum = prices.reduce((total, price) => total + price, 0);
-        acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
-        return acc;
-      }, {});
+      // const supplierProducts = supplierProductsRes.data;
+      // const latestPrices = {}, priceMap = {};
+      // supplierProducts.forEach((sp) => {
+      //   const productId = sp.product?._id;
+      //   if (!productId) return;
+      //   if (!latestPrices[productId]) latestPrices[productId] = sp.price;
+      //   if (!priceMap[productId]) priceMap[productId] = [];
+      //   priceMap[productId].push(sp.price);
+      // });
+      // const avgPrices = Object.entries(priceMap).reduce((acc, [productId, prices]) => {
+      //   const sum = prices.reduce((total, price) => total + price, 0);
+      //   acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
+      //   return acc;
+      // }, {});
       const updatedProducts = productsData.map((p) => ({
         ...p,
-        latestPrice: latestPrices[p._id] || 0,
-        avgPrice: avgPrices[p._id] || 0,
+        // latestPrice: latestPrices[p._id] || 0,
+        // avgPrice: avgPrices[p._id] || 0,
+        latestPrice: 0,
+        avgPrice: 0,
       }));
       setProducts(updatedProducts);
       setError("");
@@ -453,7 +455,14 @@ const ProductList = () => {
                         <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
                         <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
                         <TableCell>{product.unit}</TableCell>
-                        <TableCell>{product.location}</TableCell>
+                        {/* <TableCell>{product.location}</TableCell> */}
+                        <TableCell>
+                          {product.location.map((loc, idx) => (
+                            <Box key={idx} sx={{ display: 'inline-block', mr: 1, mb: 1, p: 0.5, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
+                              {loc.inventoryId} ({loc.stock})
+                            </Box>
+                          ))}
+                        </TableCell>
                         <TableCell>{renderStatusChip(product.status)}</TableCell>
                         <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
                       </TableRow>

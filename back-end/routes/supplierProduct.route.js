@@ -13,30 +13,30 @@ supplierProductRouter.get(
   supplierProductController.getProductsBySupplier
 );
 
-supplierProductRouter.get(
-  "/supplier/:supplierId/available-products",
-  supplierProductController.getAvailableProductsForSupplier
-);
+// supplierProductRouter.get(
+//   "/supplier/:supplierId/available-products",
+//   supplierProductController.getAvailableProductsForSupplier
+// );
 
-supplierProductRouter.post(
-  "/supplier/:supplierId/add-product",
-  supplierProductController.addProductToSupplier
-);
+// supplierProductRouter.post(
+//   "/supplier/:supplierId/add-product",
+//   supplierProductController.addProductToSupplier
+// );
 
-supplierProductRouter.put(
-  "/supplier-product/:supplierProductId",
-  supplierProductController.updateSupplierProductDetails
-);
+// supplierProductRouter.put(
+//   "/supplier-product/:supplierProductId",
+//   supplierProductController.updateSupplierProductDetails
+// );
 
-supplierProductRouter.delete(
-  "/supplier-product/:supplierProductId",
-  supplierProductController.removeProductFromSupplier
-);
+// supplierProductRouter.delete(
+//   "/supplier-product/:supplierProductId",
+//   supplierProductController.removeProductFromSupplier
+// );
 
-supplierProductRouter.get(
-  "/supplier/:supplierId/stats",
-  supplierProductController.getSupplierProductStats
-);
+// supplierProductRouter.get(
+//   "/supplier/:supplierId/stats",
+//   supplierProductController.getSupplierProductStats
+// );
 
 // Routes cũ (để tương thích ngược)
 supplierProductRouter.get(
@@ -60,9 +60,9 @@ supplierProductRouter.delete(
 );
 
 // API để tạo dữ liệu mẫu (chỉ dùng khi cần thiết)
-supplierProductRouter.post(
-  "/create-sample-data",
-  supplierProductController.createSampleData
-);
+// supplierProductRouter.post(
+//   "/create-sample-data",
+//   supplierProductController.createSampleData
+// );
 
 module.exports = supplierProductRouter;

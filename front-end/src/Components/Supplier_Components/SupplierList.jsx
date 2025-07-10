@@ -1,48 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Button,
-  Typography,
-  Chip,
-  IconButton,
-  Alert,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  Stack,
-  Card,
-  CardContent,
-  InputAdornment,
-  Tooltip,
-  TablePagination,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Collapse,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Fab,
-  Menu,
+  Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, Typography,
+  IconButton, Alert, FormGroup, FormControlLabel, Checkbox, Stack, Card, InputAdornment, Tooltip, TablePagination,
+  CircularProgress, Grid, MenuItem, Collapse, Menu,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -52,38 +12,33 @@ import {
   CheckCircle as CheckCircleIcon,
   RestartAlt as RestartAltIcon,
   Business as BusinessIcon,
-  Close as CloseIcon,
-  Save as SaveIcon,
-  Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Inventory as InventoryIcon,
   MoreVert as MoreVertIcon,
-  ShoppingCart as ShoppingCartIcon,
 } from "@mui/icons-material";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import useSupplier from "../../Hooks/useSupplier";
+import renderStatusChip from "../../utils/renderStatusChip";
+import palette from "../../constants/palette";
 
 // Import API modules for consistency
-import supplierAPI from "../../API/supplierAPI";
 import supplierProductAPI from "../../API/supplierProductAPI";
-import productAPI from "../../API/productAPI";
-
-// Bảng màu từ navbar
-const palette = {
-  dark: "#155E64",
-  medium: "#75B39C",
-  light: "#A0E4D0",
-  white: "#FFFFFF",
-  black: "#000000",
-};
+import AddSupplierModal from "./AddSupplierModal";
+import EditSupplierModal from "./EditSupplierModal";
+import SupplierDetailsModal from "./SupplierDetailsModal";
+import ExpandSupplierProduct from "./ExpandSupplierProduct";
 
 const SupplierList = () => {
-  const navigate = useNavigate();
-  const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    suppliers,
+    loading,
+    error,
+    fetchSuppliers,
+    createSupplier,
+    updateSupplier,
+    updateSupplierStatus
+  } = useSupplier();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState({
     "Còn cung cấp": false,
@@ -126,45 +81,13 @@ const SupplierList = () => {
     fetchSuppliers();
   }, []);
 
-  const fetchSuppliers = async () => {
-    try {
-      setLoading(true);
-      console.log("=== SupplierList fetchSuppliers ===");
-
-      const response = await supplierAPI.getAll();
-      console.log("Suppliers API response:", response);
-
-      // Handle different response structures
-      const suppliersData = response.data?.data || response.data || [];
-      setSuppliers(suppliersData);
-      setError(null);
-
-      console.log("Suppliers set to:", suppliersData);
-      console.log("=== End fetchSuppliers ===");
-    } catch (error) {
-      console.error("Error fetching suppliers:", error);
-      setError(
-        "Không thể tải dữ liệu danh sách nhà cung cấp: " +
-          (error.response?.data?.message || error.message)
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchSupplierProducts = async (supplierId) => {
     try {
       setLoadingProducts(true);
-      console.log("=== SupplierList fetchSupplierProducts ===");
-      console.log("Fetching products for supplier:", supplierId);
 
       const response = await supplierProductAPI.getProductsBySupplier(
         supplierId
       );
-
-      console.log("API Response:", response.data);
-      console.log("Products data:", response.data.data);
-      console.log("Total products:", response.data.total);
 
       // Handle standardized response structure
       const products = response.data?.data || [];
@@ -174,12 +97,8 @@ const SupplierList = () => {
         console.log("No products found for supplier:", supplierId);
       }
 
-      console.log("=== End fetchSupplierProducts ===");
     } catch (error) {
-      console.error("=== SupplierList fetchSupplierProducts Error ===");
       console.error("Error fetching supplier products:", error);
-      console.error("Error details:", error.response?.data);
-      console.error("=== End Error ===");
       setSupplierProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -189,13 +108,7 @@ const SupplierList = () => {
   // Cập nhật trạng thái nhà cung cấp
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:9999/suppliers/update-status/${id}`, {
-        status: newStatus,
-      });
-      const updatedSuppliers = suppliers.map((s) =>
-        s._id === id ? { ...s, status: newStatus } : s
-      );
-      setSuppliers(updatedSuppliers);
+      await updateSupplierStatus(id, newStatus);
       handleMenuClose();
     } catch (error) {
       console.log("Lỗi khi cập nhật trạng thái:", error);
@@ -226,29 +139,15 @@ const SupplierList = () => {
   const handleSubmit = async (isEdit = false) => {
     const errors = validateForm(formData);
     setFormErrors(errors);
-
     if (Object.keys(errors).length > 0) return;
-
     try {
       if (isEdit) {
-        await axios.put(
-          `http://localhost:9999/suppliers/updateSupplier/${editingSupplier._id}`,
-          formData
-        );
-        const updatedSuppliers = suppliers.map((s) =>
-          s._id === editingSupplier._id ? { ...s, ...formData } : s
-        );
-        setSuppliers(updatedSuppliers);
+        await updateSupplier(editingSupplier._id, formData);
         setOpenEditModal(false);
       } else {
-        const response = await axios.post(
-          "http://localhost:9999/suppliers/addSupplier",
-          formData
-        );
-        setSuppliers([...suppliers, response.data]);
+        await createSupplier(formData);
         setOpenAddModal(false);
       }
-
       // Reset form
       setFormData({
         name: "",
@@ -261,9 +160,6 @@ const SupplierList = () => {
       setFormErrors({});
     } catch (error) {
       console.error("Lỗi khi lưu nhà cung cấp:", error);
-      if (error.response?.data?.error) {
-        alert(error.response.data.error);
-      }
     }
   };
 
@@ -324,89 +220,6 @@ const SupplierList = () => {
     setMenuSupplier(null);
   };
 
-  // Function tạo dữ liệu mẫu cho test
-  const createSampleData = async () => {
-    try {
-      // Trước tiên kiểm tra xem có suppliers và products không
-      console.log("=== SupplierList createSampleData ===");
-      console.log("Checking prerequisites for sample data...");
-      const [suppliersRes, productsRes] = await Promise.all([
-        supplierAPI.getAll(),
-        productAPI.getAll().catch(() => ({ data: [] })),
-      ]);
-
-      // Handle different response structures
-      const suppliersData = suppliersRes.data?.data || suppliersRes.data || [];
-      const productsData = productsRes.data?.data || productsRes.data || [];
-
-      console.log("Available suppliers:", suppliersData.length);
-      console.log("Available products:", productsData.length);
-
-      if (suppliersData.length === 0) {
-        alert(
-          "Cần có ít nhất 1 supplier để tạo dữ liệu mẫu. Vui lòng thêm supplier trước!"
-        );
-        return;
-      }
-
-      if (productsRes.data.length === 0) {
-        alert(
-          "Cần có ít nhất 1 product để tạo dữ liệu mẫu. Vui lòng thêm product trước!"
-        );
-        return;
-      }
-
-      const response = await axios.post(
-        "http://localhost:9999/supplier-products/create-sample-data"
-      );
-      console.log("Sample data created:", response.data);
-      alert("Đã tạo dữ liệu mẫu thành công!");
-      // Refresh suppliers sau khi tạo dữ liệu
-      fetchSuppliers();
-    } catch (error) {
-      console.error("Lỗi khi tạo dữ liệu mẫu:", error);
-      const errorMsg = error.response?.data?.message || error.message;
-      alert("Lỗi khi tạo dữ liệu mẫu: " + errorMsg);
-
-      // Nếu lỗi 400, có thể là thiếu suppliers hoặc products
-      if (error.response?.status === 400) {
-        alert(
-          "Có thể thiếu suppliers hoặc products active. Vui lòng kiểm tra dữ liệu cơ bản trước!"
-        );
-      }
-    }
-  };
-
-  // Function test API
-  const testAPI = async () => {
-    try {
-      // Test lấy tất cả supplier products bằng API module
-      console.log("=== SupplierList testAPI ===");
-      const response = await supplierProductAPI.getAll();
-      console.log("All supplier products response:", response);
-
-      // Handle different response structures
-      const products = response.data?.data || response.data || [];
-      console.log("All supplier products:", products);
-
-      alert(`Tìm thấy ${products.length} supplier products trong database`);
-      console.log("=== End testAPI ===");
-    } catch (error) {
-      console.error("=== SupplierList testAPI Error ===");
-      console.error("Error testing API:", error);
-      if (error.response?.status === 404) {
-        alert(
-          "Database trống - chưa có supplier products nào. Hãy tạo dữ liệu mẫu!"
-        );
-      } else {
-        alert(
-          "Lỗi khi test API: " +
-            (error.response?.data?.message || error.message)
-        );
-      }
-    }
-  };
-
   // Lọc danh sách nhà cung cấp
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
@@ -423,33 +236,6 @@ const SupplierList = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
-  const getStatusChip = (status) => {
-    if (status === "active") {
-      return (
-        <Chip
-          label="Còn cung cấp"
-          size="small"
-          icon={<CheckCircleIcon />}
-          sx={{
-            backgroundColor: palette.light,
-            color: palette.dark,
-            fontWeight: "medium",
-          }}
-        />
-      );
-    } else {
-      return (
-        <Chip
-          label="Ngừng cung cấp"
-          color="error"
-          size="small"
-          icon={<BlockIcon />}
-          sx={{ fontWeight: "medium" }}
-        />
-      );
-    }
-  };
 
   const formatPhoneNumber = (contact) => {
     if (!contact) return "N/A";
@@ -529,38 +315,6 @@ const SupplierList = () => {
             </Box>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={testAPI}
-              sx={{
-                borderColor: palette.white,
-                color: palette.white,
-                "&:hover": {
-                  borderColor: palette.light,
-                  backgroundColor: palette.light + "20",
-                },
-                fontSize: "0.75rem",
-              }}
-            >
-              Test API
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={createSampleData}
-              sx={{
-                borderColor: palette.white,
-                color: palette.white,
-                "&:hover": {
-                  borderColor: palette.light,
-                  backgroundColor: palette.light + "20",
-                },
-                fontSize: "0.8rem",
-              }}
-            >
-              Tạo dữ liệu mẫu
-            </Button>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -801,7 +555,7 @@ const SupplierList = () => {
                             {supplier.address || "Chưa cập nhật"}
                           </Typography>
                         </TableCell>
-                        <TableCell>{getStatusChip(supplier.status)}</TableCell>
+                        <TableCell>{renderStatusChip(supplier.status)}</TableCell>
                         <TableCell>
                           <Stack
                             direction="row"
@@ -867,126 +621,13 @@ const SupplierList = () => {
                       {/* Expanded row for products */}
                       <TableRow>
                         <TableCell colSpan={7} sx={{ p: 0, border: "none" }}>
-                          <Collapse in={expandedRows.has(supplier._id)}>
-                            <Box
-                              sx={{
-                                p: 2,
-                                backgroundColor: palette.light + "20",
-                              }}
-                            >
-                              <Typography
-                                variant="h6"
-                                sx={{ mb: 2, color: palette.dark }}
-                              >
-                                <InventoryIcon
-                                  sx={{ mr: 1, verticalAlign: "middle" }}
-                                />
-                                Sản phẩm của nhà cung cấp
-                                <Typography
-                                  component="span"
-                                  variant="body2"
-                                  sx={{ ml: 1, color: "text.secondary" }}
-                                >
-                                  (ID: {supplier._id})
-                                </Typography>
-                              </Typography>
-                              {loadingProducts ? (
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    p: 2,
-                                  }}
-                                >
-                                  <CircularProgress
-                                    size={24}
-                                    sx={{ color: palette.dark }}
-                                  />
-                                </Box>
-                              ) : supplierProducts.length > 0 ? (
-                                <>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ mb: 2 }}
-                                  >
-                                    Debug: Tìm thấy {supplierProducts.length}{" "}
-                                    sản phẩm
-                                  </Typography>
-                                  <Grid container spacing={2}>
-                                    {supplierProducts
-                                      .slice(0, 6)
-                                      .map((product) => (
-                                        <Grid
-                                          item
-                                          xs={12}
-                                          sm={6}
-                                          md={4}
-                                          key={product.supplierProductId}
-                                        >
-                                          <Card
-                                            variant="outlined"
-                                            sx={{
-                                              p: 2,
-                                              height: "100%",
-                                              "&:hover": {
-                                                boxShadow: 2,
-                                                transform: "translateY(-2px)",
-                                              },
-                                              transition: "all 0.2s",
-                                            }}
-                                          >
-                                            <Typography
-                                              variant="subtitle2"
-                                              sx={{
-                                                fontWeight: "bold",
-                                                color: palette.dark,
-                                              }}
-                                            >
-                                              {product.productName}
-                                            </Typography>
-                                            <Typography
-                                              variant="body2"
-                                              color="text.secondary"
-                                              sx={{ mb: 1 }}
-                                            >
-                                              {product.categoryName}
-                                            </Typography>
-                                            <Typography
-                                              variant="body2"
-                                              sx={{
-                                                color: palette.medium,
-                                                fontWeight: "medium",
-                                              }}
-                                            >
-                                              Giá:{" "}
-                                              {new Intl.NumberFormat(
-                                                "vi-VN"
-                                              ).format(product.price)}{" "}
-                                              VNĐ
-                                            </Typography>
-                                            <Typography
-                                              variant="body2"
-                                              color="text.secondary"
-                                            >
-                                              Tồn kho: {product.stock}
-                                            </Typography>
-                                          </Card>
-                                        </Grid>
-                                      ))}
-                                  </Grid>
-                                </>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  sx={{ textAlign: "center", py: 2 }}
-                                >
-                                  Chưa có sản phẩm nào
-                                </Typography>
-                              )}
-                            </Box>
-                          </Collapse>
+                          <ExpandSupplierProduct
+                            open={expandedRows.has(supplier._id)}
+                            supplier={supplier}
+                            supplierProducts={supplierProducts}
+                            loadingProducts={loadingProducts}
+                            palette={palette}
+                          />
                         </TableCell>
                       </TableRow>
                     </React.Fragment>
@@ -1085,696 +726,40 @@ const SupplierList = () => {
       </Menu>
 
       {/* Add Supplier Modal */}
-      <Dialog
+      <AddSupplierModal
         open={openAddModal}
         onClose={() => setOpenAddModal(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            backgroundColor: palette.dark,
-            color: palette.white,
-            display: "flex",
-            alignItems: "center",
-            pb: 2,
-          }}
-        >
-          <AddIcon sx={{ mr: 1 }} />
-          Thêm nhà cung cấp mới
-          <IconButton
-            onClick={() => setOpenAddModal(false)}
-            sx={{
-              ml: "auto",
-              color: palette.white,
-              "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Tên nhà cung cấp"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                error={!!formErrors.name}
-                helperText={formErrors.name}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Số điện thoại"
-                value={formData.contact}
-                onChange={(e) =>
-                  setFormData({ ...formData, contact: e.target.value })
-                }
-                error={!!formErrors.contact}
-                helperText={formErrors.contact}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                error={!!formErrors.email}
-                helperText={formErrors.email}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Địa chỉ"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                error={!!formErrors.address}
-                helperText={formErrors.address}
-                required
-                multiline
-                rows={2}
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mô tả (tùy chọn)"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                multiline
-                rows={3}
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel
-                  sx={{
-                    "&.Mui-focused": { color: palette.dark },
-                  }}
-                >
-                  Trạng thái
-                </InputLabel>
-                <Select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  label="Trạng thái"
-                  sx={{
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: palette.dark,
-                    },
-                  }}
-                >
-                  <MenuItem value="active">Còn cung cấp</MenuItem>
-                  <MenuItem value="inactive">Ngừng cung cấp</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, backgroundColor: "#f8fafc" }}>
-          <Button
-            onClick={() => setOpenAddModal(false)}
-            sx={{
-              color: "text.secondary",
-              "&:hover": { backgroundColor: "grey.100" },
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={() => handleSubmit(false)}
-            variant="contained"
-            startIcon={<SaveIcon />}
-            sx={{
-              backgroundColor: palette.dark,
-              "&:hover": {
-                backgroundColor: palette.medium,
-                color: palette.dark,
-              },
-              borderRadius: 2,
-              px: 3,
-            }}
-          >
-            Thêm nhà cung cấp
-          </Button>
-        </DialogActions>
-      </Dialog>
+        formData={formData}
+        setFormData={setFormData}
+        formErrors={formErrors}
+        onSubmit={() => handleSubmit(false)}
+        palette={palette}
+      />
 
       {/* Edit Supplier Modal */}
-      <Dialog
+      <EditSupplierModal
         open={openEditModal}
         onClose={() => setOpenEditModal(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            backgroundColor: palette.medium,
-            color: palette.dark,
-            display: "flex",
-            alignItems: "center",
-            pb: 2,
-          }}
-        >
-          <EditIcon sx={{ mr: 1 }} />
-          Chỉnh sửa nhà cung cấp
-          <IconButton
-            onClick={() => setOpenEditModal(false)}
-            sx={{
-              ml: "auto",
-              color: palette.dark,
-              "&:hover": { backgroundColor: "rgba(0,0,0,0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Tên nhà cung cấp"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                error={!!formErrors.name}
-                helperText={formErrors.name}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Số điện thoại"
-                value={formData.contact}
-                onChange={(e) =>
-                  setFormData({ ...formData, contact: e.target.value })
-                }
-                error={!!formErrors.contact}
-                helperText={formErrors.contact}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                error={!!formErrors.email}
-                helperText={formErrors.email}
-                required
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Địa chỉ"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                error={!!formErrors.address}
-                helperText={formErrors.address}
-                required
-                multiline
-                rows={2}
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mô tả (tùy chọn)"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                multiline
-                rows={3}
-                variant="outlined"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "&.Mui-focused fieldset": {
-                      borderColor: palette.dark,
-                    },
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: palette.dark,
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel
-                  sx={{
-                    "&.Mui-focused": { color: palette.dark },
-                  }}
-                >
-                  Trạng thái
-                </InputLabel>
-                <Select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  label="Trạng thái"
-                  sx={{
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: palette.dark,
-                    },
-                  }}
-                >
-                  <MenuItem value="active">Còn cung cấp</MenuItem>
-                  <MenuItem value="inactive">Ngừng cung cấp</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, backgroundColor: "#f8fafc" }}>
-          <Button
-            onClick={() => setOpenEditModal(false)}
-            sx={{
-              color: "text.secondary",
-              "&:hover": { backgroundColor: "grey.100" },
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={() => handleSubmit(true)}
-            variant="contained"
-            startIcon={<SaveIcon />}
-            sx={{
-              backgroundColor: palette.medium,
-              color: palette.dark,
-              "&:hover": {
-                backgroundColor: palette.dark,
-                color: palette.white,
-              },
-              borderRadius: 2,
-              px: 3,
-            }}
-          >
-            Cập nhật
-          </Button>
-        </DialogActions>
-      </Dialog>
+        formData={formData}
+        setFormData={setFormData}
+        formErrors={formErrors}
+        onSubmit={() => handleSubmit(true)}
+        palette={palette}
+      />
 
       {/* Supplier Details Modal */}
-      <Dialog
+      <SupplierDetailsModal
         open={openSupplierDetails}
         onClose={() => setOpenSupplierDetails(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-            height: "80vh",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            backgroundColor: palette.dark,
-            color: palette.white,
-            display: "flex",
-            alignItems: "center",
-            pb: 2,
-          }}
-        >
-          <BusinessIcon sx={{ mr: 1 }} />
-          Chi tiết nhà cung cấp: {selectedSupplier?.name}
-          <IconButton
-            onClick={() => setOpenSupplierDetails(false)}
-            sx={{
-              ml: "auto",
-              color: palette.white,
-              "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0, height: "100%" }}>
-          <Tabs
-            value={tabValue}
-            onChange={(e, newValue) => setTabValue(newValue)}
-            sx={{
-              borderBottom: 1,
-              borderColor: "divider",
-              backgroundColor: "#f8fafc",
-            }}
-          >
-            <Tab
-              label="Thông tin cơ bản"
-              sx={{
-                "&.Mui-selected": { color: palette.dark },
-              }}
-            />
-            <Tab
-              label={`Sản phẩm (${supplierProducts.length})`}
-              sx={{
-                "&.Mui-selected": { color: palette.dark },
-              }}
-            />
-          </Tabs>
-
-          {/* Tab 1: Basic Info */}
-          {tabValue === 0 && selectedSupplier && (
-            <Box sx={{ p: 3 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined" sx={{ p: 3, height: "100%" }}>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: palette.dark }}
-                    >
-                      Thông tin liên hệ
-                    </Typography>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Tên nhà cung cấp
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          sx={{ fontWeight: "medium" }}
-                        >
-                          {selectedSupplier.name}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Số điện thoại
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatPhoneNumber(selectedSupplier.contact)}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Email
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedSupplier.email || "Chưa cập nhật"}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Địa chỉ
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedSupplier.address || "Chưa cập nhật"}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined" sx={{ p: 3, height: "100%" }}>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: palette.dark }}
-                    >
-                      Thông tin khác
-                    </Typography>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Trạng thái
-                        </Typography>
-                        {getStatusChip(selectedSupplier.status)}
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Mô tả
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedSupplier.description || "Không có mô tả"}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Số lượng sản phẩm
-                        </Typography>
-                        <Typography
-                          variant="h4"
-                          sx={{ color: palette.medium, fontWeight: "bold" }}
-                        >
-                          {supplierProducts.length}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Card>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          {/* Tab 2: Products */}
-          {tabValue === 1 && (
-            <Box sx={{ p: 3, height: "100%", overflow: "auto" }}>
-              {loadingProducts ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: 200,
-                  }}
-                >
-                  <CircularProgress sx={{ color: palette.dark }} />
-                </Box>
-              ) : supplierProducts.length > 0 ? (
-                <Grid container spacing={3}>
-                  {supplierProducts.map((product) => (
-                    <Grid
-                      item
-                      xs={12}
-                      sm={6}
-                      md={4}
-                      key={product.supplierProductId}
-                    >
-                      <Card
-                        variant="outlined"
-                        sx={{
-                          p: 3,
-                          height: "100%",
-                          "&:hover": {
-                            boxShadow: 4,
-                            transform: "translateY(-4px)",
-                          },
-                          transition: "all 0.3s",
-                        }}
-                      >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
-                        >
-                          <ShoppingCartIcon
-                            sx={{ color: palette.dark, mr: 1 }}
-                          />
-                          <Typography
-                            variant="h6"
-                            sx={{ fontWeight: "bold", color: palette.dark }}
-                          >
-                            {product.productName}
-                          </Typography>
-                        </Box>
-                        <Divider sx={{ mb: 2 }} />
-                        <Stack spacing={1}>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Danh mục
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: "medium" }}
-                            >
-                              {product.categoryName}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Giá bán
-                            </Typography>
-                            <Typography
-                              variant="h6"
-                              sx={{ color: palette.medium, fontWeight: "bold" }}
-                            >
-                              {new Intl.NumberFormat("vi-VN").format(
-                                product.price
-                              )}{" "}
-                              VNĐ
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Tồn kho
-                            </Typography>
-                            <Chip
-                              label={`${product.stock} sản phẩm`}
-                              size="small"
-                              color={product.stock > 0 ? "success" : "error"}
-                              variant="outlined"
-                            />
-                          </Box>
-                        </Stack>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : (
-                <Box sx={{ textAlign: "center", py: 6 }}>
-                  <InventoryIcon
-                    sx={{ fontSize: 64, color: "grey.300", mb: 2 }}
-                  />
-                  <Typography variant="h6" color="textSecondary">
-                    Nhà cung cấp này chưa có sản phẩm nào
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+        selectedSupplier={selectedSupplier}
+        supplierProducts={supplierProducts}
+        tabValue={tabValue}
+        setTabValue={setTabValue}
+        loadingProducts={loadingProducts}
+        palette={palette}
+        getStatusChip={renderStatusChip}
+        formatPhoneNumber={formatPhoneNumber}
+      />
     </Box>
   );
 };

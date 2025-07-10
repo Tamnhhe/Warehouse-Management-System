@@ -11,7 +11,9 @@ const useSupplier = () => {
         setLoading(true);
         try {
             const response = await supplierAPI.getAll();
-            setSuppliers(response.data);
+            // API returns { data: [...] } or just [...], handle both
+            const data = response.data?.data || response.data || [];
+            setSuppliers(data);
         } catch (err) {
             setError(err.message || "Failed to fetch suppliers");
         } finally {
@@ -19,22 +21,28 @@ const useSupplier = () => {
         }
     };
 
+    // There is no getList(id) in supplierAPI, so this should be a separate endpoint if needed
     const fetchSupplierById = async (id) => {
         setLoading(true);
         try {
-            const response = await supplierAPI.getList(id);
-            setSupplier(response.data);
+            // You may need to implement a getById in supplierAPI if needed
+            // For now, fallback to getAll and filter
+            const response = await supplierAPI.getAll();
+            const data = response.data?.data || response.data || [];
+            const found = data.find(s => s._id === id);
+            setSupplier(found || null);
         } catch (err) {
             setError(err.message || "Failed to fetch supplier");
         } finally {
             setLoading(false);
         }
     };
+
     const createSupplier = async (formData) => {
         setLoading(true);
         try {
             const response = await supplierAPI.add(formData);
-            setSuppliers([...suppliers, response.data]);
+            setSuppliers(prev => [...prev, response.data]);
         } catch (err) {
             setError(err.message || "Failed to create supplier");
         } finally {
@@ -46,7 +54,7 @@ const useSupplier = () => {
         setLoading(true);
         try {
             const response = await supplierAPI.update(id, formData);
-            setSuppliers(suppliers.map(s => (s._id === id ? response.data : s)));
+            setSuppliers(prev => prev.map(s => (s._id === id ? response.data : s)));
         } catch (err) {
             setError(err.message || "Failed to update supplier");
         } finally {
@@ -58,7 +66,7 @@ const useSupplier = () => {
         setLoading(true);
         try {
             const response = await supplierAPI.updateStatus(id, { status });
-            setSuppliers(suppliers.map(s => (s._id === id ? response.data : s)));
+            setSuppliers(prev => prev.map(s => (s._id === id ? response.data : s)));
         } catch (err) {
             setError(err.message || "Failed to update supplier status");
         } finally {
@@ -66,7 +74,17 @@ const useSupplier = () => {
         }
     };
 
-    return { suppliers, loading, error, supplier, fetchSuppliers, fetchSupplierById, createSupplier, updateSupplier, updateSupplierStatus };
-}
+    return {
+        suppliers,
+        loading,
+        error,
+        supplier,
+        fetchSuppliers,
+        fetchSupplierById,
+        createSupplier,
+        updateSupplier,
+        updateSupplierStatus
+    };
+};
 
 export default useSupplier;

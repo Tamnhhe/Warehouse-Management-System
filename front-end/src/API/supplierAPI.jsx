@@ -12,7 +12,6 @@ const addCacheBusting = (url) => {
 
 const supplierAPI = {
   getAll: () => {
-    console.log("[SupplierAPI] Fetching all suppliers with cache-busting...");
     return authorApi.get(addCacheBusting(`${API_URL}/get-list-suppliers`), {
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -22,7 +21,6 @@ const supplierAPI = {
     });
   },
   getList: () => {
-    console.log("[SupplierAPI] Fetching supplier list with cache-busting...");
     return authorApi.get(addCacheBusting(`${API_URL}/get-list-suppliers`), {
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",

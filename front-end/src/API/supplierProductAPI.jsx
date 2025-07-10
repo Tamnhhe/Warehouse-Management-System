@@ -38,8 +38,8 @@ const supplierProductAPI = {
       }
     );
   },
-  getAvailableProductsForSupplier: (supplierId) =>
-    authorApi.get(`${API_URL}/supplier/${supplierId}/available-products`),
+  // getAvailableProductsForSupplier: (supplierId) =>
+  //   authorApi.get(`${API_URL}/supplier/${supplierId}/available-products`),
   addProductToSupplier: (supplierId, data) =>
     authorApi.post(`${API_URL}/supplier/${supplierId}/add-product`, data),
   updateSupplierProduct: (supplierProductId, data) =>
