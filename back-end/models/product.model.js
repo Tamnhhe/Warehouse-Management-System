@@ -16,7 +16,10 @@ const ProductSchema = new mongoose.Schema({
         required: true,
         default: 0,
     },
-    
+    thresholdStock: {   //Nguong ton kho
+        type: Number,
+        required: true,
+    },
     productImage: { //Anh san pham
         type: String,
         required: true,
