@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Container,
@@ -114,24 +113,37 @@ const Login = () => {
                 </InputGroup>
               </Form.Group>
 
-              <div className="d-flex justify-content-between align-items-center">
-                <a
-                  href="/forgot-password"
-                  className="text-decoration-none text-primary"
-                >
-                  Quên mật khẩu?
-                </a>
-                <Button
-                  type="submit"
-                  style={{
-                    backgroundColor: "#48C1A6",
-                    border: "none",
-                    borderRadius: "20px",
-                  }}
-                >
-                  Đăng nhập
-                </Button>
-              
+              <div className="d-flex flex-column gap-3">
+                <div className="d-flex justify-content-between align-items-center">
+                  <a
+                    href="/forgot-password"
+                    className="text-decoration-none text-primary"
+                  >
+                    Quên mật khẩu?
+                  </a>
+                  <Button
+                    type="submit"
+                    style={{
+                      backgroundColor: "#48C1A6",
+                      border: "none",
+                      borderRadius: "20px",
+                    }}
+                  >
+                    Đăng nhập
+                  </Button>
+                </div>
+
+                <div className="text-center">
+                  <span className="me-2">Chưa có tài khoản?</span>
+                  <Button
+                    variant="link"
+                    onClick={() => navigate("/register")}
+                    className="text-decoration-none p-0"
+                    style={{ color: "#48C1A6" }}
+                  >
+                    Đăng ký ngay
+                  </Button>
+                </div>
               </div>
             </Form>
           </div>
