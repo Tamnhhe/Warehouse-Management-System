@@ -10,11 +10,7 @@ const ProductSchema = new mongoose.Schema({
         ref: 'Category', // Reference to the Category collection
         required: true,
     },
-    totalStock: { //Tong so luong
-        type: Number,
-        required: true,
-        default: 0,
-    },
+    
     thresholdStock: {   //Nguong ton kho
         type: Number,
         required: true,
