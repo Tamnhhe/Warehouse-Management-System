@@ -2,26 +2,63 @@ import {
   Box,
   Typography,
   CircularProgress,
-  Grid,
-  Card,
+  Button,
   Collapse,
-  Button
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Avatar,
 } from "@mui/material";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import { useState, useEffect } from "react";
+import AddSupplierProductModal from "./AddSupplierProductModal";
+import useSupplierProduct from "../../Hooks/useSupplierProduct";
+import useCategory from "../../Hooks/useCategory";
 
 const ExpandSupplierProduct = ({
   open,
   supplier,
-  supplierProducts,
-  loadingProducts,
-  palette
+  palette,
 }) => {
-  const productSample = {
-    productName: "Sản phẩm mẫu",
-    categoryName: "Danh mục mẫu",
-    price: 100000,
-    stock: 50,
-    supplierProductId: "sample-id"
+  const [openAddProductModal, setOpenAddProductModal] = useState(false);
+  const { categories, getAllCategories, loading: loadingCategories } = useCategory();
+  const {
+    loading,
+    error,
+    fetchProductsBySupplier,
+    createSupplierProduct
+  } = useSupplierProduct();
+
+  const [supplierProducts, setSupplierProducts] = useState([]);
+  // Fetch products when expanded
+  useEffect(() => {
+    if (open && supplier?._id) {
+      const fetchProducts = async () => {
+        const products = await fetchProductsBySupplier(supplier._id);
+        setSupplierProducts(products);
+      };
+      fetchProducts();
+    }
+    getAllCategories();
+  }, [open, supplier?._id]);
+
+
+  const handleAddProduct = async (productData) => {
+    try {
+      await createSupplierProduct(productData);
+      setOpenAddProductModal(false);
+      // Refresh product list after adding
+      if (supplier?._id) {
+        const products = await fetchProductsBySupplier(supplier._id);
+        setSupplierProducts(products);
+      }
+    } catch (err) {
+      alert("Lỗi khi thêm sản phẩm nhà cung cấp: " + (err.message || ""));
+    }
   };
 
   return (
@@ -38,86 +75,86 @@ const ExpandSupplierProduct = ({
           <Button
             variant="contained"
             size="small"
-            sx={{ backgroundColor: palette.medium, color: palette.dark, fontWeight: "bold" }}
-            onClick={() => alert("Chức năng thêm sản phẩm nhà cung cấp sẽ được phát triển!")}
+            sx={{
+              backgroundColor: palette.medium,
+              color: palette.dark,
+              fontWeight: "bold",
+              boxShadow: 1,
+              borderRadius: 2,
+              textTransform: "none"
+            }}
+            onClick={() => setOpenAddProductModal(true)}
           >
             Thêm sản phẩm nhà cung cấp
           </Button>
         </Box>
-        {loadingProducts ? (
+        {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
-            <CircularProgress size={24} sx={{ color: palette.dark }} />
+            <CircularProgress size={32} sx={{ color: palette.dark }} />
           </Box>
         ) : supplierProducts.length > 0 ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Debug: Tìm thấy {supplierProducts.length} sản phẩm
+              Tìm thấy {supplierProducts.length} sản phẩm
             </Typography>
-            <Grid container spacing={2}>
-              {/* Sản phẩm mẫu */}
-              <Grid item xs={12} sm={6} md={4} key={productSample.supplierProductId}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    height: "100%",
-                    backgroundColor: palette.light + "10",
-                    borderStyle: "dashed",
-                    borderColor: palette.medium,
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", color: palette.medium }}>
-                    {productSample.productName} (Sample)
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {productSample.categoryName}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: palette.medium, fontWeight: "medium" }}>
-                    Giá: {new Intl.NumberFormat("vi-VN").format(productSample.price)} VNĐ
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Tồn kho: {productSample.stock}
-                  </Typography>
-                </Card>
-              </Grid>
-              {/* Sản phẩm thực tế */}
-              {supplierProducts.slice(0, 6).map((product) => (
-                <Grid item xs={12} sm={6} md={4} key={product.supplierProductId}>
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      height: "100%",
-                      "&:hover": {
-                        boxShadow: 2,
-                        transform: "translateY(-2px)",
-                      },
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: "bold", color: palette.dark }}>
-                      {product.productName}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {product.categoryName}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: palette.medium, fontWeight: "medium" }}>
-                      Giá: {new Intl.NumberFormat("vi-VN").format(product.price)} VNĐ
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Tồn kho: {product.stock}
-                    </Typography>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ background: palette.light }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>Tên sản phẩm</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Danh mục</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Tồn kho</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Định lượng</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Đơn vị</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Ngày hết hạn</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Ảnh</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {supplierProducts.map((product) => (
+                    <TableRow key={product._id} hover>
+                      <TableCell>{product.productName}</TableCell>
+                      <TableCell>{product.categoryId?.categoryName || "Không có"}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
+                      <TableCell>{product.quantitative}</TableCell>
+                      <TableCell>{product.unit}</TableCell>
+                      <TableCell>
+                        {product.expiry ? new Date(product.expiry).toLocaleDateString() : ""}
+                      </TableCell>
+                      <TableCell>
+                        {product.productImage ? (
+                          <Avatar
+                            src={product.productImage}
+                            alt={product.productName}
+                            sx={{ width: 40, height: 40, borderRadius: 2 }}
+                            variant="rounded"
+                          />
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            Không có
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </>
         ) : (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
             Chưa có sản phẩm nào
           </Typography>
         )}
+        <AddSupplierProductModal
+          open={openAddProductModal}
+          onClose={() => setOpenAddProductModal(false)}
+          onSubmit={handleAddProduct}
+          supplierId={supplier._id}
+          palette={palette}
+          categories={categories}
+          loadingCategories={loadingCategories}
+        />
       </Box>
     </Collapse>
   );

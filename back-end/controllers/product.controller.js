@@ -23,11 +23,14 @@ const createProduct = async (req, res, next) => {
     if (!productName || !categoryId || !image || !unit || !location || typeof thresholdStock !== 'number') {
       return res.status(400).json({ message: 'Thiếu thông tin sản phẩm bắt buộc' });
     }
+
+
     // Kiểm tra danh mục
     const checkCategory = await Category.findById(categoryId);
     if (!checkCategory) {
       return res.status(404).json({ message: 'Danh mục không hợp lệ' });
     }
+  
     // Kiểm tra mảng vị trí
     if (!Array.isArray(location) || location.length === 0) {
       return res.status(400).json({ message: 'Location phải là một mảng và không được rỗng' });

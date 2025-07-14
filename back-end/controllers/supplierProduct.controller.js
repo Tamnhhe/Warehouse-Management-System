@@ -1,6 +1,7 @@
 const db = require("../models/index");
 const mongoose = require("mongoose");
 const SupplierProduct = require("../models/supplierProduct.model");
+const Product = require('../models/product.model');
 
 // Get all supplier products
 const getAllSupplierProducts = async (req, res) => {
@@ -39,7 +40,7 @@ const getProductsBySupplier = async (req, res) => {
   }
 };
 
-// Create a new supplier product
+// Create a new supplier product also create a product if it doesn't exist
 const createSupplierProduct = async (req, res) => {
   try {
     const {
@@ -71,6 +72,20 @@ const createSupplierProduct = async (req, res) => {
       quantitative,
       unit: unit.trim()
     });
+    // Check if product already exists
+    const existingProduct = await Product.findOne({ productName: newSupplierProduct.productName });
+    if (!existingProduct) {
+      const newProduct = new Product({
+        productName: newSupplierProduct.productName,
+        categoryId: newSupplierProduct.categoryId,
+        thresholdStock: newSupplierProduct.thresholdStock,
+        productImage: newSupplierProduct.productImage,
+        unit: newSupplierProduct.unit,
+        location: newSupplierProduct.location,
+        quantitative: newSupplierProduct.quantitative
+      });
+      await newProduct.save();
+    }
     const savedProduct = await newSupplierProduct.save();
     res.status(201).json({ success: true, data: savedProduct });
   } catch (error) {

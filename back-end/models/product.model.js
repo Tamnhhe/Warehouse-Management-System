@@ -4,6 +4,8 @@ const ProductSchema = new mongoose.Schema({
     productName: { //tên sản phẩm
         type: String,
         required: true,
+        unique: true, // Đảm bảo tên sản phẩm là duy nhất
+        trim: true,
     },
     categoryId: { //Danh mục
         type: mongoose.Schema.Types.ObjectId,
