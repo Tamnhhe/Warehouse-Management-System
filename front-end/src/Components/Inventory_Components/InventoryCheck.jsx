@@ -22,9 +22,12 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import axios from "axios";
 import "./inventoryPin.css"; // Thêm file CSS riêng cho từng kệ
+import HistoryIcon from '@mui/icons-material/History';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 
 const API_BASE = "http://localhost:9999/inventory";
 const CATEGORY_API = "http://localhost:9999/category/getAllCategories";
+const STOCKTAKING_API = "http://localhost:9999/stocktaking";
 
 // Danh sách màu cho từng loại sản phẩm
 const colorList = [
@@ -135,10 +138,10 @@ function InventoryCheck() {
   // Lọc inventories theo category
   const filteredInventories = selectedCategory
     ? inventories.filter(
-        (inv) =>
-          inv.category?._id === selectedCategory ||
-          inv.categoryId === selectedCategory
-      )
+      (inv) =>
+        inv.category?._id === selectedCategory ||
+        inv.categoryId === selectedCategory
+    )
     : inventories;
 
   // SẮP XẾP: Kệ nào 100% lên đầu
@@ -158,6 +161,71 @@ function InventoryCheck() {
   const filteredCategories = (categories || []).filter((cat) =>
     usedCategoryIds.includes(cat._id)
   );
+
+  const [openStocktaking, setOpenStocktaking] = useState(false);
+  const [stocktakingInventory, setStocktakingInventory] = useState(null);
+  const [stocktakingProducts, setStocktakingProducts] = useState([]);
+  const [actualQuantities, setActualQuantities] = useState({});
+  const [stocktakingResult, setStocktakingResult] = useState(null);
+  const [openHistory, setOpenHistory] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [adjustmentResult, setAdjustmentResult] = useState(null);
+
+  const handleOpenStocktaking = (inventory) => {
+    setStocktakingInventory(inventory);
+    // Chuẩn bị actualQuantities mặc định = số lượng hệ thống
+    const prods = (inventory.products || []).map(p => ({
+      ...p,
+      actualQuantity: p.quantity
+    }));
+    setStocktakingProducts(prods);
+    setActualQuantities(Object.fromEntries(prods.map(p => [p.productId, p.quantity])));
+    setStocktakingResult(null);
+    setAdjustmentResult(null);
+    setOpenStocktaking(true);
+  };
+  const handleChangeActual = (productId, value) => {
+    setActualQuantities({ ...actualQuantities, [productId]: value });
+  };
+  const handleSubmitStocktaking = async () => {
+    try {
+      const auditor = localStorage.getItem("userId") || "demo-user";
+      const products = stocktakingProducts.map(p => ({
+        productId: p.productId,
+        actualQuantity: Number(actualQuantities[p.productId] || 0)
+      }));
+      const res = await axios.post(`${STOCKTAKING_API}/create`, {
+        inventoryId: stocktakingInventory._id,
+        products,
+        auditor
+      });
+      setStocktakingResult(res.data.task);
+    } catch (err) {
+      alert("Lỗi khi kiểm kê!");
+    }
+  };
+  const handleCreateAdjustment = async () => {
+    try {
+      const createdBy = localStorage.getItem("userId") || "demo-user";
+      const res = await axios.post(`${STOCKTAKING_API}/adjustment`, {
+        stocktakingTaskId: stocktakingResult._id,
+        createdBy
+      });
+      setAdjustmentResult(res.data.adjustment);
+      fetchInventories(); // Cập nhật lại tồn kho
+    } catch (err) {
+      alert("Lỗi khi tạo phiếu điều chỉnh!");
+    }
+  };
+  const handleOpenHistory = async () => {
+    try {
+      const res = await axios.get(`${STOCKTAKING_API}/history`);
+      setHistory(res.data);
+      setOpenHistory(true);
+    } catch (err) {
+      alert("Lỗi khi tải lịch sử kiểm kê!");
+    }
+  };
 
   return (
     <Box sx={{ p: 3, background: "#fff", minHeight: "100vh" }}>
@@ -208,8 +276,8 @@ function InventoryCheck() {
           const percent =
             inv.maxQuantitative > 0
               ? Math.round(
-                  (inv.currentQuantitative / inv.maxQuantitative) * 100
-                )
+                (inv.currentQuantitative / inv.maxQuantitative) * 100
+              )
               : 0;
           // Số hộp hàng trên kệ (tối đa 5 hộp/tầng, 3 tầng)
           const maxBoxes = 15;
@@ -418,8 +486,8 @@ function InventoryCheck() {
                             percent < 20
                               ? "#ef4444"
                               : percent < 60
-                              ? "#facc15"
-                              : "#22d3ee",
+                                ? "#facc15"
+                                : "#22d3ee",
                         }}
                       />
                       <Box
@@ -458,6 +526,16 @@ function InventoryCheck() {
                     size="small"
                   />
                 </Box>
+                <Button
+                  variant="contained"
+                  color="info"
+                  size="small"
+                  startIcon={<FactCheckIcon />}
+                  sx={{ mt: 1, fontWeight: 700, borderRadius: 3, px: 2, py: 0.5, fontSize: 14 }}
+                  onClick={(e) => { e.stopPropagation(); handleOpenStocktaking(inv); }}
+                >
+                  Kiểm kê
+                </Button>
               </Box>
             </Grid>
           );
@@ -590,6 +668,77 @@ function InventoryCheck() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Dialog kiểm kê thực tế */}
+      <Dialog open={openStocktaking} onClose={() => setOpenStocktaking(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Kiểm kê thực tế: {stocktakingInventory?.name}</DialogTitle>
+        <DialogContent>
+          {stocktakingProducts.map((prod, idx) => (
+            <Box key={prod.productId} sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Typography sx={{ minWidth: 120 }}>{prod.productName}</Typography>
+              <Typography sx={{ mx: 2, color: "#1976d2" }}>Hệ thống: {prod.quantity}</Typography>
+              <TextField
+                label="Thực tế"
+                type="number"
+                size="small"
+                value={actualQuantities[prod.productId]}
+                onChange={e => handleChangeActual(prod.productId, e.target.value)}
+                sx={{ width: 100 }}
+              />
+            </Box>
+          ))}
+          {stocktakingResult && (
+            <Box sx={{ mt: 2 }}>
+              <Typography fontWeight={700} color="#1976d2">Kết quả kiểm kê:</Typography>
+              {stocktakingResult.products.map((p, idx) => (
+                <Typography key={p.productId} color={p.difference !== 0 ? "error" : "success.main"}>
+                  {p.productId}: Lệch {p.difference} ({p.systemQuantity} → {p.actualQuantity})
+                </Typography>
+              ))}
+              {stocktakingResult.products.some(p => p.difference !== 0) && !adjustmentResult && (
+                <Button variant="contained" color="warning" sx={{ mt: 2 }} onClick={handleCreateAdjustment}>
+                  Tạo phiếu điều chỉnh
+                </Button>
+              )}
+              {adjustmentResult && (
+                <Typography color="success.main" sx={{ mt: 2 }}>Đã tạo phiếu điều chỉnh thành công!</Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenStocktaking(false)}>Đóng</Button>
+          {!stocktakingResult && (
+            <Button variant="contained" onClick={handleSubmitStocktaking}>Xác nhận kiểm kê</Button>
+          )}
+        </DialogActions>
+      </Dialog>
+      {/* Dialog lịch sử kiểm kê */}
+      <Dialog open={openHistory} onClose={() => setOpenHistory(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Lịch sử kiểm kê</DialogTitle>
+        <DialogContent>
+          {history.length === 0 ? (
+            <Typography>Chưa có phiếu kiểm kê nào.</Typography>
+          ) : (
+            history.map((task, idx) => (
+              <Box key={task._id} sx={{ mb: 2, p: 1, border: "1px solid #eee", borderRadius: 2 }}>
+                <Typography fontWeight={700}>Kệ: {task.inventoryId?.name || task.inventoryId}</Typography>
+                <Typography>Người kiểm kê: {task.auditor?.name || task.auditor}</Typography>
+                <Typography>Thời gian: {new Date(task.checkedAt).toLocaleString()}</Typography>
+                {task.products.map((p, i) => (
+                  <Typography key={p.productId} color={p.difference !== 0 ? "error" : "success.main"}>
+                    {p.productId}: Lệch {p.difference} ({p.systemQuantity} → {p.actualQuantity})
+                  </Typography>
+                ))}
+                {task.adjustmentId && <Typography color="success.main">Đã điều chỉnh</Typography>}
+              </Box>
+            ))
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenHistory(false)}>Đóng</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

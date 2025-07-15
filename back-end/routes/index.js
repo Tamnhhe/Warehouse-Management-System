@@ -10,6 +10,7 @@ const inventoryTransactionRouter = require("./inventoryTransaction.route");
 const categoryRouter = require("./category.route");
 const supplierRouter = require("./supplier.route");
 const supplierProductRouter = require("./supplierProduct.route");
+const stocktakingRouter = require("./stocktaking.route");
 
 // Assign routers to router
 router.use("/suppliers", supplierRouter);
@@ -20,6 +21,6 @@ router.use("/inventoryTransactions", inventoryTransactionRouter);
 router.use("/categories", categoryRouter); // Nguyễn Đức Linh - HE170256 23/1/2025
 router.use("/users", userRouter);
 router.use("/supplierProduct", supplierProductRouter);
-
+router.use("/stocktaking", stocktakingRouter);
 
 module.exports = router;
