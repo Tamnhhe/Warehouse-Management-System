@@ -41,7 +41,7 @@ const mainFunctions = [
   {
     title: "Kiểm kê",
     icon: <FactCheckIcon />,
-    path: "/inventory-check",
+    path: "/inventory",
     allowedRoles: ["manager", "employee"],
   },
   {
@@ -53,7 +53,7 @@ const mainFunctions = [
   {
     title: "Kệ hàng",
     icon: <Palette />,
-    path: "/",
+    path: "/inventory-check",
     allowedRoles: ["manager", "employee"],
   },
   {

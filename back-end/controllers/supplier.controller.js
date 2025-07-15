@@ -13,7 +13,7 @@ exports.getSuppliers = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-//Minh Phuong - Ham lấy suppliers
+//- Ham lấy suppliers
 exports.getAllSuppliers = async (req, res, next) => {
   try {
     // Add cache-busting headers
