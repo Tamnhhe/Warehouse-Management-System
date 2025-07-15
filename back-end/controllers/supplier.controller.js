@@ -1,4 +1,3 @@
-
 const db = require("../models/index");
 const Supplier = db.Supplier;
 const SupplierProduct = db.SupplierProduct;
@@ -14,14 +13,37 @@ exports.getSuppliers = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-//Minh Phuong - Ham lấy suppliers
+//- Ham lấy suppliers
 exports.getAllSuppliers = async (req, res, next) => {
   try {
+    // Add cache-busting headers
+    res.set({
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      "Last-Modified": new Date().toUTCString(),
+      ETag: `"${Date.now()}-${Math.random().toString(36).substr(2, 9)}"`,
+    });
+
+    console.log(
+      "[SupplierController] Fetching all suppliers with cache-busting headers..."
+    );
     const suppliers = await Supplier.find({});
-    res.status(200).json(suppliers);
+    console.log(`[SupplierController] Found ${suppliers.length} suppliers`);
+
+    res.status(200).json({
+      success: true,
+      data: suppliers,
+      total: suppliers.length,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     console.error("Lỗi lấy dữ liệu các nhà cung cấp:", error);
-    res.status(500).json({ message: "Lỗi server" });
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 // Lấy danh sách sản phẩm của nhà cung cấp
@@ -84,7 +106,9 @@ exports.createSupplier = async (req, res) => {
       }
       // Kiểm tra số điện thoại hợp lệ (chỉ chứa số, độ dài từ 10-15 số)
       if (!/^\d{10,15}$/.test(contact)) {
-        return res.status(400).json({ error: "Số điện thoại phải chứa 10 - 15 chữ số" });
+        return res
+          .status(400)
+          .json({ error: "Số điện thoại phải chứa 10 - 15 chữ số" });
       }
     }
 
@@ -111,7 +135,6 @@ exports.createSupplier = async (req, res) => {
   }
 };
 
-
 // Cập nhật thông tin nhà cung cấp
 exports.updateSupplier = async (req, res) => {
   try {
@@ -126,7 +149,10 @@ exports.updateSupplier = async (req, res) => {
 
     // Kiểm tra nếu name đã tồn tại trong database (ngoại trừ chính supplier đang cập nhật)
     if (name) {
-      const duplicateName = await Supplier.findOne({ name, _id: { $ne: supplierId } });
+      const duplicateName = await Supplier.findOne({
+        name,
+        _id: { $ne: supplierId },
+      });
       if (duplicateName) {
         return res.status(400).json({ error: "Supplier name already exists" });
       }
@@ -134,7 +160,10 @@ exports.updateSupplier = async (req, res) => {
 
     // Kiểm tra nếu số điện thoại đã tồn tại trong database (ngoại trừ chính supplier đang cập nhật)
     if (contact) {
-      const duplicateContact = await Supplier.findOne({ contact, _id: { $ne: supplierId } });
+      const duplicateContact = await Supplier.findOne({
+        contact,
+        _id: { $ne: supplierId },
+      });
       if (duplicateContact) {
         return res.status(400).json({ error: "Contact number already exists" });
       }
@@ -146,7 +175,10 @@ exports.updateSupplier = async (req, res) => {
 
     // Kiểm tra nếu email đã tồn tại trong database (ngoại trừ chính supplier đang cập nhật)
     if (email) {
-      const duplicateEmail = await Supplier.findOne({ email, _id: { $ne: supplierId } });
+      const duplicateEmail = await Supplier.findOne({
+        email,
+        _id: { $ne: supplierId },
+      });
       if (duplicateEmail) {
         return res.status(400).json({ error: "Email already exists" });
       }
@@ -185,5 +217,86 @@ exports.inactiveSupplier = async (req, res, next) => {
       .json({ message: "User status changed successfully", supplier });
   } catch (error) {
     next(error);
+  }
+};
+
+// Lấy thông tin chi tiết nhà cung cấp kèm danh sách sản phẩm
+exports.getSupplierWithProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { includeInactive = false } = req.query;
+
+    // Lấy thông tin nhà cung cấp
+    const supplier = await Supplier.findById(id);
+    if (!supplier) {
+      return res.status(404).json({ message: "Supplier not found" });
+    }
+
+    // Lấy danh sách sản phẩm của nhà cung cấp
+    const matchCondition =
+      includeInactive === "true" ? {} : { status: "active" };
+
+    const supplierProducts = await SupplierProduct.find({
+      supplier: id,
+    }).populate({
+      path: "product",
+      match: matchCondition,
+      populate: {
+        path: "categoryId",
+        model: "Category",
+        select: "categoryName",
+      },
+    });
+
+    // Lọc bỏ những document có product null
+    const validProducts = supplierProducts.filter((sp) => sp.product !== null);
+
+    // Tính toán thống kê
+    const stats = {
+      totalProducts: validProducts.length,
+      totalStock: validProducts.reduce((sum, sp) => sum + sp.stock, 0),
+      avgPrice:
+        validProducts.length > 0
+          ? validProducts.reduce((sum, sp) => sum + sp.price, 0) /
+            validProducts.length
+          : 0,
+      totalValue: validProducts.reduce(
+        (sum, sp) => sum + sp.price * sp.stock,
+        0
+      ),
+    };
+
+    const responseData = {
+      supplier: {
+        _id: supplier._id,
+        name: supplier.name,
+        contact: supplier.contact,
+        email: supplier.email,
+        status: supplier.status,
+        address: supplier.address,
+        createdAt: supplier.createdAt,
+        updatedAt: supplier.updatedAt,
+      },
+      products: validProducts.map((sp) => ({
+        supplierProductId: sp._id,
+        productId: sp.product._id,
+        productName: sp.product.productName,
+        productDescription: sp.product.description,
+        price: sp.price,
+        stock: sp.stock,
+        expiry: sp.expiry,
+        categoryId: sp.product.categoryId?._id,
+        categoryName: sp.product.categoryId?.categoryName || "Chưa phân loại",
+        status: sp.product.status,
+        createdAt: sp.createdAt,
+        updatedAt: sp.updatedAt,
+      })),
+      stats: stats,
+    };
+
+    res.json(responseData);
+  } catch (err) {
+    console.error("Error getting supplier with products:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };

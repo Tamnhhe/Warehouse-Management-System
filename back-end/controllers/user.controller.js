@@ -6,18 +6,8 @@ const { sendMail } = require("../utils/Mailer");
 const { verifyAccessToken } = require("../utils/Jwt");
 // - Hàm View Profile
 async function getProfile(req, res, next) {
-  try {
-    const token = req.headers.authorization;
-    /* console.log(req.headers);*/
-    if (!token) {
-      return res.status(401).json({ message: "Không tồn tại token" });
-    }
-
-    const decoded = verifyAccessToken(token);
-
-    console.log("Decoded token:", decoded);
-
-    const user = await db.User.findById(decoded.id);
+  try {    
+    const user = await db.User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
@@ -32,14 +22,8 @@ async function getProfile(req, res, next) {
 // - Ham edit Profile
 async function editProfile(req, res, next) {
   try {
-    const token = req.headers.authorization;
-    //xac thuc ng dung bang jwtjwt
-    if (!token) {
-      return res.status(401).json({ message: "Không tồn tại token" });
-    }
-    //lay token tu header
-    const decoded = verifyAccessToken(token);
-    const userId = decoded.id;
+    
+    const userId = req.user.id;
 
     const user = await db.User.findById(userId);
     if (!user) {
