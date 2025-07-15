@@ -19,15 +19,24 @@ const UpdateProductModal = ({
 
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
+  const [shelves, setShelves] = useState([]);
   const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Fetch categories
+  // Fetch categories and shelves
   useEffect(() => {
-    axios
-      .get("http://localhost:9999/categories/getAllCategories")
-      .then((response) => setCategories(response.data))
-      .catch((error) => console.error("Error fetching categories:", error));
+    Promise.all([
+      axios.get("http://localhost:9999/categories/getAllCategories"),
+      axios.get("http://localhost:9999/inventory")
+    ])
+      .then(([categoriesResponse, shelvesResponse]) => {
+        setCategories(categoriesResponse.data);
+        setShelves(shelvesResponse.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+        setGeneralError("Error loading categories or shelves");
+      });
   }, []);
 
   // Update productData after both product and categories are loaded
@@ -91,6 +100,25 @@ const UpdateProductModal = ({
       ...prevErrors,
       [name]: error,
     }));
+  };
+
+  const handleShelfSelect = (e) => {
+    const selectedShelfId = e.target.value;
+    if (!selectedShelfId) return;
+
+    const selectedShelf = shelves.find(shelf => shelf._id === selectedShelfId);
+    if (selectedShelf) {
+      setProductData(prevData => ({
+        ...prevData,
+        location: selectedShelf.name
+      }));
+
+      // Clear any location error
+      setErrors(prevErrors => ({
+        ...prevErrors,
+        location: ""
+      }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -221,6 +249,25 @@ const UpdateProductModal = ({
             </Form.Control.Feedback>
           </Form.Group>
 
+          <Form.Group controlId="shelfSelect">
+            <Form.Label>Chọn Kệ Hàng</Form.Label>
+            <Form.Control
+              as="select"
+              onChange={handleShelfSelect}
+              defaultValue=""
+            >
+              <option value="">Chọn kệ hàng có sẵn</option>
+              {shelves.map((shelf) => (
+                <option key={shelf._id} value={shelf._id}>
+                  {shelf.name}
+                </option>
+              ))}
+            </Form.Control>
+            <Form.Text className="text-muted">
+              Chọn kệ hàng hoặc nhập vị trí thủ công bên dưới
+            </Form.Text>
+          </Form.Group>
+
           <Form.Group controlId="location">
             <Form.Label>Vị Trí</Form.Label>
             <Form.Control
@@ -248,29 +295,16 @@ const UpdateProductModal = ({
               {errors.productImage}
             </Form.Control.Feedback>
 
-            {/* Hiển thị ảnh cũ nếu có */}
-            {productData.productImage &&
-              typeof productData.productImage === "string" && (
-                <div className="mt-3">
-                  <img
-                    src={`http://localhost:9999${productData.productImage}`}
-                    alt="Product"
-                    width="60"
-                  />
-                </div>
-              )}
-
-            {/* Hiển thị ảnh mới nếu chọn */}
-            {productData.productImage &&
-              typeof productData.productImage !== "string" && (
-                <div className="mt-3">
-                  <img
-                    src={URL.createObjectURL(productData.productImage)}
-                    alt="Preview"
-                    style={{ maxWidth: "100%", height: "auto" }}
-                  />
-                </div>
-              )}
+            {productData.productImage && typeof productData.productImage === "string" && (
+              <div className="mt-2">
+                <p>Ảnh hiện tại:</p>
+                <img
+                  src={`http://localhost:9999${productData.productImage}`}
+                  alt="Product preview"
+                  style={{ maxWidth: "100%", height: "auto", maxHeight: "150px" }}
+                />
+              </div>
+            )}
           </Form.Group>
 
           <Form.Group controlId="status">
@@ -280,9 +314,10 @@ const UpdateProductModal = ({
               name="status"
               value={productData.status}
               onChange={handleChange}
+              required
             >
-              <option value="active">Hoạt động</option>
-              <option value="inactive">Không hoạt động</option>
+              <option value="active">Đang bán</option>
+              <option value="inactive">Ngừng bán</option>
             </Form.Control>
           </Form.Group>
         </Form>
@@ -291,8 +326,12 @@ const UpdateProductModal = ({
         <Button variant="secondary" onClick={handleClose} disabled={loading}>
           Đóng
         </Button>
-        <Button variant="primary" onClick={onUpdate} disabled={loading}>
-          {loading ? "Đang cập nhật..." : "Cập nhật"}
+        <Button
+          variant="primary"
+          onClick={onUpdate}
+          disabled={loading}
+        >
+          {loading ? "Đang cập nhật..." : "Lưu thay đổi"}
         </Button>
       </Modal.Footer>
     </Modal>

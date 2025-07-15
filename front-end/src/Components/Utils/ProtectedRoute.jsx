@@ -1,57 +1,66 @@
 import { jwtDecode } from 'jwt-decode';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 const checkTokenExpiration = () => {
     const token = localStorage.getItem('authToken');
     if (token) {
-        const { exp } = jwtDecode(token);
-        if (Date.now() >= exp * 1000) {
+        try {
+            const { exp } = jwtDecode(token);
+            if (Date.now() >= exp * 1000) {
+                localStorage.removeItem('authToken');
+                return true; // Token hết hạn
+            }
+        } catch (error) {
+            console.error('Invalid token format:', error);
             localStorage.removeItem('authToken');
-            return true; // Token hết hạn
+            return true;
         }
     }
-    return false; // Token hợp lệ
+    return !token; // Token không tồn tại hoặc hợp lệ
 };
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, redirectTo = '/login' }) => {
     const navigate = useNavigate();
     const token = localStorage.getItem("authToken");
-    const [hasAlerted, setHasAlerted] = useState(false); // Tránh lặp alert
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // useEffect(() => {
-    //     if (!token || checkTokenExpiration()) {
-    //         if (!hasAlerted) {
-    //             alert('Token đã hết hạn, vui lòng đăng nhập lại');
-    //             setHasAlerted(true);
-    //         }
-    //         navigate('/login', { replace: true });
-    //     } else {
-    //         try {
-    //             const decodedToken = jwtDecode(token);
-    //             const userRole = decodedToken.role;
+    useEffect(() => {
+        const checkAuth = () => {
+            if (!token || checkTokenExpiration()) {
+                setIsAuthenticated(false);
+                setIsLoading(false);
+                return;
+            }
 
-    //             if (!allowedRoles.includes(userRole)) {
-    //                 alert('Ko có quyền');
-    //                 navigate('/product');
-    //             }
-    //         } catch (error) {
-    //             console.error('Invalid token:', error);
-    //             localStorage.removeItem('authToken');
-    //             navigate('/login', { replace: true });
-    //         }
-    //     }
-    // }, [token, allowedRoles, navigate, hasAlerted]);
+            try {
+                const decodedToken = jwtDecode(token);
+                const userRole = decodedToken.role;
 
-    // if (!token || checkTokenExpiration()) return null;
-    // try {
-    //     const decodedToken = jwtDecode(token);
-    //     if (!allowedRoles.includes(decodedToken.role)) return null;
-    // } catch {
-    //     return null;
-    // }
+                if (!allowedRoles.includes(userRole)) {
+                    // Người dùng đăng nhập nhưng không có quyền truy cập
+                    setIsAuthenticated(false);
+                } else {
+                    setIsAuthenticated(true);
+                }
+            } catch (error) {
+                console.error('Invalid token:', error);
+                localStorage.removeItem('authToken');
+                setIsAuthenticated(false);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    return children;
+        checkAuth();
+    }, [token, allowedRoles]);
+
+    if (isLoading) {
+        return <div>Đang kiểm tra quyền truy cập...</div>;
+    }
+
+    return isAuthenticated ? children : <Navigate to={redirectTo} replace />;
 };
 
 export default ProtectedRoute;

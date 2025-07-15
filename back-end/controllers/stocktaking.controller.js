@@ -168,7 +168,16 @@ exports.getStocktakingHistory = async (req, res) => {
   try {
     const tasks = await StocktakingTask.find()
       .populate("inventoryId auditor adjustmentId")
-      .sort({ checkedAt: -1 });
+      .sort({ checkedAt: -1 })
+      .lean();
+    // Populate product info for each task
+    for (const task of tasks) {
+      for (const prod of task.products) {
+        const product = await Product.findById(prod.productId).lean();
+        prod.productName = product?.productName || prod.productId;
+        prod.unit = product?.unit || "";
+      }
+    }
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -191,11 +200,17 @@ exports.getAdjustmentHistory = async (req, res) => {
 exports.getStocktakingTaskDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const task = await StocktakingTask.findById(id).populate(
-      "inventoryId auditor adjustmentId"
-    );
+    const task = await StocktakingTask.findById(id)
+      .populate("inventoryId auditor adjustmentId")
+      .lean();
     if (!task)
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
+    // Populate product info
+    for (const prod of task.products) {
+      const product = await Product.findById(prod.productId).lean();
+      prod.productName = product?.productName || prod.productId;
+      prod.unit = product?.unit || "";
+    }
     res.json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });

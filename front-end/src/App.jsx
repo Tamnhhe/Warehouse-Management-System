@@ -5,6 +5,7 @@ import {
   Routes,
   useLocation,
   matchPath,
+  Navigate
 } from "react-router-dom";
 import ProtectedRoute from "./Components/Utils/ProtectedRoute";
 import ForgotPassword from "./Components/Login_Components/ForgotPassword";
@@ -85,7 +86,11 @@ function App() {
       <Layout>
         <Routes>
           {/* Các Routes vẫn giữ nguyên không thay đổi */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={
+            <ProtectedRoute allowedRoles={["employee", "manager"]} redirectTo="/login">
+              <Landing />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

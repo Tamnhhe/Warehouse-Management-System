@@ -139,6 +139,16 @@ function Header() {
       path: "/manager/get-all-user",
       allowedRoles: ["manager"],
     },
+    {
+      label: "Kiểm kê",
+      path: "/stocktaking",
+      allowedRoles: ["manager", "employee"],
+    },
+    {
+      label: "Kệ hàng",
+      path: "/inventory-check",
+      allowedRoles: ["manager", "employee"],
+    },
   ];
 
   const partnerMenuItems = [
@@ -257,7 +267,7 @@ function Header() {
             <Typography
               variant="h6"
               onClick={() =>
-                navigate(userRole === "manager" ? "/" : "/product")
+                navigate(userRole ? "/" : "/login")
               }
               sx={{
                 fontWeight: "bold",
