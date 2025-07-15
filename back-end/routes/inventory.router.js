@@ -8,4 +8,5 @@ inventoryRouter.post('/add', InventoryController.createInventory);
 // Nhập hàng tự động phân bổ vào nhiều kệ
 inventoryRouter.post('/import-auto', InventoryController.importProductAutoDistribute);
 inventoryRouter.delete('/delete/:id', InventoryController.deleteInventory);
+
 module.exports = inventoryRouter;

@@ -21,7 +21,7 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
     stock: 0,
     expiry: "",
     categoryId: "",
-    productImage: "",
+    productImage: null, // now stores File
     productName: "",
     quantitative: 1,
     unit: ""
@@ -32,18 +32,21 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
     const errors = {};
     if (!data.supplier) errors.supplier = "Nhà cung cấp là bắt buộc";
     if (typeof data.stock !== "number" || data.stock < 0) errors.stock = "Tồn kho phải là số không âm";
-    if (!data.productImage) errors.productImage = "Ảnh sản phẩm là bắt buộc";
+    if (!data.productImage || !(data.productImage instanceof File)) errors.productImage = "Ảnh sản phẩm là bắt buộc";
     if (!data.productName.trim()) errors.productName = "Tên sản phẩm là bắt buộc";
     if (typeof data.quantitative !== "number" || data.quantitative <= 0) errors.quantitative = "Định lượng phải là số dương";
     if (!data.unit.trim()) errors.unit = "Đơn vị là bắt buộc";
-    // if (!data.categoryId) errors.categoryId = "Danh mục là bắt buộc";
     if (data.expiry && isNaN(Date.parse(data.expiry))) errors.expiry = "Ngày hết hạn không hợp lệ";
     return errors;
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: name === "stock" || name === "quantitative" ? Number(value) : value }));
+    const { name, value, type, files } = e.target;
+    if (name === "productImage" && files && files[0]) {
+      setFormData((prev) => ({ ...prev, productImage: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: name === "stock" || name === "quantitative" ? Number(value) : value }));
+    }
   };
 
   const handleSubmit = () => {
@@ -55,8 +58,8 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
       supplier: supplierId || "",
       stock: 0,
       expiry: "",
-      categoryId: "60f7c2b8e1d2c81234567891",
-      productImage: "",
+      categoryId: "",
+      productImage: null,
       productName: "",
       quantitative: 1,
       unit: ""
@@ -223,27 +226,27 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Ảnh sản phẩm (URL)"
-              name="productImage"
-              value={formData.productImage}
-              onChange={handleChange}
-              error={!!formErrors.productImage}
-              helperText={formErrors.productImage}
-              required
+            <Button
               variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  "&.Mui-focused fieldset": {
-                    borderColor: palette.dark,
-                  },
-                },
-                "& .MuiInputLabel-root.Mui-focused": {
-                  color: palette.dark,
-                },
-              }}
-            />
+              component="label"
+              fullWidth
+              sx={{ mb: 1 }}
+            >
+              Chọn ảnh sản phẩm
+              <input
+                type="file"
+                name="productImage"
+                accept="image/*"
+                hidden
+                onChange={handleChange}
+              />
+            </Button>
+            {formData.productImage && (
+              <span style={{ fontSize: 12 }}>{formData.productImage.name}</span>
+            )}
+            {formErrors.productImage && (
+              <div style={{ color: "red", fontSize: 12 }}>{formErrors.productImage}</div>
+            )}
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>

@@ -48,20 +48,27 @@ const createSupplierProduct = async (req, res) => {
       stock,
       expiry,
       categoryId,
-      productImage,
       productName,
       quantitative,
       unit
     } = req.body;
+    const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
+
     // Validate required fields
-    if (!supplier) return res.status(400).json({ message: 'Supplier is required.' });
-    if (typeof stock !== 'number' || stock < 0) return res.status(400).json({ message: 'Stock must be a non-negative number.' });
-    if (!productImage || typeof productImage !== 'string') return res.status(400).json({ message: 'Product image is required and must be a string.' });
-    if (!productName || typeof productName !== 'string' || !productName.trim()) return res.status(400).json({ message: 'Product name is required and must be a non-empty string.' });
-    if (typeof quantitative !== 'number' || quantitative <= 0) return res.status(400).json({ message: 'Quantitative must be a positive number.' });
-    if (!unit || typeof unit !== 'string' || !unit.trim()) return res.status(400).json({ message: 'Unit is required and must be a non-empty string.' });
-    if (categoryId && !/^[0-9a-fA-F]{24}$/.test(categoryId)) return res.status(400).json({ message: 'Category must be a valid ObjectId.' });
-    if (expiry && isNaN(Date.parse(expiry))) return res.status(400).json({ message: 'Expiry must be a valid date.' });
+    if (!supplier) return res.status(400).json({ message: 'Nhà cung cấp là bắt buộc.' });
+    // if (typeof stock !== 'number' || stock < 0) return res.status(400).json({ message: 'Tồn kho phải là số không âm.' });
+    if (!productImage || typeof productImage !== 'string') return res.status(400).json({ message: 'Ảnh sản phẩm là bắt buộc.' });
+    if (!productName || typeof productName !== 'string' || !productName.trim()) return res.status(400).json({ message: 'Tên sản phẩm là bắt buộc.' });
+    // if (typeof quantitative !== 'number' || quantitative <= 0) return res.status(400).json({ message: 'Định lượng phải là số dương.' });
+    if (!unit || typeof unit !== 'string' || !unit.trim()) return res.status(400).json({ message: 'Đơn vị là bắt buộc.' });
+    if (categoryId && !mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ message: 'Danh mục phải là ObjectId hợp lệ.' });
+    }
+    if (expiry && isNaN(Date.parse(expiry))) {
+      return res.status(400).json({ message: 'Ngày hết hạn không hợp lệ.' });
+    }
+
+    // Create new supplier product
     const newSupplierProduct = new SupplierProduct({
       supplier,
       stock,
@@ -72,23 +79,27 @@ const createSupplierProduct = async (req, res) => {
       quantitative,
       unit: unit.trim()
     });
-    // Check if product already exists
-    const existingProduct = await Product.findOne({ productName: newSupplierProduct.productName });
-    if (!existingProduct) {
-      const newProduct = new Product({
-        productName: newSupplierProduct.productName,
-        categoryId: newSupplierProduct.categoryId,
-        thresholdStock: newSupplierProduct.thresholdStock,
-        productImage: newSupplierProduct.productImage,
-        unit: newSupplierProduct.unit,
-        location: newSupplierProduct.location,
-        quantitative: newSupplierProduct.quantitative
-      });
-      await newProduct.save();
-    }
+
     const savedProduct = await newSupplierProduct.save();
+
+    // Check if product already exists
+    let product = await Product.findOne({ productName: savedProduct.productName, categoryId: savedProduct.categoryId });
+    if (!product) {
+      // Create new product
+      product = new Product({
+        productName: savedProduct.productName,
+        categoryId: savedProduct.categoryId,
+        productImage: savedProduct.productImage,
+        quantitative: savedProduct.quantitative,
+        unit: savedProduct.unit,
+        thresholdStock: 0, // Default value, can be updated later
+      });
+      await product.save();
+    }
+
     res.status(201).json({ success: true, data: savedProduct });
   } catch (error) {
+    console.error(error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -99,13 +110,20 @@ const updateSupplierProduct = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
     const allowedFields = [
-      'supplier', 'stock', 'expiry', 'categoryId', 'productImage', 'productName', 'quantitative', 'unit'
+      'supplier', 'stock', 'expiry', 'categoryId', 'productName', 'quantitative', 'unit'
     ];
     for (const key of allowedFields) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
         updateFields[key] = req.body[key];
       }
     }
+    // Handle productImage file
+    if (req.file) {
+      updateFields.productImage = `/uploads/${req.file.filename}`;
+    } else if (req.body.productImage) {
+      updateFields.productImage = req.body.productImage;
+    }
+
     // Validation for each field if present
     if ('supplier' in updateFields && !updateFields.supplier) return res.status(400).json({ message: 'Supplier is required.' });
     if ('stock' in updateFields && (typeof updateFields.stock !== 'number' || updateFields.stock < 0)) return res.status(400).json({ message: 'Stock must be a non-negative number.' });

@@ -30,7 +30,7 @@ const createProduct = async (req, res, next) => {
     if (!checkCategory) {
       return res.status(404).json({ message: 'Danh mục không hợp lệ' });
     }
-
+  
     // Kiểm tra mảng vị trí
     if (!Array.isArray(location) || location.length === 0) {
       return res.status(400).json({ message: 'Location phải là một mảng và không được rỗng' });
@@ -52,7 +52,7 @@ const createProduct = async (req, res, next) => {
       thresholdStock,
       productImage: image,
       unit,
-      location: location ? location.map(loc => ({ inventoryId: loc.inventoryId, stock: loc.stock })) : [],
+      location,
       quantitative: typeof quantitative === 'number' ? quantitative : 1,
       status: status || 'active',
     });

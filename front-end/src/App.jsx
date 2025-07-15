@@ -246,14 +246,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-         <Route
-  path="/inventory-check"
-  element={
-    <ProtectedRoute allowedRoles={["manager", "employee"]}>
-      <InventoryCheck />
-    </ProtectedRoute>
-  }
-/>
+          <Route
+            path="/inventory-check"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                <InventoryCheck />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

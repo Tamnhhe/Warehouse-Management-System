@@ -77,7 +77,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
       setImagePreview(null);
     }
     if (errors.productImage) {
-        setErrors((prev) => ({ ...prev, productImage: "" }));
+      setErrors((prev) => ({ ...prev, productImage: "" }));
     }
   };
 
@@ -87,42 +87,42 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
     tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
     tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
-    
+
     if (!productData.productImage) {
-        tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
+      tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
     } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
-        tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
+      tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
     } else {
-        tempErrors.productImage = "";
+      tempErrors.productImage = "";
     }
-    
+
     setErrors(tempErrors);
 
     // Kiểm tra xem tất cả các giá trị trong tempErrors có rỗng không
     const isValid = Object.values(tempErrors).every((x) => x === "");
 
     if (isValid) {
-        // Chỉ kiểm tra tên khi các trường khác đã hợp lệ
-        try {
-            const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
-            if(response.data.exists) {
-                setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
-                return false;
-            }
-        } catch (error) {
-            console.error("Error checking product name:", error);
-            setErrors(prev => ({ ...prev, general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm." }));
-            return false;
+      // Chỉ kiểm tra tên khi các trường khác đã hợp lệ
+      try {
+        const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
+        if (response.data.exists) {
+          setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
+          return false;
         }
+      } catch (error) {
+        console.error("Error checking product name:", error);
+        setErrors(prev => ({ ...prev, general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm." }));
+        return false;
+      }
     }
-    
+
     return isValid;
   };
 
   const handleSave = async () => {
     setErrors(prev => ({ ...prev, general: "" })); // Xóa lỗi chung cũ
     const isValid = await validate();
-    
+
     if (isValid) {
       setLoading(true);
       const formData = new FormData();
@@ -168,28 +168,28 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             helperText={errors.productName}
             fullWidth
           />
-          
+
           <FormControl fullWidth error={!!errors.categoryId}>
             <InputLabel id="category-select-label">Danh Mục</InputLabel>
             <Select
-                labelId="category-select-label"
-                name="categoryId"
-                value={productData.categoryId}
-                label="Danh Mục"
-                onChange={handleChange}
+              labelId="category-select-label"
+              name="categoryId"
+              value={productData.categoryId}
+              label="Danh Mục"
+              onChange={handleChange}
             >
-                <MenuItem value="">
-                    <em>Chọn danh mục</em>
+              <MenuItem value="">
+                <em>Chọn danh mục</em>
+              </MenuItem>
+              {categories.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.categoryName}
                 </MenuItem>
-                {categories.map((cat) => (
-                    <MenuItem key={cat._id} value={cat._id}>
-                        {cat.categoryName}
-                    </MenuItem>
-                ))}
+              ))}
             </Select>
             {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
           </FormControl>
-          
+
           <TextField
             name="unit"
             label="Đơn Vị (ví dụ: cái, hộp, kg)"
@@ -213,14 +213,14 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
           <FormControl fullWidth>
             <InputLabel id="status-select-label">Trạng Thái</InputLabel>
             <Select
-                labelId="status-select-label"
-                name="status"
-                value={productData.status}
-                label="Trạng Thái"
-                onChange={handleChange}
+              labelId="status-select-label"
+              name="status"
+              value={productData.status}
+              label="Trạng Thái"
+              onChange={handleChange}
             >
-                <MenuItem value="active">Đang bán</MenuItem>
-                <MenuItem value="inactive">Ngừng bán</MenuItem>
+              <MenuItem value="active">Đang bán</MenuItem>
+              <MenuItem value="inactive">Ngừng bán</MenuItem>
             </Select>
           </FormControl>
 
@@ -238,7 +238,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             />
           </Button>
           {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
-          
+
           {imagePreview && (
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <img

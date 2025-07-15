@@ -41,7 +41,15 @@ const useSupplierProduct = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await supplierProductAPI.create(productData);
+      const formData = new FormData();
+      Object.entries(productData).forEach(([key, value]) => {
+        if (key === "productImage" && value instanceof File) {
+          formData.append("productImage", value);
+        } else {
+          formData.append(key, value);
+        }
+      });
+      const response = await supplierProductAPI.create(formData);
       await fetchAllSupplierProducts();
       return response.data;
     } catch (err) {
@@ -57,7 +65,15 @@ const useSupplierProduct = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await supplierProductAPI.update(id, productData);
+      const formData = new FormData();
+      Object.entries(productData).forEach(([key, value]) => {
+        if (key === "productImage" && value instanceof File) {
+          formData.append("productImage", value);
+        } else {
+          formData.append(key, value);
+        }
+      });
+      const response = await supplierProductAPI.update(id, formData);
       await fetchAllSupplierProducts();
       return response.data;
     } catch (err) {

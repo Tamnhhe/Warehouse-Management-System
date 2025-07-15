@@ -12,9 +12,13 @@ const ProductSchema = new mongoose.Schema({
         ref: 'Category', // Reference to the Category collection
         required: true,
     },
-    
+    totalStock: { //Tong ton kho
+        type: Number,
+        default: 0, // Mặc định là 0 nếu không có giá trị
+    },
     thresholdStock: {   //Nguong ton kho
         type: Number,
+        spare: true,
         required: true,
     },
     productImage: { //Anh san pham
@@ -26,7 +30,7 @@ const ProductSchema = new mongoose.Schema({
         required: true,
     },
     location: [{ //Vi tri
-       inventoryId: { //Ma kho
+        inventoryId: { //Ma kho
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Inventory', // Reference to the Inventory collection
             required: true,
