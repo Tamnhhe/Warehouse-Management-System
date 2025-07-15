@@ -1,0 +1,23 @@
+{
+  "name": "warehouse-management-system",
+  "version": "1.0.0",
+  "description": "Warehouse management system that help in controller your warehouse",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix front-end\" \"npm start --prefix back-end\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tamnhhe/Warehouse-Management-System.git"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "author": "Group 5 - WDP301 - SE1827",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tamnhhe/Warehouse-Management-System/issues"
+  },
+  "homepage": "https://github.com/Tamnhhe/Warehouse-Management-System#readme"
+}

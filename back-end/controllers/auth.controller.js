@@ -1,6 +1,6 @@
 const db = require("../models/index");
 const User = db.User;
-const { generateAccessToken, generateRefreshToken, generateResetToken, verifyResetToken } = require("../utils/Jwt");
+const { generateAccessToken, generateRefreshToken, generateResetToken, verifyResetToken, verifyRefreshToken } = require("../utils/Jwt");
 const { hashPassword, isMatch } = require("../utils/Hasher");
 const { sendMail } = require("../utils/Mailer");
 // Đăng ký người dùng mới
@@ -146,11 +146,12 @@ const verifyEmail = async (req, res) => {
 
 const refreshToken = async (req, res) => {
     const { refreshToken } = req.cookies;
+    console.log("Refreshing token with refreshToken:", refreshToken);
     if (!refreshToken) {
         return res.status(401).json({ message: "No refresh token provided" });
     }
     try {
-        const decoded = verifyResetToken(refreshToken);
+        const decoded = verifyRefreshToken(refreshToken);
         const user = await User.findById(decoded.id);
         if (!user) {
             return res.status(404).json({ message: "User not found" });

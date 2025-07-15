@@ -58,7 +58,7 @@ const Layout = ({ children }) => {
   const shouldHide = hidePaths.some((path) =>
     matchPath(path, location.pathname)
   );
-  
+
   // Nếu là trang không cần Header, chỉ render nội dung trang
   if (shouldHide) {
     return <>{children}</>;
@@ -81,7 +81,6 @@ function App() {
     <Router>
       <Layout>
         <Routes>
-          {/* Các Routes vẫn giữ nguyên không thay đổi */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -234,6 +233,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
         </Routes>
       </Layout>
     </Router>

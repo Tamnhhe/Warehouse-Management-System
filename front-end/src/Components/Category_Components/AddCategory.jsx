@@ -1,6 +1,5 @@
 // File: AddCategory.js
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -9,7 +8,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const AddCategoryDialog = ({ open, onClose, onCategoryAdded }) => {
+const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
   const [categoryName, setCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [subcategories, setSubcategories] = useState([]);
@@ -61,13 +60,12 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded }) => {
     setLoading(true);
     setError('');
     try {
-      await axios.post('http://localhost:9999/categories/addCategory', {
+      await onAdd({
         categoryName,
         description,
         // Chỉ gửi các danh mục con có tên, loại bỏ các dòng trống
         classifications: subcategories.filter(sub => sub.name.trim()),
       });
-      onCategoryAdded(); // Gọi callback để component cha refresh lại danh sách
       onClose(); // Đóng dialog
     } catch (err) {
       setError(err.response?.data?.message || 'Lỗi khi thêm danh mục. Vui lòng thử lại.');

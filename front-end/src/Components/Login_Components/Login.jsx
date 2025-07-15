@@ -12,7 +12,7 @@ import {
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
+import useAuth from "../../Hooks/useAuth"; // Giả sử bạn có hook này để quản lý xác thực
 // Import các thành phần cần thiết từ Framer Motion
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,19 +22,16 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-
+  const { login } = useAuth(); // Giả sử bạn có hook này để quản lý xác thực
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
 
     try {
-      const response = await axios.post(
-        "http://localhost:9999/authentication/login",
-        { email, password }
-      );
-      if (response.data) {
-        const { token } = response.data;
+      const response = await login({ email, password });
+      if (response) {
+        const { token } = response;
         localStorage.setItem("authToken", token);
         setSuccess(true);
         setTimeout(() => navigate("/product"), 500);

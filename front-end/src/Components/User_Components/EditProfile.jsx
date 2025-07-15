@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Form, Button, Alert, Row, Col, Card } from "react-bootstrap";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import  useUser  from "../../Hook\s/useUser"; // Giả sử bạn có hook này để quản lý người dùng
 const EditProfile = () => {
     const navigate = useNavigate();
         //khoi tao cac state (luu data ng dung de hien thi va editedit)
@@ -26,14 +27,12 @@ const EditProfile = () => {
     //luu anh moimoi
     const [newAvatarFile, setNewAvatarFile] = useState(null);
 
+    const { getProfile, editProfile } = useUser(); // Giả sử bạn có hook này để lấy thông tin người dùng
     //get profile info 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const token = localStorage.getItem("authToken");
-                const response = await axios.get("http://localhost:9999/users/view-profile", {
-                    headers: { Authorization: token },
-                });
+                const response = await getProfile(); // Gọi hàm lấy thông tin người dùng từ hook
 
                 const { fullName = "", account = {}, profile = {} } = response.data;
                 const { email = "" } = account;
@@ -101,10 +100,7 @@ const EditProfile = () => {
         }
 
         try {
-            const token = localStorage.getItem("authToken");
-            const response = await axios.put("http://localhost:9999/users/edit-profile", formData, {
-                headers: { Authorization: token, "Content-Type": "multipart/form-data" }
-            });
+            const response = await editProfile(formData); // Gọi hàm chỉnh sửa thông tin người dùng từ hook
             setStatusMessage(response.data.message);
 
             setTimeout(() => {

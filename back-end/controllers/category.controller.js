@@ -120,13 +120,14 @@ async function addSubCategory(req, res, next) {
 // Sửa sub category 
 async function updateSubCategory(req, res, next) {
     try {
-        const { categoryId, subCategoryId } = req.params;
+        const { categoryId, subId } = req.params;
+        console.log("categoryId:", categoryId, "subCategoryId:", subId);
         const { name, description } = req.body;
         const category = await db.Category.findById(categoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found" });
         }
-        const subCategory = category.classifications.id(subCategoryId);
+        const subCategory = category.classifications.id(subId);
         if (!subCategory) {
             return res.status(404).json({ message: "Subcategory not found" });
         }

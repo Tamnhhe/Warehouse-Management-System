@@ -32,7 +32,7 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import MenuIcon from "@mui/icons-material/Menu"; // Icon Hamburger
-
+import useUser from "../../Hooks/useUser";
 // Bảng màu của bạn
 const palette = {
   dark: "#155E64",
@@ -80,23 +80,11 @@ function Header() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md")); // true nếu màn hình < 900px
 
+  const { getProfile } = useUser();
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (currentToken) {
-        try {
-          const response = await axios.get(
-            "http://localhost:9999/users/view-profile",
-            {
-              headers: { Authorization: currentToken },
-            }
-          );
-          setProfile(response.data);
-        } catch (err) {
-          console.error("Không thể tải thông tin người dùng cho header:", err);
-        }
-      }
-    };
-    fetchProfile();
+    getProfile().then((data) => {
+      setProfile(data);
+    });
   }, [currentToken]);
 
   // --- HANDLERS ---

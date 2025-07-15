@@ -5,8 +5,18 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const httpsErrors = require("http-errors");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
+// Khởi tạo ứng dụng Express
 const app = express();
+// Cấu hình cookie parser để xử lý cookies
+app.use(cookieParser());
+// Cấu hình body parser để xử lý dữ liệu JSON
+app.use(express.json());
+app.use(bodyParser.json());
+// Cấu hình morgan để ghi log các request
+app.use(morgan("dev"));
+
 const db = require("./models/index");
 const router = require("./routes");
 const inventoryRouter = require('./routes/inventory.router');
@@ -23,9 +33,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
-app.use(morgan("dev"));
-app.use(bodyParser.json());
+
 app.use('/inventory', inventoryRouter);
 app.use('/category', categoryRouter); 
 app.get("/", async (req, res, next) => {

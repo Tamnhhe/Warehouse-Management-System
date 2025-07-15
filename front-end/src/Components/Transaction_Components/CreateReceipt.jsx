@@ -29,7 +29,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 // Import API modules
 import supplierProductAPI from "../../API/supplierProductAPI";
-import categoriesAPI from "../../API/categoriesAPI";
+import categoryAPI from "../../API/categoryAPI";
 import supplierAPI from "../../API/supplierAPI";
 
 // Bảng màu tham khảo
@@ -71,7 +71,7 @@ const CreateReceipt = () => {
       try {
         console.log("=== CreateReceipt fetchInitialData ===");
         const [categoriesRes, suppliersRes] = await Promise.all([
-          categoriesAPI.getAll(),
+          categoryAPI.getAll(),
           supplierAPI.getAll(),
         ]);
 

@@ -1,4 +1,4 @@
-// Nguyễn Đức Linh - HE170256 17/1/2025
+
 const mongoose = require("mongoose");
 const Notification = require("./notification.model");
 const User = require("./user.model");

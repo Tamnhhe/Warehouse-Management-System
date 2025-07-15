@@ -19,7 +19,7 @@ router.use("/products", productRouter);
 router.use("/inventoryTransactions", inventoryTransactionRouter);
 router.use("/categories", categoryRouter); // Nguyễn Đức Linh - HE170256 23/1/2025
 router.use("/users", userRouter);
-router.use("/supplierProducts", supplierProductRouter);
+router.use("/supplierProduct", supplierProductRouter);
 
 
 module.exports = router;
