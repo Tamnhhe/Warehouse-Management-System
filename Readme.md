@@ -1,14 +1,33 @@
- **Warehouse Management System (WMS)** – Dự án Quản lý Kho Thông Minh
+ # Warehouse Management System (WMS) – Dự án Quản lý Kho Thông Minh
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/Tamnhhe/Warehouse-Management-System)
+[![License](https://img.shields.io/badge/license-ISC-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](package.json)
 
 ---
 
-## **
+## 📋 Tài liệu phân tích yêu cầu
 
+**🎯 Hoàn thành**: Thu thập yêu cầu từ client và team giáo dục, viết đặc tả tính năng người dùng (user stories)
+
+### 📑 Tài liệu chính
+- **[📊 Requirements Summary](docs/requirements-summary.md)** - Tóm tắt phân tích yêu cầu
+- **[📋 Requirements Analysis](docs/requirements-analysis.md)** - Phân tích yêu cầu chi tiết  
+- **[👥 User Stories](docs/user-stories.md)** - Đặc tả tính năng người dùng (27 stories)
+- **[🤝 Client & Education Requirements](docs/client-education-requirements.md)** - Yêu cầu từ stakeholders
+- **[🗓️ Implementation Roadmap](docs/implementation-roadmap.md)** - Lộ trình thực hiện dự án
+
+### 🚀 Quick Start
+```bash
+# Đọc tài liệu theo thứ tự
+1. docs/requirements-summary.md      # Tổng quan dự án
+2. docs/user-stories.md             # Các tính năng cần phát triển  
+3. docs/implementation-roadmap.md   # Kế hoạch thực hiện
 ```
 
-```
+---
 
-I. Giới thiệu chung**
+## **I. Giới thiệu chung**
 
 * **Tên hệ thống:** Warehouse Management System (WMS)
 * **Nhu cầu:** Hệ thống quản lí kho sinh ra với mục đích hỗ trợ Quản lý cho phép quản lí sản phẩm trong kho, quản lí việc xuất, nhập hàng vào kho và cho phép khách hàng có thể tạo đơn nhập hàng nhằm tối ưu trong công việc
