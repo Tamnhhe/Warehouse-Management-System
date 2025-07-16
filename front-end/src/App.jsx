@@ -5,6 +5,7 @@ import {
   Routes,
   useLocation,
   matchPath,
+  Navigate
 } from "react-router-dom";
 import ProtectedRoute from "./Components/Utils/ProtectedRoute";
 import ForgotPassword from "./Components/Login_Components/ForgotPassword";
@@ -40,6 +41,7 @@ import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
 import ListReceipts from "./Components/Transaction_Components/ListReceipts";
 import InventoryCheck from "./Components/Inventory_Components/InventoryCheck";
+import Stocktaking from "./Components/Inventory_Components/Stocktaking";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
@@ -84,7 +86,11 @@ function App() {
       <Layout>
         <Routes>
           {/* Các Routes vẫn giữ nguyên không thay đổi */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={
+            <ProtectedRoute allowedRoles={["employee", "manager"]} redirectTo="/login">
+              <Landing />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -251,6 +257,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["manager", "employee"]}>
                 <InventoryCheck />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stocktaking"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                <Stocktaking />
               </ProtectedRoute>
             }
           />

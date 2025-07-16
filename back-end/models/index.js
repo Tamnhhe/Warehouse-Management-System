@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 const Notification = require("./notification.model");
 const User = require("./user.model");
@@ -7,6 +6,8 @@ const InventoryTransaction = require("./inventoryTransaction.model");
 const Category = require("./category.model");
 const SupplierProduct = require("./supplierProduct.model");
 const Supplier = require("./supplier.model");
+const StocktakingTask = require("./stocktakingTask.model");
+const Adjustment = require("./adjustment.model");
 
 const db = {};
 
@@ -17,9 +18,11 @@ db.Notification = Notification;
 db.Category = Category;
 db.SupplierProduct = SupplierProduct;
 db.Supplier = Supplier;
+db.StocktakingTask = StocktakingTask;
+db.Adjustment = Adjustment;
 
 db.connectDB = async () => {
-  try { 
+  try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("Connected to MongoDB");
   } catch (err) {

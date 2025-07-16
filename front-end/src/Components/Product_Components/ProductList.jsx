@@ -19,10 +19,10 @@ import { visuallyHidden } from "@mui/utils";
 // --- BƯỚC 1: IMPORT FRAMER MOTION ---
 import { motion, AnimatePresence } from "framer-motion";
 
-// Giả sử các component Modal còn lại đã được cập nhật
+// Import the AddProduct component from the separate file
+import AddProduct from "./AddProduct";
 import UpdateProductModal from "./UpdateProductModal";
 import ProductDetails from "./ProductDetails";
-import AddProductModal from "./AddProductModal";
 
 const DESKTOP_PAGE_SIZE = 20;
 const MOBILE_PAGE_SIZE = 10;
@@ -55,150 +55,7 @@ const itemVariants = {
 };
 
 
-// Component AddProduct (giữ nguyên không đổi)
-const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
-  // ... code của AddProduct không thay đổi
-  const [productData, setProductData] = useState({
-    productName: "", categoryId: "", totalStock: 0,
-    productImage: null, unit: "", location: "", status: "active",
-  });
-  const [imagePreview, setImagePreview] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      axios.get("http://localhost:9999/categories/getAllCategories")
-        .then((response) => setCategories(response.data))
-        .catch((error) => console.error("Error fetching categories:", error));
-    } else {
-      setProductData({
-        productName: "", categoryId: "", totalStock: 0,
-        productImage: null, unit: "", location: "", status: "active",
-      });
-      setErrors({});
-      setImagePreview(null);
-      setLoading(false);
-    }
-  }, [open]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProductData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProductData((prev) => ({ ...prev, productImage: file }));
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-    } else {
-      setProductData((prev) => ({ ...prev, productImage: null }));
-      setImagePreview(null);
-    }
-    if (errors.productImage) {
-      setErrors((prev) => ({ ...prev, productImage: "" }));
-    }
-  };
-
-  const validate = async () => {
-    let tempErrors = {};
-    tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
-    tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
-    tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
-    tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
-    if (!productData.productImage) {
-      tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
-    } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
-      tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
-    } else {
-      tempErrors.productImage = "";
-    }
-    setErrors(tempErrors);
-
-    const isFormValid = Object.values(tempErrors).every((x) => x === "");
-
-    if (isFormValid) {
-      try {
-        const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
-        if (response.data.exists) {
-          setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
-          return false;
-        }
-        return true;
-      } catch (error) {
-        console.error("Error checking product name:", error);
-        setErrors(prev => ({ ...prev, general: "Có lỗi khi kiểm tra tên sản phẩm." }));
-        return false;
-      }
-    }
-    return false;
-  };
-
-  const handleSave = async () => {
-    setErrors(prev => ({ ...prev, general: "" }));
-    if (await validate()) {
-      setLoading(true);
-      const formData = new FormData();
-      Object.entries(productData).forEach(([key, value]) => formData.append(key, value));
-
-      try {
-        await axios.post("http://localhost:9999/products/createProduct", formData, { headers: { "Content-Type": "multipart/form-data" } });
-        onSaveSuccess();
-        handleClose();
-      } catch (error) {
-        console.error("Error creating product:", error);
-        setErrors((prev) => ({ ...prev, general: error.response?.data?.message || "Có lỗi xảy ra." }));
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {errors.general && <Alert severity="error">{errors.general}</Alert>}
-          <TextField autoFocus name="productName" label="Tên Sản Phẩm" value={productData.productName} onChange={handleChange} error={!!errors.productName} helperText={errors.productName} fullWidth />
-          <FormControl fullWidth error={!!errors.categoryId}>
-            <InputLabel id="category-select-label">Danh Mục</InputLabel>
-            <Select labelId="category-select-label" name="categoryId" value={productData.categoryId} label="Danh Mục" onChange={handleChange}>
-              <MenuItem value=""><em>Chọn danh mục</em></MenuItem>
-              {categories.map((cat) => (<MenuItem key={cat._id} value={cat._id}>{cat.categoryName}</MenuItem>))}
-            </Select>
-            {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
-          </FormControl>
-          <TextField name="unit" label="Đơn Vị (ví dụ: cái, hộp, kg)" value={productData.unit} onChange={handleChange} error={!!errors.unit} helperText={errors.unit} fullWidth />
-          <TextField name="location" label="Vị Trí (ví dụ: Kệ A1, Kho B)" value={productData.location} onChange={handleChange} error={!!errors.location} helperText={errors.location} fullWidth />
-          <FormControl fullWidth>
-            <InputLabel id="status-select-label">Trạng Thái</InputLabel>
-            <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>
-              <MenuItem value="active">Đang bán</MenuItem>
-              <MenuItem value="inactive">Ngừng bán</MenuItem>
-            </Select>
-          </FormControl>
-          <Button variant="outlined" component="label" color={errors.productImage ? "error" : "primary"}>
-            Chọn Hình Ảnh
-            <input type="file" hidden accept="image/png, image/jpeg" onChange={handleFileChange} />
-          </Button>
-          {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
-          {imagePreview && <Box sx={{ mt: 2, textAlign: 'center' }}><img src={imagePreview} alt="Xem trước sản phẩm" style={{ maxWidth: "200px", height: "auto", borderRadius: '8px' }} /></Box>}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
-        <Button onClick={handleClose} disabled={loading} color="secondary">Hủy</Button>
-        <Button onClick={handleSave} variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : "Lưu Sản Phẩm"}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+// Remove the AddProduct component definition here since it's now in its own file
 
 
 const ProductList = () => {
@@ -458,20 +315,11 @@ const ProductList = () => {
                       <TableCell>{product.unit}</TableCell>
                       {/* <TableCell>{product.location}</TableCell> */}
                       <TableCell>
-                        {product.location > 0 ? (
-                          product.location.map((loc, idx) => (
-                            <Box key={idx} sx={{ display: 'inline-block', mr: 1, mb: 1, p: 0.5, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
-                              {loc.inventoryId} ({loc.stock})
-                            </Box>
-                          ))
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">Chưa xác định</Typography>
-                        )}
-                        {/* {product.location.map((loc, idx) => (
+                        {product.location.map((loc, idx) => (
                           <Box key={idx} sx={{ display: 'inline-block', mr: 1, mb: 1, p: 0.5, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
                             {loc.inventoryId} ({loc.stock})
                           </Box>
-                        ))} */}
+                        ))}
                       </TableCell>
                       <TableCell>{renderStatusChip(product.status)}</TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
@@ -496,7 +344,7 @@ const ProductList = () => {
         <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchAllProducts} />
       </>)}
 
-      <AddProductModal
+      <AddProduct
         open={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
         onSaveSuccess={fetchAllProducts}

@@ -33,6 +33,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   });
   const [imagePreview, setImagePreview] = useState(null); // State riêng cho ảnh preview
   const [categories, setCategories] = useState([]);
+  const [shelves, setShelves] = useState([]); // Thêm shelves state
   const [errors, setErrors] = useState({}); // Đổi tên để tránh nhầm lẫn
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +44,11 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
         .get("http://localhost:9999/categories/getAllCategories")
         .then((response) => setCategories(response.data))
         .catch((error) => console.error("Error fetching categories:", error));
+
+      // Fetch shelves/inventories
+      axios.get("http://localhost:9999/inventory")
+        .then((response) => setShelves(response.data))
+        .catch((error) => console.error("Error fetching shelves:", error));
     } else {
       // Reset form khi dialog đóng
       setProductData({
@@ -78,6 +84,19 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     }
     if (errors.productImage) {
       setErrors((prev) => ({ ...prev, productImage: "" }));
+    }
+  };
+
+  const handleShelfSelect = (e) => {
+    const selectedShelf = shelves.find(shelf => shelf._id === e.target.value);
+    if (selectedShelf) {
+      setProductData((prev) => ({
+        ...prev,
+        location: selectedShelf.name
+      }));
+      if (errors.location) {
+        setErrors((prev) => ({ ...prev, location: "" }));
+      }
     }
   };
 
@@ -199,6 +218,24 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             helperText={errors.unit}
             fullWidth
           />
+
+          {/* Thêm dropdown để chọn kệ hàng có sẵn */}
+          <FormControl fullWidth>
+            <InputLabel id="shelf-select-label">Chọn Kệ Hàng</InputLabel>
+            <Select
+              labelId="shelf-select-label"
+              id="shelf-select"
+              value=""
+              label="Chọn Kệ Hàng"
+              onChange={handleShelfSelect}
+            >
+              <MenuItem value=""><em>Chọn kệ hàng có sẵn</em></MenuItem>
+              {shelves.map((shelf) => (
+                <MenuItem key={shelf._id} value={shelf._id}>{shelf.name}</MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Chọn kệ hàng hoặc nhập vị trí thủ công</FormHelperText>
+          </FormControl>
 
           <TextField
             name="location"

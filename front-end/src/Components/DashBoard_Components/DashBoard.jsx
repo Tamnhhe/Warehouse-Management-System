@@ -156,18 +156,17 @@ function ChartDisplay({ activeTab, chartData, timeRange, salesData }) {
           activeTab === "stock"
             ? "Số lượng sản phẩm"
             : activeTab === "price"
-            ? "So sánh giá sản phẩm"
-            : activeTab === "category"
-            ? "Lượng sản phẩm của danh mục"
-            : activeTab === "status"
-            ? "Tình trạng kho"
-            : `Xu hướng tiêu thụ (${
-                timeRange === "Tuần"
-                  ? "7 ngày trước"
-                  : timeRange === "tháng"
-                  ? "30 ngày trước "
-                  : "90 ngày trước "
-              })`,
+              ? "So sánh giá sản phẩm"
+              : activeTab === "category"
+                ? "Lượng sản phẩm của danh mục"
+                : activeTab === "status"
+                  ? "Tình trạng kho"
+                  : `Xu hướng tiêu thụ (${timeRange === "Tuần"
+                    ? "7 ngày trước"
+                    : timeRange === "tháng"
+                      ? "30 ngày trước "
+                      : "90 ngày trước "
+                  })`,
       },
       legend: {
         display: activeTab === "stock",
@@ -324,14 +323,14 @@ function DataTable({
                         product.stockStatus === "Normal"
                           ? "#d4edda"
                           : product.stockStatus === "Critical"
-                          ? "#f8d7da"
-                          : "#fff3cd",
+                            ? "#f8d7da"
+                            : "#fff3cd",
                       color:
                         product.stockStatus === "Normal"
                           ? "#155724"
                           : product.stockStatus === "Critical"
-                          ? "#721c24"
-                          : "#856404",
+                            ? "#721c24"
+                            : "#856404",
                       fontSize: "0.85em",
                     }}
                   >
@@ -360,8 +359,8 @@ function DataTable({
                           product.daysUntilExpiry <= 30
                             ? colors.danger
                             : product.daysUntilExpiry <= 90
-                            ? colors.warning
-                            : colors.success,
+                              ? colors.warning
+                              : colors.success,
                         fontWeight:
                           product.daysUntilExpiry <= 30 ? "bold" : "normal",
                       }}
@@ -393,7 +392,7 @@ function DataTable({
               (e.target.style.backgroundColor = colors.primary)
             }
           >
-           Hiển thị toàn bộ sản phẩm
+            Hiển thị toàn bộ sản phẩm
           </button>
         </div>
       )}
@@ -472,7 +471,7 @@ function Recommendations({
   const healthyPercentage = Math.round(
     (productData.filter((p) => p.stockStatus === "Normal").length /
       productData.length) *
-      100
+    100
   );
   return (
     <div style={{ ...cardStyle, marginTop: "20px" }}>
@@ -695,8 +694,8 @@ function Dashboard() {
                 p.stockStatus === "Critical"
                   ? colors.danger
                   : p.stockStatus === "Low"
-                  ? colors.warning
-                  : colors.success
+                    ? colors.warning
+                    : colors.success
               ),
             borderWidth: 1,
           },
@@ -829,8 +828,8 @@ function Dashboard() {
             return typeof value === "string" && value.includes(",")
               ? `"${value}"`
               : value !== undefined && value !== null
-              ? value
-              : "";
+                ? value
+                : "";
           })
           .join(",")
       ),
@@ -1009,7 +1008,22 @@ function Dashboard() {
       <ExpiringAlert productData={productData} />
 
       <DataTable
-        sortedProducts={sortedProducts}
+        sortedProducts={sortedProducts.map(product => {
+          // Create a new object with all properties safely converted to renderable values
+          return {
+            ...product,
+            // Ensure any object properties are properly converted to strings
+            // This handles the case where some properties might be objects
+            ...Object.fromEntries(
+              Object.entries(product).map(([key, value]) => {
+                if (typeof value === 'object' && value !== null && !React.isValidElement(value)) {
+                  return [key, JSON.stringify(value)];
+                }
+                return [key, value];
+              })
+            )
+          };
+        })}
         handleSortChange={handleSortChange}
         sortBy={sortBy}
         sortOrder={sortOrder}
