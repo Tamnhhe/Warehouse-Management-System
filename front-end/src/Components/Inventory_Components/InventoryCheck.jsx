@@ -214,6 +214,7 @@ function InventoryCheck() {
           // Số hộp hàng trên kệ (tối đa 5 hộp/tầng, 3 tầng)
           const maxBoxes = 15;
           const products = inv.products || [];
+   const sumWeight = products.reduce((sum, p) => sum + (p.weight || 0), 0);
 
           // Đảm bảo đủ số hộp: nếu có sản phẩm thì luôn có ít nhất 1 hộp màu
           let boxCount = 0;
@@ -452,11 +453,11 @@ function InventoryCheck() {
                     color="primary"
                     size="small"
                   />
-                  <Chip
-                    label={`Cân nặng: ${inv.currentWeight}/${inv.maxWeight}`}
-                    color="secondary"
-                    size="small"
-                  />
+ <Chip
+  label={`Cân nặng: ${sumWeight}/${inv.maxWeight}`}
+  color="secondary"
+  size="small"
+/>
                 </Box>
               </Box>
             </Grid>

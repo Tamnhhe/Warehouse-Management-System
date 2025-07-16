@@ -27,7 +27,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
-// Bảng màu tham khảo
 const palette = {
   dark: "#155E64",
   medium: "#75B39C",
@@ -45,6 +44,9 @@ const validationSchema = Yup.object({
         price: Yup.number()
           .required("Đơn giá là bắt buộc")
           .min(0, "Đơn giá không được âm"),
+        weight: Yup.number()
+          .required("Cân nặng là bắt buộc")
+          .min(0, "Cân nặng không được âm"),
       })
     )
     .min(1, "Phải có ít nhất một sản phẩm trong phiếu nhập"),
@@ -61,7 +63,6 @@ const CreateReceipt = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch dữ liệu cần thiết cho form
     const fetchInitialData = async () => {
       try {
         const [categoriesRes, suppliersRes] = await Promise.all([
@@ -84,7 +85,7 @@ const CreateReceipt = () => {
       supplierName: "",
       transactionDate: new Date().toISOString().split("T")[0],
       products: [
-        { productName: "", categoryName: "", quantity: "", price: "" },
+        { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
       ],
     },
     validationSchema,
@@ -92,7 +93,6 @@ const CreateReceipt = () => {
       setLoading(true);
       setError("");
       setSuccess(false);
-      // Payload được xây dựng lại để khớp với controller `createReceipt`
       const payload = {
         supplierName: values.supplierName,
         products: values.products.map((p) => ({
@@ -100,6 +100,7 @@ const CreateReceipt = () => {
           categoryName: p.categoryName,
           quantity: p.quantity,
           price: p.price,
+          weight: p.weight,
         })),
       };
 
@@ -124,7 +125,7 @@ const CreateReceipt = () => {
     formik.setFieldValue("supplierName", value?.name || "");
     setSelectedSupplier(value);
     formik.setFieldValue("products", [
-      { productName: "", categoryName: "", quantity: "", price: "" },
+      { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
     ]);
     if (value) {
       try {
@@ -142,6 +143,7 @@ const CreateReceipt = () => {
     }
   };
 
+  // Khi chọn sản phẩm, tự động điền cân nặng
   const handleProductSelect = (index, value) => {
     if (value) {
       formik.setFieldValue(`products.${index}.productName`, value.productName);
@@ -149,13 +151,17 @@ const CreateReceipt = () => {
         `products.${index}.categoryName`,
         value.categoryId?.categoryName || ""
       );
+      formik.setFieldValue(
+        `products.${index}.weight`,
+        value.weight || ""
+      );
     }
   };
 
   const addProductRow = () =>
     formik.setFieldValue("products", [
       ...formik.values.products,
-      { productName: "", categoryName: "", quantity: "", price: "" },
+      { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
     ]);
   const removeProductRow = (index) =>
     formik.setFieldValue(
@@ -241,6 +247,7 @@ const CreateReceipt = () => {
                 <TableRow>
                   <TableCell>Sản phẩm</TableCell>
                   <TableCell>Số lượng</TableCell>
+                  <TableCell>Cân nặng</TableCell>
                   <TableCell>Đơn giá (VNĐ)</TableCell>
                   <TableCell>Thành tiền (VNĐ)</TableCell>
                   <TableCell></TableCell>
@@ -291,6 +298,23 @@ const CreateReceipt = () => {
                         error={
                           formik.touched.products?.[index]?.quantity &&
                           Boolean(formik.errors.products?.[index]?.quantity)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        type="number"
+                        variant="standard"
+                        value={product.weight}
+                        onChange={(e) =>
+                          formik.setFieldValue(
+                            `products.${index}.weight`,
+                            e.target.value
+                          )
+                        }
+                        error={
+                          formik.touched.products?.[index]?.weight &&
+                          Boolean(formik.errors.products?.[index]?.weight)
                         }
                       />
                     </TableCell>

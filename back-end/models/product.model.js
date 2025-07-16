@@ -28,10 +28,15 @@ const ProductSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    location: { //Vi tri
-        type: String,
-        required: true,
+      weight: { //Cân nặng
+        type: Number,   
+        default: 0,
     },
+  inventoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Inventory',
+    required: true,
+},
     status: { //Trang thái
         type: String,
         required: true,
