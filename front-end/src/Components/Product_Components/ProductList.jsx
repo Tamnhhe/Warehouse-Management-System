@@ -5,33 +5,30 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import axios from "axios";
 import {
   Container, Box, Typography, Button, TextField, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, TableSortLabel, CircularProgress, Alert, Stack, Avatar,
   ButtonGroup, useMediaQuery, useTheme, Card, CardContent, CardActions, Grid, TableFooter,
+  Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, FormControl,
+  InputLabel, Select, FormHelperText,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { visuallyHidden } from "@mui/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import AddProductModal from "./AddProductModal"; // Đổi từ AddProduct sang AddProductModal
 import UpdateProductModal from "./UpdateProductModal";
 import ProductDetails from "./ProductDetails";
-<<<<<<< HEAD
-import useProduct from "../../Hooks/useProduct"; // <-- Use custom hook
-=======
 import InventoryCheck from "../Inventory_Components/InventoryCheck";
->>>>>>> TruongPV
 
 const DESKTOP_PAGE_SIZE = 20;
 const MOBILE_PAGE_SIZE = 10;
 
-// --- BƯỚC 2: ĐỊNH NGHĨA CÁC VARIANTS CHO ANIMATION ---
 const listContainerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05, // Thời gian trễ giữa các item con
+      staggerChildren: 0.05,
     },
   },
 };
@@ -52,20 +49,6 @@ const itemVariants = {
   }
 };
 
-<<<<<<< HEAD
-
-const ProductList = () => {
-  // Use custom hook for product logic
-  const {
-    products,
-    loading,
-    error,
-    fetchProducts,
-    createProduct, // <-- Thêm hàm createProduct từ hook
-    inactiveProduct,
-    checkProductName
-  } = useProduct();
-=======
 // --- AddProduct Component với kiểm tra kệ đầy đúng ---
 const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   const [productData, setProductData] = useState({
@@ -299,7 +282,6 @@ const ProductList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
->>>>>>> TruongPV
 
   // States for filtering and sorting
   const [filterText, setFilterText] = useState("");
@@ -313,16 +295,12 @@ const ProductList = () => {
   const [showProductDetailsModal, setShowProductDetailsModal] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
-<<<<<<< HEAD
-  // --- Responsive Design & Unified State for Infinite Scroll ---
-=======
   // Thêm state để lưu danh sách kệ
   const [inventories, setInventories] = useState([]);
 
   // Ref để gọi fetchInventories từ InventoryCheck
   const fetchInventoriesRef = useRef(null);
 
->>>>>>> TruongPV
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [itemsToShow, setItemsToShow] = useState(
@@ -330,12 +308,6 @@ const ProductList = () => {
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-=======
   const fetchAllProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -344,7 +316,7 @@ const ProductList = () => {
         axios.get("http://localhost:9999/supplierProducts/getAllSupplierProducts"),
       ]);
       const productsData = productsRes.data;
-      const supplierProducts = supplierProductsRes.data;
+      const supplierProducts = Array.isArray(supplierProductsRes.data) ? supplierProductsRes.data : [];
       const latestPrices = {}, priceMap = {};
       supplierProducts.forEach((sp) => {
         const productId = sp.product?._id;
@@ -402,7 +374,6 @@ const ProductList = () => {
     fetchInventories();
   };
 
->>>>>>> TruongPV
   const filteredProducts = useMemo(() => {
     let updatedProducts = [...products];
     if (filterText) {
@@ -440,10 +411,11 @@ const ProductList = () => {
   const handleChangeStatus = async (productId, currentStatus) => {
     if (!window.confirm("Bạn có chắc chắn muốn thay đổi trạng thái?")) return;
     try {
-      await inactiveProduct(productId);
-      await fetchProducts();
+      await axios.put(`http://localhost:9999/products/inactivateProduct/${productId}`, { status: currentStatus === "active" ? "inactive" : "active" });
+      await fetchAllProducts();
     } catch (err) {
-      // Error handled in hook
+      setDeleteError("Có lỗi xảy ra khi thay đổi trạng thái.");
+      console.error("Change Status Error:", err);
     }
   };
 
@@ -472,10 +444,6 @@ const ProductList = () => {
     [isLoadingMore, loading, hasMore, handleLoadMore]
   );
 
-<<<<<<< HEAD
-  const renderStatusChip = (status) => (<Box component="span" sx={{ color: "white", bgcolor: status === "active" ? "success.main" : "error.main", p: "4px 10px", borderRadius: "16px", display: "inline-block", fontSize: "0.75rem", fontWeight: "bold", textAlign: "center", }}>{status === "active" ? "Đang Bán" : "Ngừng Bán"}</Box>);
-  const headCells = [{ id: 'productImage', label: 'Hình Ảnh', sortable: false }, { id: 'productName', label: 'Tên Sản Phẩm', sortable: true }, { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' }, { id: 'avgPrice', label: 'Giá TB', sortable: true, align: 'right' }, { id: 'latestPrice', label: 'Giá Mới', sortable: true, align: 'right' }, { id: 'unit', label: 'Đơn Vị', sortable: true }, { id: 'location', label: 'Vị Trí', sortable: true }, { id: 'status', label: 'Trạng Thái', sortable: true }, { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },];
-=======
   const renderStatusChip = (status) => (
     <Box component="span" sx={{ color: "white", bgcolor: status === "active" ? "success.main" : "error.main", p: "4px 10px", borderRadius: "16px", display: "inline-block", fontSize: "0.75rem", fontWeight: "bold", textAlign: "center", }}>{status === "active" ? "Đang Bán" : "Ngừng Bán"}</Box>
   );
@@ -490,33 +458,27 @@ const ProductList = () => {
     { id: 'status', label: 'Trạng Thái', sortable: true },
     { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },
   ];
->>>>>>> TruongPV
 
   if (loading && products.length === 0) {
     return (<Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>);
   }
-  // if (error) {
-  //   return (<Container><Alert severity="error" sx={{ mt: 2 }}>{error}</Alert></Container>);
-  // }
-
+  if (error) {
+    return (<Container><Alert severity="error" sx={{ mt: 2 }}>{error}</Alert></Container>);
+  }
 
   return (
     <Container maxWidth={false} disableGutters sx={{ p: { xs: 1, sm: 2, md: 3 }, mt: 2 }}>
       <Typography variant="h4" component="h1" gutterBottom>Quản Lý Sản Phẩm</Typography>
-
-      {/* --- BƯỚC 3: CẢI TIẾN THANH LỌC --- */}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         spacing={2}
-        alignItems={{ xs: 'stretch', md: 'center' }} // Stretch trên mobile, center trên desktop
+        alignItems={{ xs: 'stretch', md: 'center' }}
         justifyContent="space-between"
         sx={{ mb: 3 }}
       >
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddProductModal(true)}>
           Thêm Sản Phẩm
         </Button>
-
-        {/* Nhóm các control tìm kiếm và lọc vào một Stack */}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={2}
@@ -539,43 +501,66 @@ const ProductList = () => {
           </ButtonGroup>
         </Stack>
       </Stack>
-
+      {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
       {isMobile ? (
-        // --- BƯỚC 4: ÁP DỤNG MOTION CHO MOBILE VIEW ---
-        <>
-          <Box
-            component={motion.div}
-            variants={listContainerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <AnimatePresence>
-              {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
-                <Box component={motion.div} key={product._id} variants={itemVariants} exit="exit">
-                  <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                    <Card
-                      elevation={2}
-                      onClick={() => handleOpenProductDetailsModal(product)}
-                      sx={{ mb: 2 }} // Thêm margin bottom cho mỗi card
-                      ref={index === arr.length - 1 ? lastItemElementRef : null}
-                    >
-                      <CardContent><Grid container spacing={2} alignItems="center"><Grid item xs={3}><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} /></Grid><Grid item xs={9}><Typography variant="h6" component="div" noWrap>{product.productName}</Typography><Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography><Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice?.toLocaleString("vi-VN")} VND</Typography>{renderStatusChip(product.status)}</Grid></Grid></CardContent>
-                      <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}><Button size="small" color="warning" variant="outlined" onClick={(e) => { e.stopPropagation(); handleOpenUpdateModal(product); }}>Sửa</Button><Button size="small" color={product.status === "active" ? "error" : "success"} variant="outlined" onClick={(e) => { e.stopPropagation(); handleChangeStatus(product._id, product.status); }}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></CardActions>
-                    </Card>
-                  </motion.div>
-                </Box>
-              ))}
-            </AnimatePresence>
-          </Box>
-          {isLoadingMore && <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
-        </>
+        <Box
+          component={motion.div}
+          variants={listContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <AnimatePresence>
+            {filteredProducts.slice(0, itemsToShow).map((product, index, arr) => (
+              <Box component={motion.div} key={product._id} variants={itemVariants} exit="exit">
+                <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card
+                    elevation={2}
+                    onClick={() => handleOpenProductDetailsModal(product)}
+                    sx={{ mb: 2 }}
+                    ref={index === arr.length - 1 ? lastItemElementRef : null}
+                  >
+                    <CardContent>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={3}>
+                          <Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} />
+                        </Grid>
+                        <Grid item xs={9}>
+                          <Typography variant="h6" component="div" noWrap>{product.productName}</Typography>
+                          <Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography>
+                          <Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice.toLocaleString("vi-VN")} VND</Typography>
+                          {renderStatusChip(product.status)}
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
+                      <Button size="small" color="warning" variant="outlined" onClick={(e) => { e.stopPropagation(); handleOpenUpdateModal(product); }}>Sửa</Button>
+                      <Button size="small" color={product.status === "active" ? "error" : "success"} variant="outlined" onClick={(e) => { e.stopPropagation(); handleChangeStatus(product._id, product.status); }}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button>
+                    </CardActions>
+                  </Card>
+                </motion.div>
+              </Box>
+            ))}
+          </AnimatePresence>
+        </Box>
       ) : (
-        // --- BƯỚC 5: ÁP DỤNG MOTION CHO DESKTOP VIEW ---
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
           <TableContainer sx={{ maxHeight: 'calc(100vh - 280px)' }}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
-                <TableRow>{headCells.map((headCell) => (<TableCell key={headCell.id} align={headCell.align || 'left'} sortDirection={sortBy === headCell.id ? sortDirection : false}>{headCell.sortable ? (<TableSortLabel active={sortBy === headCell.id} direction={sortBy === headCell.id ? sortDirection : 'asc'} onClick={() => handleSort(headCell.id)}>{headCell.label}{sortBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{sortDirection === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}</TableSortLabel>) : (headCell.label)}</TableCell>))}</TableRow>
+                <TableRow>{headCells.map((headCell) => (
+                  <TableCell key={headCell.id} align={headCell.align || 'left'} sortDirection={sortBy === headCell.id ? sortDirection : false}>
+                    {headCell.sortable ? (
+                      <TableSortLabel active={sortBy === headCell.id} direction={sortBy === headCell.id ? sortDirection : 'asc'} onClick={() => handleSort(headCell.id)}>
+                        {headCell.label}
+                        {sortBy === headCell.id ? (
+                          <Box component="span" sx={visuallyHidden}>
+                            {sortDirection === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          </Box>
+                        ) : null}
+                      </TableSortLabel>
+                    ) : (headCell.label)}
+                  </TableCell>
+                ))}</TableRow>
               </TableHead>
               <Box
                 component={motion.tbody}
@@ -590,7 +575,7 @@ const ProductList = () => {
                       key={product._id}
                       variants={itemVariants}
                       exit="exit"
-                      layout // Prop quan trọng giúp animation mượt mà khi lọc/sắp xếp
+                      layout
                       hover
                       onClick={() => handleOpenProductDetailsModal(product)}
                       sx={{ cursor: 'pointer' }}
@@ -599,23 +584,30 @@ const ProductList = () => {
                       <TableCell><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} /></TableCell>
                       <TableCell><Typography variant="body2" fontWeight="medium">{product.productName}</Typography></TableCell>
                       <TableCell align="center">{product.totalStock}</TableCell>
-                      <TableCell align="right">{product.avgPrice?.toLocaleString("vi-VN")} VND</TableCell>
-                      <TableCell align="right">{product.latestPrice?.toLocaleString("vi-VN")} VND</TableCell>
+                      <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
+                      <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell>{product.unit}</TableCell>
                       <TableCell>
-                        {/* Hiển thị vị trí kho dưới dạng danh sách nếu có nhiều vị trí */}
-                        {product.location && product.location.length > 0 ? (
-                          <Box>
-                            {product.location.map((loc, idx) => (
-                              <Typography key={idx} variant="body2" color="text.secondary">{loc.inventoryId?.name || "Kho không xác định"}: {loc.stock} {product.unit}</Typography>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">Chưa có vị trí</Typography>
-                        )}
+                        {
+                          (() => {
+                            // Tìm kệ chứa sản phẩm này dựa vào inventories
+                            const foundInv = inventories.find(inv =>
+                              Array.isArray(inv.products) &&
+                              inv.products.some(p =>
+                                (p.productId && (p.productId._id || p.productId) === product._id)
+                              )
+                            );
+                            return foundInv ? foundInv.name : "";
+                          })()
+                        }
                       </TableCell>
                       <TableCell>{renderStatusChip(product.status)}</TableCell>
-                      <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button>
+                          <Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button>
+                        </Stack>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </AnimatePresence>
@@ -632,12 +624,6 @@ const ProductList = () => {
         </Paper>
       )}
 
-<<<<<<< HEAD
-      {selectedProduct && (<>
-        <ProductDetails open={showProductDetailsModal} handleClose={() => setShowProductDetailsModal(false)} product={selectedProduct} />
-        <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchProducts} />
-      </>)}
-=======
      {selectedProduct && (
   <>
     <ProductDetails
@@ -654,19 +640,11 @@ const ProductList = () => {
     />
   </>
 )}
->>>>>>> TruongPV
 
-      {/* Thay thế AddProduct bằng AddProductModal và truyền createProduct vào */}
-      <AddProductModal
+      <AddProduct
         open={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
-<<<<<<< HEAD
-        onSaveSuccess={fetchProducts}
-        createProduct={createProduct} // Truyền hàm vào modal
-        checkProductName={checkProductName}
-=======
         onSaveSuccess={handleUpdateSuccess}
->>>>>>> TruongPV
       />
 
    

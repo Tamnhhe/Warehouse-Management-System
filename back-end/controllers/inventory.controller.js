@@ -1,63 +1,6 @@
 const Inventory = require("../models/inventory.model");
 const Product = require("../models/product.model");
 
-const createTransaction = async (req, res, next) => {
-  const {
-    supplier,
-    transactionType,
-    transactionDate,
-    products,
-    totalPrice,
-    status,
-    branch,
-  } = req.body;
-
-  // Tự động lấy productId nếu chỉ có productName
-  for (const item of products) {
-    if (!item.productId && item.productName) {
-      const productDoc = await Product.findOne({
-        productName: item.productName,
-      });
-      if (productDoc) {
-        item.productId = productDoc._id;
-      } else {
-        return res
-          .status(400)
-          .json({ message: `Không tìm thấy sản phẩm: ${item.productName}` });
-      }
-    }
-  }
-
-  // ...phần còn lại giữ nguyên...
-  const manager = await User.findOne({ role: "manager" });
-  if (!manager) {
-    return res.status(400).json({ message: "Manager not found." });
-  }
-
-  const newTransaction = new InventoryTransaction({
-    supplier,
-    transactionType,
-    transactionDate: transactionDate || Date.now(),
-    products,
-    operator: manager._id,
-    totalPrice,
-    status: status || "pending",
-    branch,
-  });
-
-  await newTransaction.save();
-
-  // Nếu là xuất kho thì trừ hàng luôn (nếu muốn)
-  if (transactionType === "export") {
-    const { deductProductsFromInventories } = require("./inventory.controller");
-    await deductProductsFromInventories(products);
-  }
-
-  return res
-    .status(201)
-    .json({ message: "Giao dịch được tạo thành công", newTransaction });
-};
-
 exports.distributeProductsToInventories = async (products) => {
   for (const item of products) {
     let productId =
@@ -212,8 +155,6 @@ exports.getInventoryLayout = async (req, res) => {
       category: inv.categoryId,
       maxQuantitative: inv.maxQuantitative,
       currentQuantitative: inv.currentQuantitative,
-      maxWeight: inv.maxWeight,
-      currentWeight: inv.currentWeight,
       status: inv.status,
       products: inv.products,
     }));
@@ -225,19 +166,9 @@ exports.getInventoryLayout = async (req, res) => {
 // Thêm kệ mới
 exports.createInventory = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { name, location, categoryId, maxQuantitative, maxWeight, status } =
+    const { name, location, categoryId, maxQuantitative, status } =
       req.body;
-    if (!name || !categoryId || !maxQuantitative || !maxWeight) {
-=======
-    const { name, categoryId, maxQuantitative, status } = req.body;
-
-    if (
-      !name ||
-      !categoryId ||
-      !maxQuantitative
-    ) {
->>>>>>> TruongPV
+    if (!name || !categoryId || !maxQuantitative) {
       return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
     }
     // Kiểm tra nếu đã có kệ cùng tên
@@ -247,12 +178,6 @@ exports.createInventory = async (req, res) => {
         .status(400)
         .json({ message: "Tên kệ đã tồn tại, vui lòng chọn tên khác!" });
     }
-<<<<<<< HEAD
-    // Tạo kệ mới với số lượng hiện tại = 0, KHÔNG có trường creator
-=======
-
-    // Tạo kệ mới với số lượng hiện tại = 0
->>>>>>> TruongPV
     const newInventory = new Inventory({
       name,
       location,
@@ -274,12 +199,6 @@ exports.createInventory = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
-// Hàm phân bổ lại tồn kho cho tất cả kệ cùng category, cập nhật cả Product.location
-=======
-
-// Hàm phân bổ lại tồn kho cho tất cả kệ cùng category
->>>>>>> TruongPV
 async function redistributeStockForCategory(categoryId) {
   // Lấy tất cả sản phẩm thuộc category này
   const products = await Product.find({ categoryId });
@@ -301,7 +220,6 @@ async function redistributeStockForCategory(categoryId) {
     await p.save();
   }
 
-<<<<<<< HEAD
   // Phân bổ lại tồn kho từng sản phẩm vào các kệ
   for (let p of products) {
     let remain = p.totalStock;
@@ -325,39 +243,17 @@ async function redistributeStockForCategory(categoryId) {
         p.location.push({ inventoryId: inv._id, stock: addQty });
         remain -= addQty;
       }
-=======
-    if (addQty > 0) {
-      inv.currentQuantitative = addQty;
-      inv.products = [];
-      await inv.save();
-      remain -= addQty;
->>>>>>> TruongPV
     }
     await p.save();
   }
 }
 
-// Thêm sản phẩm với số lượng vào kệ (KHÔNG còn cân nặng)
+// Thêm sản phẩm với số lượng vào kệ
 exports.addProductWithQuantityToInventory = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { inventoryId, productId, quantity, weight } = req.body;
-    if (
-      !inventoryId ||
-      !productId ||
-      !quantity ||
-      quantity <= 0 ||
-      !weight ||
-      weight <= 0
-    ) {
-      return res.status(400).json({
-        message: "Thiếu thông tin hoặc số lượng/cân nặng không hợp lệ",
-      });
-=======
     const { inventoryId, productId, quantity } = req.body;
     if (!inventoryId || !productId || !quantity || quantity <= 0) {
       return res.status(400).json({ message: "Thiếu thông tin hoặc số lượng không hợp lệ" });
->>>>>>> TruongPV
     }
 
     const inventory = await Inventory.findById(inventoryId);
@@ -372,16 +268,6 @@ exports.addProductWithQuantityToInventory = async (req, res) => {
         .json({ message: "Kệ không đủ chỗ trống về số lượng" });
     }
 
-<<<<<<< HEAD
-    // Kiểm tra chỗ trống cân nặng
-    if (inventory.currentWeight + weight > inventory.maxWeight) {
-      return res
-        .status(400)
-        .json({ message: "Kệ không đủ chỗ trống về cân nặng" });
-    }
-
-=======
->>>>>>> TruongPV
     // Thêm sản phẩm vào mảng products nếu chưa có
     let prodObj = inventory.products.find(p => p.productId.equals(productId));
     if (prodObj) {
@@ -441,13 +327,7 @@ exports.getAllInventories = async (req, res) => {
               productName: p.productName,
               quantity: canAdd,
               totalStock: p.totalStock,
-<<<<<<< HEAD
               unit: p.unit,
-              weight: p.weight || 0
-=======
-              unit: p.unit
-              // KHÔNG còn weight
->>>>>>> TruongPV
             });
             invCurrent += canAdd;
             productRemain[p._id.toString()] -= canAdd;
@@ -470,11 +350,7 @@ exports.getAllInventories = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-<<<<<<< HEAD
-// Khi xóa kệ, cập nhật lại location trong Product
-=======
 
->>>>>>> TruongPV
 exports.deleteInventory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -491,26 +367,23 @@ exports.deleteInventory = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-<<<<<<< HEAD
 };
 
 // Thêm sản phẩm vào kệ (nhập hàng trực tiếp)
 exports.addProductToShelf = async (req, res) => {
   try {
-    const { inventoryId, productId, quantity, weight } = req.body;
+    const { inventoryId, productId, quantity } = req.body;
 
     if (
       !inventoryId ||
       !productId ||
       !quantity ||
-      quantity <= 0 ||
-      !weight ||
-      weight <= 0
+      quantity <= 0
     ) {
       return res
         .status(400)
         .json({
-          message: "Thiếu thông tin hoặc số lượng/cân nặng không hợp lệ",
+          message: "Thiếu thông tin hoặc số lượng không hợp lệ",
         });
     }
 
@@ -540,13 +413,6 @@ exports.addProductToShelf = async (req, res) => {
         .json({ message: "Kệ không đủ chỗ trống về số lượng" });
     }
 
-    // Kiểm tra cân nặng kệ
-    if (inventory.currentWeight + weight > inventory.maxWeight) {
-      return res
-        .status(400)
-        .json({ message: "Kệ không đủ chỗ trống về cân nặng" });
-    }
-
     // Cập nhật sản phẩm trong kệ
     let productExists = false;
     for (let i = 0; i < inventory.products.length; i++) {
@@ -561,9 +427,8 @@ exports.addProductToShelf = async (req, res) => {
       inventory.products.push({ productId, quantity });
     }
 
-    // Cập nhật số lượng và cân nặng kệ
+    // Cập nhật số lượng kệ
     inventory.currentQuantitative += quantity;
-    inventory.currentWeight += weight;
     await inventory.save();
 
     // Cập nhật tổng tồn kho sản phẩm
@@ -634,11 +499,6 @@ exports.removeProductFromShelf = async (req, res) => {
         .json({ message: "Số lượng xuất vượt quá số lượng hiện có trong kệ" });
     }
 
-    // Tính toán cân nặng dựa trên tỷ lệ số lượng
-    const weightPerItem =
-      inventory.currentWeight / inventory.currentQuantitative;
-    const weightToRemove = weightPerItem * quantity;
-
     // Cập nhật số lượng sản phẩm trong kệ
     inventory.products[productIndex].quantity -= quantity;
 
@@ -647,9 +507,8 @@ exports.removeProductFromShelf = async (req, res) => {
       inventory.products.splice(productIndex, 1);
     }
 
-    // Cập nhật số lượng và cân nặng kệ
+    // Cập nhật số lượng kệ
     inventory.currentQuantitative -= quantity;
-    inventory.currentWeight -= weightToRemove;
     await inventory.save();
 
     // Cập nhật tổng tồn kho sản phẩm
@@ -680,6 +539,3 @@ exports.removeProductFromShelf = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-=======
-};
->>>>>>> TruongPV
