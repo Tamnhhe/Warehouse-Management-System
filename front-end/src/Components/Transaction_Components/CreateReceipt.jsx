@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -26,6 +25,9 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import useSupplier from "../../Hooks/useSupplier";
+import useSupplierProduct from "../../Hooks/useSupplierProduct";
+import useCategory from "../../Hooks/useCategory";
 
 const palette = {
   dark: "#155E64",
@@ -53,8 +55,6 @@ const validationSchema = Yup.object({
 });
 
 const CreateReceipt = () => {
-  const [categories, setCategories] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -62,22 +62,14 @@ const CreateReceipt = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const navigate = useNavigate();
 
+  // Use hooks
+  const { suppliers, fetchSuppliers } = useSupplier();
+  const { fetchProductsBySupplier } = useSupplierProduct();
+  const { categories, getAllCategories } = useCategory();
+
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [categoriesRes, suppliersRes] = await Promise.all([
-          axios.get("http://localhost:9999/categories/getAllCategories"),
-          axios.get("http://localhost:9999/suppliers/getAllSuppliers"),
-        ]);
-        setCategories(categoriesRes.data || []);
-        setSuppliers(
-          suppliersRes.data.filter((s) => s.status === "active") || []
-        );
-      } catch (err) {
-        setError("Không thể tải dữ liệu cần thiết.");
-      }
-    };
-    fetchInitialData();
+    fetchSuppliers();
+    getAllCategories();
   }, []);
 
   const formik = useFormik({
@@ -105,15 +97,16 @@ const CreateReceipt = () => {
       };
 
       try {
-        await axios.post(
-          "http://localhost:9999/inventoryTransactions/create-receipts",
-          payload
-        );
+        await fetch("http://localhost:9999/inventoryTransactions/create-receipts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
         setSuccess(true);
         setTimeout(() => navigate("/receipts"), 2000);
       } catch (err) {
         setError(
-          err.response?.data?.message || "Có lỗi xảy ra khi tạo phiếu nhập"
+          err.response?.data?.message || err.message || "Có lỗi xảy ra khi tạo phiếu nhập"
         );
       } finally {
         setLoading(false);
@@ -129,12 +122,8 @@ const CreateReceipt = () => {
     ]);
     if (value) {
       try {
-        const response = await axios.get(
-          `http://localhost:9999/supplierProducts/getProductsBySupplier/${value._id}`
-        );
-        setFilteredProducts(
-          response.data.filter((p) => p.status === "active") || []
-        );
+        const products = await fetchProductsBySupplier(value._id);
+        setFilteredProducts(products);
       } catch (error) {
         setFilteredProducts([]);
       }
@@ -143,7 +132,7 @@ const CreateReceipt = () => {
     }
   };
 
-  // Khi chọn sản phẩm, tự động điền cân nặng
+  // Khi chọn sản phẩm, tự động điền cân nặng và danh mục
   const handleProductSelect = (index, value) => {
     if (value) {
       formik.setFieldValue(`products.${index}.productName`, value.productName);
