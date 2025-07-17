@@ -36,7 +36,6 @@ const ProductSchema = new mongoose.Schema({
     inventoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Inventory',
-        required: true,
     },
     status: { //Trang thái
         type: String,

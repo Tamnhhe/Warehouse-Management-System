@@ -68,6 +68,14 @@ const createSupplierProduct = async (req, res) => {
       return res.status(400).json({ message: 'Ngày hết hạn không hợp lệ.' });
     }
 
+    const supplierProductExists = await SupplierProduct.findOne({ productName: productName.trim() });
+    if (supplierProductExists) {
+      return res.status(400).json({
+        error: 'Supplier product already exists',
+        message: 'Sản phẩm đã tồn tại trong danh sách nhà cung cấp.'
+      });
+    }
+
     // Create new supplier product
     const newSupplierProduct = new SupplierProduct({
       supplier,
@@ -93,6 +101,7 @@ const createSupplierProduct = async (req, res) => {
         quantitative: savedProduct.quantitative,
         unit: savedProduct.unit,
         thresholdStock: 0, // Default value, can be updated later
+
       });
       await product.save();
     }
