@@ -1,30 +1,40 @@
 import React, { useState, useEffect } from "react";
 import useCategory from "../../Hooks/useCategory";
+import useInventory from "../../Hooks/useInventory";
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Stack, TextField, FormControl,
-    InputLabel, Select, MenuItem, FormHelperText, Button, Box, CircularProgress, Alert
+    InputLabel, Select, MenuItem, FormHelperText, Button, Box, CircularProgress, Alert, Typography
 } from "@mui/material";
 
-const AddProductModal = ({ open, handleClose, onSaveSuccess }) => {
+const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, checkProductName }) => {
     const [productData, setProductData] = useState({
         productName: "", categoryId: "", totalStock: 0,
         productImage: null, unit: "", location: "", status: "active",
+        location: [] // [{ inventoryId, stock }]
     });
+    const [selectedInventory, setSelectedInventory] = useState(""); // Inventory user selects
+    const [inventoryStock, setInventoryStock] = useState(""); // Stock for selected inventory
     const [imagePreview, setImagePreview] = useState(null);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     // Use category hook
     const { categories, getAllCategories } = useCategory();
+    // Use inventory hook
+    const { inventories, fetchInventories } = useInventory();
 
     useEffect(() => {
         if (open) {
             getAllCategories();
+            fetchInventories();
         } else {
             setProductData({
                 productName: "", categoryId: "", totalStock: 0,
                 productImage: null, unit: "", location: "", status: "active",
+                location: []
             });
+            setSelectedInventory("");
+            setInventoryStock("");
             setErrors({});
             setImagePreview(null);
             setLoading(false);
@@ -54,12 +64,57 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess }) => {
         }
     };
 
+    // Handle inventory selection and stock input
+    const handleInventorySelect = (e) => {
+        setSelectedInventory(e.target.value);
+        setInventoryStock("");
+        setErrors((prev) => ({ ...prev, location: "" }));
+    };
+
+    const handleInventoryStockInput = (e) => {
+        setInventoryStock(e.target.value);
+        setErrors((prev) => ({ ...prev, location: "" }));
+    };
+
+    const handleAddInventory = () => {
+        if (!selectedInventory || inventoryStock === "" || Number(inventoryStock) < 0) {
+            setErrors((prev) => ({
+                ...prev,
+                location: "Vui lòng chọn kho và nhập số lượng tồn kho hợp lệ."
+            }));
+            return;
+        }
+        // Prevent duplicate inventory
+        if (productData.location.some(inv => inv.inventoryId === selectedInventory)) {
+            setErrors((prev) => ({
+                ...prev,
+                location: "Kho đã được thêm."
+            }));
+            return;
+        }
+        setProductData((prev) => ({
+            ...prev,
+            location: [
+                ...prev.location,
+                { inventoryId: selectedInventory, stock: Number(inventoryStock) }
+            ]
+        }));
+        setSelectedInventory("");
+        setInventoryStock("");
+    };
+
+    const handleRemoveInventory = (inventoryId) => {
+        setProductData((prev) => ({
+            ...prev,
+            location: prev.location.filter(inv => inv.inventoryId !== inventoryId)
+        }));
+    };
+
     const validate = async () => {
         let tempErrors = {};
         tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
         tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
         tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
-        tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
         if (!productData.productImage) {
             tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
         } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
@@ -67,25 +122,20 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess }) => {
         } else {
             tempErrors.productImage = "";
         }
+        // Validate inventories
+        if (!productData.location.length) {
+            tempErrors.location = "Vui lòng thêm ít nhất một kho và số lượng tồn kho.";
+        } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
+            tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
+        } else {
+            tempErrors.location = "";
+        }
         setErrors(tempErrors);
 
         const isFormValid = Object.values(tempErrors).every((x) => x === "");
 
-        if (isFormValid) {
-            try {
-                const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
-                if (response.data.exists) {
-                    setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
-                    return false;
-                }
-                return true;
-            } catch (error) {
-                console.error("Error checking product name:", error);
-                setErrors(prev => ({ ...prev, general: "Có lỗi khi kiểm tra tên sản phẩm." }));
-                return false;
-            }
-        }
-        return false;
+
+        return isFormValid;
     };
 
     const handleSave = async () => {
@@ -93,15 +143,25 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess }) => {
         if (await validate()) {
             setLoading(true);
             const formData = new FormData();
-            Object.entries(productData).forEach(([key, value]) => formData.append(key, value));
+            Object.entries(productData).forEach(([key, value]) => {
+                // Fix: send location as array, not JSON string
+                if (key === "location") {
+                    // Append each location object as location[]
+                    value.forEach((loc, idx) => {
+                        formData.append(`location[${idx}][inventoryId]`, loc.inventoryId);
+                        formData.append(`location[${idx}][stock]`, loc.stock);
+                    });
+                } else {
+                    formData.append(key, value);
+                }
+            });
 
             try {
-                await axios.post("http://localhost:9999/products/createProduct", formData, { headers: { "Content-Type": "multipart/form-data" } });
+                await createProduct(formData);
                 onSaveSuccess();
-                handleClose();
+                // handleClose();
             } catch (error) {
-                console.error("Error creating product:", error);
-                setErrors((prev) => ({ ...prev, general: error.response?.data?.message || "Có lỗi xảy ra." }));
+                setErrors((prev) => ({ ...prev, general: error?.message || "Có lỗi xảy ra." }));
             } finally {
                 setLoading(false);
             }
@@ -124,7 +184,54 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess }) => {
                         {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
                     </FormControl>
                     <TextField name="unit" label="Đơn Vị (ví dụ: cái, hộp, kg)" value={productData.unit} onChange={handleChange} error={!!errors.unit} helperText={errors.unit} fullWidth />
-                    <TextField name="location" label="Vị Trí (ví dụ: Kệ A1, Kho B)" value={productData.location} onChange={handleChange} error={!!errors.location} helperText={errors.location} fullWidth />
+                    {/* Inventory selection */}
+                    <Box>
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kho và nhập tồn kho cho từng kho:</Typography>
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                            <FormControl sx={{ minWidth: 160 }}>
+                                <InputLabel id="inventory-select-label">Kho</InputLabel>
+                                <Select
+                                    labelId="inventory-select-label"
+                                    value={selectedInventory}
+                                    label="Kho"
+                                    onChange={handleInventorySelect}
+                                >
+                                    <MenuItem value=""><em>Chọn kho</em></MenuItem>
+                                    {inventories
+                                        .filter(inv => !productData.location.some(i => i.inventoryId === inv._id))
+                                        .map(inv => (
+                                            <MenuItem key={inv._id} value={inv._id}>{inv.name}</MenuItem>
+                                        ))}
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                type="number"
+                                label="Tồn kho"
+                                size="small"
+                                inputProps={{ min: 0 }}
+                                value={inventoryStock}
+                                onChange={handleInventoryStockInput}
+                                sx={{ width: 120 }}
+                            />
+                            <Button variant="contained" onClick={handleAddInventory}>Thêm</Button>
+                        </Stack>
+                        {productData.location.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                                <Typography variant="subtitle2">Danh sách kho đã chọn:</Typography>
+                                {productData.location.map(inv => {
+                                    const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
+                                    return (
+                                        <Stack direction="row" alignItems="center" spacing={2} key={inv.inventoryId} sx={{ mb: 1 }}>
+                                            <Typography sx={{ minWidth: 100 }}>{inventoryObj ? inventoryObj.name : inv.inventoryId}</Typography>
+                                            <Typography sx={{ minWidth: 80 }}>Tồn kho: {inv.stock}</Typography>
+                                            <Button variant="outlined" color="error" size="small" onClick={() => handleRemoveInventory(inv.inventoryId)}>Xóa</Button>
+                                        </Stack>
+                                    );
+                                })}
+                            </Box>
+                        )}
+                        {errors.location && <FormHelperText error>{errors.location}</FormHelperText>}
+                    </Box>
                     <FormControl fullWidth>
                         <InputLabel id="status-select-label">Trạng Thái</InputLabel>
                         <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>

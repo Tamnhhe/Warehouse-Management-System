@@ -1,22 +1,56 @@
 const Product = require("../models/product.model");
 const Category = require("../models/category.model");
 const Inventory = require("../models/inventory.model");
-
+const SupplierProduct = require("../models/supplierProduct.model");
 // Tạo mới một sản phẩm
 const createProduct = async (req, res, next) => {
   try {
-    const {
+    let {
       productName,
       categoryId,
       totalStock,
       thresholdStock,
-      productImage,
       unit,
-      inventoryId,
       status,
-      weight, // thêm cân nặng
+      quantitative,
+      location,
+      supplierId
     } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : productImage;
+    const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
+
+    // Parse location if sent as array of objects in multipart/form-data
+    if (Array.isArray(location)) {
+      // location is array of objects, but each field is sent as string
+      location = location.map(loc => {
+        if (typeof loc === "string") {
+          // If loc is '[object Object]', parse it
+          try {
+            return JSON.parse(loc);
+          } catch {
+            return loc;
+          }
+        }
+        return loc;
+      });
+    } else if (typeof location === "object" && location !== null && !Array.isArray(location)) {
+      // If location is an object, wrap in array
+      location = [location];
+    }
+
+    // If location is undefined, try to reconstruct from req.body
+    if (!location) {
+      // Try to reconstruct from fields like location[0][inventoryId], location[0][stock], etc.
+      location = [];
+      Object.keys(req.body).forEach(key => {
+        const match = key.match(/^location\[(\d+)\]\[(\w+)\]$/);
+        if (match) {
+          const idx = Number(match[1]);
+          const field = match[2];
+          if (!location[idx]) location[idx] = {};
+          location[idx][field] = req.body[key];
+        }
+      });
+    }
 
     // Kiểm tra các trường bắt buộc
     if (
@@ -24,7 +58,7 @@ const createProduct = async (req, res, next) => {
       !categoryId ||
       !productImage ||
       !unit ||
-      !inventoryId
+      !status
     ) {
       return res
         .status(400)
@@ -37,6 +71,7 @@ const createProduct = async (req, res, next) => {
       return res.status(400).json({ message: 'Sản phẩm đã tồn tại trong kho.' });
     }
 
+
     // Kiểm tra danh mục
     const checkCategory = await Category.findById(categoryId);
     if (!checkCategory) {
@@ -45,40 +80,49 @@ const createProduct = async (req, res, next) => {
         .json({ message: "Định dạng danh mục không hợp lệ" });
     }
 
-    // Kiểm tra inventoryId có tồn tại không
-    const checkInventory = await Inventory.findById(inventoryId);
-    if (!checkInventory) {
-      return res
-        .status(404)
-        .json({ message: "Kệ không tồn tại" });
-    }
-
     // Tạo sản phẩm mới
     const newProduct = new Product({
       productName,
       categoryId,
-      totalStock: totalStock || 0,
+      totalStock: location.reduce((sum, loc) => sum + (loc.stock || 0), 0) || totalStock || 0,
       thresholdStock: thresholdStock || 0,
       productImage,
       unit,
-      inventoryId,
+      quantitative: quantitative || 0,
+      location: location || [],
       status: status || "active",
-      weight: weight || 0, // thêm cân nặng
     });
 
     await newProduct.save();
+
+    // Update kệ trong cơ sở dữ liệu
+    if (location && Array.isArray(location)) {
+      for (const loc of location) {
+        if (loc.inventoryId) {
+          const inventory = await Inventory.findById(loc.inventoryId);
+          if (inventory) {
+            inventory.products.push({
+              productId: newProduct._id,
+              stock: loc.stock || 0
+            });
+            await inventory.save();
+          }
+        }
+      }
+    }
+
     res.status(201).json({ message: 'Sản phẩm được tạo thành công', newProduct });
   } catch (err) {
     next(err);
   }
 };
 
-// Lấy tất cả sản phẩm (populate inventoryId)
+// Lấy tất cả sản phẩm (populate categoryId và location.inventoryId)
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
       .populate('categoryId', 'categoryName status')
-      .populate('inventoryId', 'name');
+      .populate('location.inventoryId', 'name');
     res.status(200).json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -90,7 +134,7 @@ const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate("categoryId")
-      .populate("inventoryId");
+      .populate("location.inventoryId");
     if (!product) {
       return res.status(404).json({ message: 'Sản phẩm không tìm thấy' });
     }
@@ -104,7 +148,16 @@ const getProductById = async (req, res) => {
 async function updateProduct(req, res, next) {
   try {
     const { id } = req.params;
-    const { productName, categoryId, thresholdStock, unit, inventoryId, status, weight } = req.body;
+    const {
+      productName,
+      categoryId,
+      totalStock,
+      thresholdStock,
+      unit,
+      quantitative,
+      location,
+      status,
+    } = req.body;
     const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
 
     const existingProduct = await Product.findById(id);
@@ -112,7 +165,16 @@ async function updateProduct(req, res, next) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    const updatedProduct = { productName, categoryId, thresholdStock, unit, inventoryId, status, weight };
+    const updatedProduct = {
+      productName,
+      categoryId,
+      totalStock,
+      thresholdStock,
+      unit,
+      quantitative,
+      location,
+      status
+    };
     if (productImage) updatedProduct.productImage = productImage;
 
     const product = await Product.findByIdAndUpdate(id, { $set: updatedProduct }, { new: true });
@@ -138,10 +200,30 @@ const inactiveProduct = async (req, res, next) => {
   }
 };
 
+const checkProductName = async (req, res, next) => {
+  try {
+    const { name } = req.params;
+    const existingProduct = await Product.findOne({ name: name.trim() });
+    if (existingProduct) {
+      return res.status(400).json({
+        exists: true,
+        message: 'Sản phẩm đã tồn tại trong kho.'
+      });
+    }
+    res.status(200).json({
+      exists: false,
+      message: 'Tên sản phẩm hợp lệ'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   inactiveProduct,
+  checkProductName
 };

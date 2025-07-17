@@ -29,14 +29,21 @@ const ProductSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    weight: { //Cân nặng
+    quantitative: { //Cân nặng
         type: Number,
         default: 0,
     },
-    inventoryId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Inventory',
-    },
+    location: [{
+        inventoryId: { //Kệ
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Inventory', // Reference to the Inventory collection
+            required: true,
+        },
+        stock: { //Tồn kho
+            type: Number,
+            default: 0, // Mặc định là 0 nếu không có giá trị
+        }
+    }],
     status: { //Trang thái
         type: String,
         required: true,

@@ -5,24 +5,18 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import axios from "axios";
 import {
   Container, Box, Typography, Button, TextField, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, TableSortLabel, CircularProgress, Alert, Stack, Avatar,
   ButtonGroup, useMediaQuery, useTheme, Card, CardContent, CardActions, Grid, TableFooter,
-  Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, FormControl,
-  InputLabel, Select, FormHelperText,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { visuallyHidden } from "@mui/utils";
-
-// --- BƯỚC 1: IMPORT FRAMER MOTION ---
 import { motion, AnimatePresence } from "framer-motion";
-
-// Import the AddProduct component from the separate file
-import AddProduct from "./AddProduct";
+import AddProductModal from "./AddProductModal"; // Đổi từ AddProduct sang AddProductModal
 import UpdateProductModal from "./UpdateProductModal";
 import ProductDetails from "./ProductDetails";
+import useProduct from "../../Hooks/useProduct"; // <-- Use custom hook
 
 const DESKTOP_PAGE_SIZE = 20;
 const MOBILE_PAGE_SIZE = 10;
@@ -55,15 +49,17 @@ const itemVariants = {
 };
 
 
-// Remove the AddProduct component definition here since it's now in its own file
-
-
 const ProductList = () => {
-  // ... state và các hàm khác giữ nguyên ...
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleteError, setDeleteError] = useState("");
+  // Use custom hook for product logic
+  const {
+    products,
+    loading,
+    error,
+    fetchProducts,
+    createProduct, // <-- Thêm hàm createProduct từ hook
+    inactiveProduct,
+    checkProductName
+  } = useProduct();
 
   // States for filtering and sorting
   const [filterText, setFilterText] = useState("");
@@ -85,48 +81,9 @@ const ProductList = () => {
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const fetchAllProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [productsRes, supplierProductsRes] = await Promise.all([
-        axios.get("http://localhost:9999/products/getAllProducts"),
-        axios.get("http://localhost:9999/supplierProducts/getAllSupplierProducts"),
-      ]);
-      const productsData = productsRes.data;
-      // const supplierProducts = supplierProductsRes.data;
-      // const latestPrices = {}, priceMap = {};
-      // supplierProducts.forEach((sp) => {
-      //   const productId = sp.product?._id;
-      //   if (!productId) return;
-      //   if (!latestPrices[productId]) latestPrices[productId] = sp.price;
-      //   if (!priceMap[productId]) priceMap[productId] = [];
-      //   priceMap[productId].push(sp.price);
-      // });
-      // const avgPrices = Object.entries(priceMap).reduce((acc, [productId, prices]) => {
-      //   const sum = prices.reduce((total, price) => total + price, 0);
-      //   acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
-      //   return acc;
-      // }, {});
-      const updatedProducts = productsData.map((p) => ({
-        ...p,
-        // latestPrice: latestPrices[p._id] || 0,
-        // avgPrice: avgPrices[p._id] || 0,
-        latestPrice: 0,
-        avgPrice: 0,
-      }));
-      setProducts(updatedProducts);
-      setError("");
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchAllProducts();
-  }, [fetchAllProducts]);
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     let updatedProducts = [...products];
@@ -165,11 +122,10 @@ const ProductList = () => {
   const handleChangeStatus = async (productId, currentStatus) => {
     if (!window.confirm("Bạn có chắc chắn muốn thay đổi trạng thái?")) return;
     try {
-      await axios.put(`http://localhost:9999/products/inactivateProduct/${productId}`, { status: currentStatus === "active" ? "inactive" : "active" });
-      await fetchAllProducts();
+      await inactiveProduct(productId);
+      await fetchProducts();
     } catch (err) {
-      setDeleteError("Có lỗi xảy ra khi thay đổi trạng thái.");
-      console.error("Change Status Error:", err);
+      // Error handled in hook
     }
   };
 
@@ -204,9 +160,9 @@ const ProductList = () => {
   if (loading && products.length === 0) {
     return (<Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>);
   }
-  if (error) {
-    return (<Container><Alert severity="error" sx={{ mt: 2 }}>{error}</Alert></Container>);
-  }
+  // if (error) {
+  //   return (<Container><Alert severity="error" sx={{ mt: 2 }}>{error}</Alert></Container>);
+  // }
 
 
   return (
@@ -249,8 +205,6 @@ const ProductList = () => {
         </Stack>
       </Stack>
 
-      {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
-
       {isMobile ? (
         // --- BƯỚC 4: ÁP DỤNG MOTION CHO MOBILE VIEW ---
         <>
@@ -270,7 +224,7 @@ const ProductList = () => {
                       sx={{ mb: 2 }} // Thêm margin bottom cho mỗi card
                       ref={index === arr.length - 1 ? lastItemElementRef : null}
                     >
-                      <CardContent><Grid container spacing={2} alignItems="center"><Grid item xs={3}><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} /></Grid><Grid item xs={9}><Typography variant="h6" component="div" noWrap>{product.productName}</Typography><Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography><Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice.toLocaleString("vi-VN")} VND</Typography>{renderStatusChip(product.status)}</Grid></Grid></CardContent>
+                      <CardContent><Grid container spacing={2} alignItems="center"><Grid item xs={3}><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} sx={{ width: '100%', height: 'auto' }} /></Grid><Grid item xs={9}><Typography variant="h6" component="div" noWrap>{product.productName}</Typography><Typography variant="body2" color="text.secondary">Tồn kho: <strong>{product.totalStock}</strong> {product.unit}</Typography><Typography variant="body1" color="primary.main" fontWeight="bold">{product.latestPrice?.toLocaleString("vi-VN")} VND</Typography>{renderStatusChip(product.status)}</Grid></Grid></CardContent>
                       <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}><Button size="small" color="warning" variant="outlined" onClick={(e) => { e.stopPropagation(); handleOpenUpdateModal(product); }}>Sửa</Button><Button size="small" color={product.status === "active" ? "error" : "success"} variant="outlined" onClick={(e) => { e.stopPropagation(); handleChangeStatus(product._id, product.status); }}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></CardActions>
                     </Card>
                   </motion.div>
@@ -310,16 +264,20 @@ const ProductList = () => {
                       <TableCell><Avatar variant="rounded" src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"} alt={product.productName} /></TableCell>
                       <TableCell><Typography variant="body2" fontWeight="medium">{product.productName}</Typography></TableCell>
                       <TableCell align="center">{product.totalStock}</TableCell>
-                      <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
-                      <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
+                      <TableCell align="right">{product.avgPrice?.toLocaleString("vi-VN")} VND</TableCell>
+                      <TableCell align="right">{product.latestPrice?.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell>{product.unit}</TableCell>
-                      {/* <TableCell>{product.location}</TableCell> */}
                       <TableCell>
-                        {product.location.map((loc, idx) => (
-                          <Box key={idx} sx={{ display: 'inline-block', mr: 1, mb: 1, p: 0.5, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
-                            {loc.inventoryId} ({loc.stock})
+                        {/* Hiển thị vị trí kho dưới dạng danh sách nếu có nhiều vị trí */}
+                        {product.location && product.location.length > 0 ? (
+                          <Box>
+                            {product.location.map((loc, idx) => (
+                              <Typography key={idx} variant="body2" color="text.secondary">{loc.inventoryId?.name || "Kho không xác định"}: {loc.stock} {product.unit}</Typography>
+                            ))}
                           </Box>
-                        ))}
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">Chưa có vị trí</Typography>
+                        )}
                       </TableCell>
                       <TableCell>{renderStatusChip(product.status)}</TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
@@ -341,13 +299,16 @@ const ProductList = () => {
 
       {selectedProduct && (<>
         <ProductDetails open={showProductDetailsModal} handleClose={() => setShowProductDetailsModal(false)} product={selectedProduct} />
-        <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchAllProducts} />
+        <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchProducts} />
       </>)}
 
-      <AddProduct
+      {/* Thay thế AddProduct bằng AddProductModal và truyền createProduct vào */}
+      <AddProductModal
         open={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
-        onSaveSuccess={fetchAllProducts}
+        onSaveSuccess={fetchProducts}
+        createProduct={createProduct} // Truyền hàm vào modal
+        checkProductName={checkProductName}
       />
     </Container>
   );

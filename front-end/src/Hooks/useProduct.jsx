@@ -1,5 +1,5 @@
 import { useState } from "react";
-import productAPI from "../API/productAPI"; 
+import productAPI from "../API/productAPI";
 
 const useProduct = () => {
     const [products, setProducts] = useState([]);
@@ -55,13 +55,13 @@ const useProduct = () => {
         }
     };
 
-    const deleteProduct = async (id) => {
+    const inactiveProduct = async (id) => {
         setLoading(true);
         try {
-            await productAPI.remove(id);
-            setProducts(products.filter(p => p._id !== id));
+            await productAPI.inactivate(id);
+            setProducts(products.map(p => (p._id === id ? { ...p, status: "inactive" } : p)));
         } catch (err) {
-            setError(err.message || "Failed to delete product");
+            setError(err.message || "Failed to inactivate product");
         } finally {
             setLoading(false);
         }
@@ -70,6 +70,7 @@ const useProduct = () => {
     const checkProductName = async (name) => {
         try {
             const response = await productAPI.checkProductName(name);
+            console.log(response);
             return response.data.exists; // Giả sử API trả về { exists: true/false }
         } catch (err) {
             setError(err.message || "Failed to check product name");
@@ -86,7 +87,7 @@ const useProduct = () => {
         fetchProductById,
         createProduct,
         updateProduct,
-        deleteProduct,
+        inactiveProduct,
         checkProductName,
     };
 }
