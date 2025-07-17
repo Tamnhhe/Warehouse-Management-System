@@ -44,9 +44,7 @@ const validationSchema = Yup.object({
         price: Yup.number()
           .required("Đơn giá là bắt buộc")
           .min(0, "Đơn giá không được âm"),
-        weight: Yup.number()
-          .required("Cân nặng là bắt buộc")
-          .min(0, "Cân nặng không được âm"),
+        // Đã bỏ weight
       })
     )
     .min(1, "Phải có ít nhất một sản phẩm trong phiếu nhập"),
@@ -85,7 +83,7 @@ const CreateReceipt = () => {
       supplierName: "",
       transactionDate: new Date().toISOString().split("T")[0],
       products: [
-        { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
+        { productName: "", categoryName: "", quantity: "", price: "" },
       ],
     },
     validationSchema,
@@ -100,7 +98,7 @@ const CreateReceipt = () => {
           categoryName: p.categoryName,
           quantity: p.quantity,
           price: p.price,
-          weight: p.weight,
+          // Đã bỏ weight
         })),
       };
 
@@ -125,7 +123,7 @@ const CreateReceipt = () => {
     formik.setFieldValue("supplierName", value?.name || "");
     setSelectedSupplier(value);
     formik.setFieldValue("products", [
-      { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
+      { productName: "", categoryName: "", quantity: "", price: "" },
     ]);
     if (value) {
       try {
@@ -143,7 +141,7 @@ const CreateReceipt = () => {
     }
   };
 
-  // Khi chọn sản phẩm, tự động điền cân nặng
+  // Khi chọn sản phẩm, KHÔNG tự động điền cân nặng
   const handleProductSelect = (index, value) => {
     if (value) {
       formik.setFieldValue(`products.${index}.productName`, value.productName);
@@ -151,17 +149,14 @@ const CreateReceipt = () => {
         `products.${index}.categoryName`,
         value.categoryId?.categoryName || ""
       );
-      formik.setFieldValue(
-        `products.${index}.weight`,
-        value.weight || ""
-      );
+      // Đã bỏ weight
     }
   };
 
   const addProductRow = () =>
     formik.setFieldValue("products", [
       ...formik.values.products,
-      { productName: "", categoryName: "", quantity: "", price: "", weight: "" },
+      { productName: "", categoryName: "", quantity: "", price: "" },
     ]);
   const removeProductRow = (index) =>
     formik.setFieldValue(
@@ -247,7 +242,7 @@ const CreateReceipt = () => {
                 <TableRow>
                   <TableCell>Sản phẩm</TableCell>
                   <TableCell>Số lượng</TableCell>
-                  <TableCell>Cân nặng</TableCell>
+                  {/* <TableCell>Cân nặng</TableCell> */}
                   <TableCell>Đơn giá (VNĐ)</TableCell>
                   <TableCell>Thành tiền (VNĐ)</TableCell>
                   <TableCell></TableCell>
@@ -301,23 +296,7 @@ const CreateReceipt = () => {
                         }
                       />
                     </TableCell>
-                    <TableCell>
-                      <TextField
-                        type="number"
-                        variant="standard"
-                        value={product.weight}
-                        onChange={(e) =>
-                          formik.setFieldValue(
-                            `products.${index}.weight`,
-                            e.target.value
-                          )
-                        }
-                        error={
-                          formik.touched.products?.[index]?.weight &&
-                          Boolean(formik.errors.products?.[index]?.weight)
-                        }
-                      />
-                    </TableCell>
+                    {/* Đã bỏ ô nhập cân nặng */}
                     <TableCell>
                       <TextField
                         type="number"
