@@ -33,7 +33,6 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   });
   const [imagePreview, setImagePreview] = useState(null); // State riêng cho ảnh preview
   const [categories, setCategories] = useState([]);
-  const [shelves, setShelves] = useState([]); // Thêm shelves state
   const [errors, setErrors] = useState({}); // Đổi tên để tránh nhầm lẫn
   const [loading, setLoading] = useState(false);
 
@@ -44,11 +43,6 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
         .get("http://localhost:9999/categories/getAllCategories")
         .then((response) => setCategories(response.data))
         .catch((error) => console.error("Error fetching categories:", error));
-
-      // Fetch shelves/inventories
-      axios.get("http://localhost:9999/inventory")
-        .then((response) => setShelves(response.data))
-        .catch((error) => console.error("Error fetching shelves:", error));
     } else {
       // Reset form khi dialog đóng
       setProductData({
@@ -83,20 +77,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
       setImagePreview(null);
     }
     if (errors.productImage) {
-      setErrors((prev) => ({ ...prev, productImage: "" }));
-    }
-  };
-
-  const handleShelfSelect = (e) => {
-    const selectedShelf = shelves.find(shelf => shelf._id === e.target.value);
-    if (selectedShelf) {
-      setProductData((prev) => ({
-        ...prev,
-        location: selectedShelf.name
-      }));
-      if (errors.location) {
-        setErrors((prev) => ({ ...prev, location: "" }));
-      }
+        setErrors((prev) => ({ ...prev, productImage: "" }));
     }
   };
 
@@ -106,42 +87,42 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
     tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
     tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
-
+    
     if (!productData.productImage) {
-      tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
+        tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
     } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
-      tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
+        tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
     } else {
-      tempErrors.productImage = "";
+        tempErrors.productImage = "";
     }
-
+    
     setErrors(tempErrors);
 
     // Kiểm tra xem tất cả các giá trị trong tempErrors có rỗng không
     const isValid = Object.values(tempErrors).every((x) => x === "");
 
     if (isValid) {
-      // Chỉ kiểm tra tên khi các trường khác đã hợp lệ
-      try {
-        const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
-        if (response.data.exists) {
-          setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
-          return false;
+        // Chỉ kiểm tra tên khi các trường khác đã hợp lệ
+        try {
+            const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
+            if(response.data.exists) {
+                setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
+                return false;
+            }
+        } catch (error) {
+            console.error("Error checking product name:", error);
+            setErrors(prev => ({ ...prev, general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm." }));
+            return false;
         }
-      } catch (error) {
-        console.error("Error checking product name:", error);
-        setErrors(prev => ({ ...prev, general: "Có lỗi xảy ra khi kiểm tra tên sản phẩm." }));
-        return false;
-      }
     }
-
+    
     return isValid;
   };
 
   const handleSave = async () => {
     setErrors(prev => ({ ...prev, general: "" })); // Xóa lỗi chung cũ
     const isValid = await validate();
-
+    
     if (isValid) {
       setLoading(true);
       const formData = new FormData();
@@ -187,28 +168,28 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             helperText={errors.productName}
             fullWidth
           />
-
+          
           <FormControl fullWidth error={!!errors.categoryId}>
             <InputLabel id="category-select-label">Danh Mục</InputLabel>
             <Select
-              labelId="category-select-label"
-              name="categoryId"
-              value={productData.categoryId}
-              label="Danh Mục"
-              onChange={handleChange}
+                labelId="category-select-label"
+                name="categoryId"
+                value={productData.categoryId}
+                label="Danh Mục"
+                onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>Chọn danh mục</em>
-              </MenuItem>
-              {categories.map((cat) => (
-                <MenuItem key={cat._id} value={cat._id}>
-                  {cat.categoryName}
+                <MenuItem value="">
+                    <em>Chọn danh mục</em>
                 </MenuItem>
-              ))}
+                {categories.map((cat) => (
+                    <MenuItem key={cat._id} value={cat._id}>
+                        {cat.categoryName}
+                    </MenuItem>
+                ))}
             </Select>
             {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
           </FormControl>
-
+          
           <TextField
             name="unit"
             label="Đơn Vị (ví dụ: cái, hộp, kg)"
@@ -218,24 +199,6 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             helperText={errors.unit}
             fullWidth
           />
-
-          {/* Thêm dropdown để chọn kệ hàng có sẵn */}
-          <FormControl fullWidth>
-            <InputLabel id="shelf-select-label">Chọn Kệ Hàng</InputLabel>
-            <Select
-              labelId="shelf-select-label"
-              id="shelf-select"
-              value=""
-              label="Chọn Kệ Hàng"
-              onChange={handleShelfSelect}
-            >
-              <MenuItem value=""><em>Chọn kệ hàng có sẵn</em></MenuItem>
-              {shelves.map((shelf) => (
-                <MenuItem key={shelf._id} value={shelf._id}>{shelf.name}</MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>Chọn kệ hàng hoặc nhập vị trí thủ công</FormHelperText>
-          </FormControl>
 
           <TextField
             name="location"
@@ -250,14 +213,14 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
           <FormControl fullWidth>
             <InputLabel id="status-select-label">Trạng Thái</InputLabel>
             <Select
-              labelId="status-select-label"
-              name="status"
-              value={productData.status}
-              label="Trạng Thái"
-              onChange={handleChange}
+                labelId="status-select-label"
+                name="status"
+                value={productData.status}
+                label="Trạng Thái"
+                onChange={handleChange}
             >
-              <MenuItem value="active">Đang bán</MenuItem>
-              <MenuItem value="inactive">Ngừng bán</MenuItem>
+                <MenuItem value="active">Đang bán</MenuItem>
+                <MenuItem value="inactive">Ngừng bán</MenuItem>
             </Select>
           </FormControl>
 
@@ -275,7 +238,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             />
           </Button>
           {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
-
+          
           {imagePreview && (
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <img
