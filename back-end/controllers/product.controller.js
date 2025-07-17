@@ -8,6 +8,7 @@ const createProduct = async (req, res, next) => {
       categoryId,
       totalStock,
       thresholdStock,
+      netWeight, // THÊM netWeight VÀO ĐÂY
       unit,
       location,
       status,
@@ -20,9 +21,10 @@ const createProduct = async (req, res, next) => {
     if (
       !productName ||
       !categoryId ||
-      !productImage || // Vẫn kiểm tra productImage, nhưng giờ nó có thể đến từ req.file
+      !productImage ||
       !unit ||
-      !location
+      !location ||
+      netWeight === undefined || netWeight === null || netWeight === "" 
     ) {
       return res
         .status(400)
@@ -43,13 +45,20 @@ const createProduct = async (req, res, next) => {
         .json({ message: "Định dạng danh mục sách nhà cung cấp không hợp lệ" });
     }
 
+    // Validate netWeight là số và có giá trị hợp lệ
+    const parsedNetWeight = Number(netWeight);
+    if (isNaN(parsedNetWeight) || parsedNetWeight < 100) {
+      return res.status(400).json({ message: "Khối lượng tịnh phải là số và tối thiểu 100 gram." });
+    }
+
     // Tạo sản phẩm mới
     const newProduct = new db.Product({
       productName,
       categoryId,
-      totalStock: totalStock || 0,
-      thresholdStock: thresholdStock || 0,
-      productImage, // Sử dụng productImage đã được xử lý từ req.file hoặc req.body
+      totalStock: totalStock || 0, // totalStock có thể không có khi tạo mới, mặc định là 0
+      thresholdStock: thresholdStock ||0, // SỬ DỤNG GIÁ TRỊ ĐÃ PARSE
+      netWeight: parsedNetWeight, // THÊM netWeight VÀ SỬ DỤNG GIÁ TRỊ ĐÃ PARSE
+      productImage,
       unit,
       location,
       status: status || "active",
@@ -90,10 +99,11 @@ const getProductById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 async function updateProduct(req, res, next) {
   try {
     const { id } = req.params;
-    const { productName, categoryId, thresholdStock, unit, location } = req.body;
+    const { productName, categoryId, thresholdStock, netWeight, unit, location } = req.body; // THÊM netWeight VÀO ĐÂY
     const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
     console.log("San pham la" + id)
     const existingProduct = await db.Product.findById(id);
@@ -101,11 +111,39 @@ async function updateProduct(req, res, next) {
       return res.status(404).json({ message: "Khong tim thay san pham" });
     }
 
-    const updatedProduct = { productName, categoryId, thresholdStock, unit, location };
+    // Validate netWeight và thresholdStock nếu chúng được cung cấp
+    const updatedFields = {};
 
-    if (productImage) updatedProduct.productImage = productImage;
+    if (productName !== undefined) updatedFields.productName = productName;
+    if (categoryId !== undefined) updatedFields.categoryId = categoryId;
 
-    const products = await db.Product.findByIdAndUpdate(id, { $set: updatedProduct }, { new: true });
+    if (netWeight !== undefined && netWeight !== null && netWeight !== "") {
+      const parsedNetWeight = Number(netWeight);
+      if (isNaN(parsedNetWeight) || parsedNetWeight < 100) {
+        return res.status(400).json({ message: "Khối lượng tịnh phải là số và tối thiểu 100 gram." });
+      }
+      updatedFields.netWeight = parsedNetWeight;
+    } else if (netWeight === "") { // Nếu gửi lên chuỗi rỗng (người dùng xóa input)
+      updatedFields.netWeight = 0; // Hoặc một giá trị mặc định khác tùy business logic
+    }
+
+    if (thresholdStock !== undefined && thresholdStock !== null && thresholdStock !== "") {
+      const parsedThresholdStock = Number(thresholdStock);
+      if (isNaN(parsedThresholdStock) || parsedThresholdStock < 0) {
+        return res.status(400).json({ message: "Ngưỡng tồn kho phải là số và không thể âm." });
+      }
+      updatedFields.thresholdStock = parsedThresholdStock;
+    } else if (thresholdStock === "") { // Nếu gửi lên chuỗi rỗng
+      updatedFields.thresholdStock = 0; // Hoặc giá trị mặc định
+    }
+
+    if (unit !== undefined) updatedFields.unit = unit;
+    if (location !== undefined) updatedFields.location = location;
+
+    if (productImage) updatedFields.productImage = productImage;
+
+
+    const products = await db.Product.findByIdAndUpdate(id, { $set: updatedFields }, { new: true });
     res.status(200).json({ message: "Cap nhat san pham thanh cong", products });
   } catch (error) {
     next(error);
@@ -113,20 +151,6 @@ async function updateProduct(req, res, next) {
 };
 
 
-// // Xóa một sản phẩm theo ID
-// async function inactiveProduct(req, res, next) {
-//     try {
-//         const { id } = req.params;
-//         const { status } = req.body;
-//         const changedProduct = await db.Product.findByIdAndUpdate(id, { status });
-//         if (!changedProduct) {
-//             return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
-//         }
-//         res.status(200).json({ message: "Trạng thái sản phẩm đã được thay đổi thành công", changedProduct });
-//     } catch (error) {
-//         next(error);
-//     }
-// }
 // Cập nhật trạng thái sản phẩm (inactive)
 async function inactiveProduct(req, res, next) {
   try {
@@ -150,26 +174,3 @@ module.exports = {
   updateProduct,
   inactiveProduct
 };
-
-// Cập nhật một sản phẩm theo ID cũ
-// const updateProduct = async (req, res) => {
-//   try {
-//     let productData = req.body;
-
-//     // Kiểm tra nếu có ảnh mới được tải lên
-//     if (req.file) {
-//       productData.productImage = req.file.path; // Cập nhật đường dẫn ảnh mới
-//     }
-
-//     const product = await db.Product.findByIdAndUpdate(req.params.id, productData, {
-//       new: true,
-//     });
-
-//     if (!product) {
-//       return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
-//     }
-//     res.status(200).json(product);
-//   } catch (err) {
-//     res.status(400).json({ message: err.message });
-//   }
-// };

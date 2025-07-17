@@ -28,6 +28,11 @@ const ProductSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    netWeight: { //Khoi luong
+        type: Number,
+        min: 100,
+        default: null,
+    },
     status: { //Trang thái
         type: String,
         required: true,
