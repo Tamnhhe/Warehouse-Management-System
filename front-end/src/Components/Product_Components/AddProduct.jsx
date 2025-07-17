@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-=======
-// AddProduct.js - Phiên bản Material-UI
+
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
