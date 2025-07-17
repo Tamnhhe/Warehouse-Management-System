@@ -7,8 +7,7 @@ const InventorySchema = new Schema({
   // Đã bỏ trường creator
   maxQuantitative: { type: Number, required: true },
   currentQuantitative: { type: Number, default: 0 },
-  maxWeight: { type: Number, required: true },
-  currentWeight: { type: Number, default: 0 },
+
   status: { type: String, default: 'active' },
   products: [
     {

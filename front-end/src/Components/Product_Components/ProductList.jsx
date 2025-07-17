@@ -18,6 +18,7 @@ import { visuallyHidden } from "@mui/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import UpdateProductModal from "./UpdateProductModal";
 import ProductDetails from "./ProductDetails";
+import InventoryCheck from "../Inventory_Components/InventoryCheck";
 
 const DESKTOP_PAGE_SIZE = 20;
 const MOBILE_PAGE_SIZE = 10;
@@ -52,7 +53,8 @@ const itemVariants = {
 const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   const [productData, setProductData] = useState({
     productName: "", categoryId: "", totalStock: 0,
-    productImage: null, unit: "", inventoryId: "", status: "active",
+    productImage: null, unit: "", inventoryId: ""
+    // Không có status ở đây
   });
   const [imagePreview, setImagePreview] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -73,7 +75,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     } else {
       setProductData({
         productName: "", categoryId: "", totalStock: 0,
-        productImage: null, unit: "", inventoryId: "", status: "active",
+        productImage: null, unit: "", inventoryId: ""
       });
       setErrors({});
       setImagePreview(null);
@@ -116,8 +118,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     if (name === "inventoryId") {
       const selectedInv = filteredInventories.find(inv => inv._id === value);
       const isFull =
-        (typeof selectedInv?.maxQuantitative === "number" && typeof selectedInv?.currentQuantitative === "number" && selectedInv.currentQuantitative >= selectedInv.maxQuantitative) ||
-        (typeof selectedInv?.maxWeight === "number" && typeof selectedInv?.currentWeight === "number" && selectedInv.currentWeight >= selectedInv.maxWeight);
+        (typeof selectedInv?.maxQuantitative === "number" && typeof selectedInv?.currentQuantitative === "number" && selectedInv.currentQuantitative >= selectedInv.maxQuantitative);
       if (isFull) {
         setFullShelfError("Kệ đã đầy vui lòng chọn kệ khác");
       } else {
@@ -168,8 +169,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
         // Kiểm tra kệ đầy khi lưu
         const selectedInv = filteredInventories.find(inv => inv._id === productData.inventoryId);
         const isFull =
-          (typeof selectedInv?.maxQuantitative === "number" && typeof selectedInv?.currentQuantitative === "number" && selectedInv.currentQuantitative >= selectedInv.maxQuantitative) ||
-          (typeof selectedInv?.maxWeight === "number" && typeof selectedInv?.currentWeight === "number" && selectedInv.currentWeight >= selectedInv.maxWeight);
+          (typeof selectedInv?.maxQuantitative === "number" && typeof selectedInv?.currentQuantitative === "number" && selectedInv.currentQuantitative >= selectedInv.maxQuantitative);
         if (isFull) {
           setFullShelfError("Kệ đã đầy vui lòng chọn kệ khác");
           return false;
@@ -192,6 +192,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
       setLoading(true);
       const formData = new FormData();
       Object.entries(productData).forEach(([key, value]) => formData.append(key, value));
+      formData.append("status", "active"); // Luôn là đang bán
 
       try {
         await axios.post("http://localhost:9999/products/createProduct", formData, { headers: { "Content-Type": "multipart/form-data" } });
@@ -238,8 +239,7 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
               </MenuItem>
               {filteredInventories.map((inv) => {
                 const isFull =
-                  (typeof inv.maxQuantitative === "number" && typeof inv.currentQuantitative === "number" && inv.currentQuantitative >= inv.maxQuantitative) ||
-                  (typeof inv.maxWeight === "number" && typeof inv.currentWeight === "number" && inv.currentWeight >= inv.maxWeight);
+                  (typeof inv.maxQuantitative === "number" && typeof inv.currentQuantitative === "number" && inv.currentQuantitative >= inv.maxQuantitative);
                 return (
                   <MenuItem key={inv._id} value={inv._id}>
                     {inv.name} {inv.category?.categoryName ? `- ${inv.category.categoryName}` : ""}
@@ -252,13 +252,15 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
             {fullShelfError && <FormHelperText error>{fullShelfError}</FormHelperText>}
           </FormControl>
 
-          <FormControl fullWidth>
+          {/* BỎ phần chọn trạng thái */}
+          {/* <FormControl fullWidth>
             <InputLabel id="status-select-label">Trạng Thái</InputLabel>
             <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>
               <MenuItem value="active">Đang bán</MenuItem>
               <MenuItem value="inactive">Ngừng bán</MenuItem>
             </Select>
-          </FormControl>
+          </FormControl> */}
+
           <Button variant="outlined" component="label" color={errors.productImage ? "error" : "primary"}>
             Chọn Hình Ảnh
             <input type="file" hidden accept="image/png, image/jpeg" onChange={handleFileChange} />
@@ -274,8 +276,8 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     </Dialog>
   );
 };
+
 const ProductList = () => {
-  // ... state và các hàm khác giữ nguyên ...
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -295,6 +297,9 @@ const ProductList = () => {
 
   // Thêm state để lưu danh sách kệ
   const [inventories, setInventories] = useState([]);
+
+  // Ref để gọi fetchInventories từ InventoryCheck
+  const fetchInventoriesRef = useRef(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -341,15 +346,33 @@ const ProductList = () => {
   }, []);
 
   // Lấy danh sách kệ khi load ProductList
-  useEffect(() => {
-    axios.get("http://localhost:9999/inventory")
-      .then(res => setInventories(res.data))
-      .catch(() => setInventories([]));
+  const fetchInventories = useCallback(async () => {
+    try {
+      const res = await axios.get("http://localhost:9999/inventory");
+      setInventories(res.data);
+    } catch {
+      setInventories([]);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchInventories();
+  }, [fetchInventories]);
 
   useEffect(() => {
     fetchAllProducts();
   }, [fetchAllProducts]);
+
+  // Hàm gọi lại cả fetchAllProducts và fetchInventories (InventoryCheck)
+  const handleUpdateSuccess = () => {
+    fetchAllProducts();
+    // Gọi InventoryCheck reload lại dữ liệu kệ
+    if (fetchInventoriesRef.current) {
+      fetchInventoriesRef.current();
+    }
+    // Đồng bộ lại danh sách kệ ở ProductList (nếu cần)
+    fetchInventories();
+  };
 
   const filteredProducts = useMemo(() => {
     let updatedProducts = [...products];
@@ -431,11 +454,9 @@ const ProductList = () => {
     { id: 'avgPrice', label: 'Giá TB', sortable: true, align: 'right' },
     { id: 'latestPrice', label: 'Giá Mới', sortable: true, align: 'right' },
     { id: 'unit', label: 'Đơn Vị', sortable: true },
-    { id: 'weight', label: 'Cân nặng', sortable: true, align: 'right' },
     { id: 'inventoryId', label: 'Vị Trí', sortable: true },
     { id: 'status', label: 'Trạng Thái', sortable: true },
     { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },
-    
   ];
 
   if (loading && products.length === 0) {
@@ -566,7 +587,6 @@ const ProductList = () => {
                       <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell>{product.unit}</TableCell>
-                      <TableCell align="right">{product.weight || 0}</TableCell>
                       <TableCell>
                         {
                           (() => {
@@ -604,16 +624,30 @@ const ProductList = () => {
         </Paper>
       )}
 
-      {selectedProduct && (<>
-        <ProductDetails open={showProductDetailsModal} handleClose={() => setShowProductDetailsModal(false)} product={selectedProduct} />
-        <UpdateProductModal open={showUpdateModal} handleClose={() => setShowUpdateModal(false)} product={selectedProduct} onUpdateSuccess={fetchAllProducts} />
-      </>)}
+     {selectedProduct && (
+  <>
+    <ProductDetails
+      open={showProductDetailsModal}
+      handleClose={() => setShowProductDetailsModal(false)}
+      product={selectedProduct}
+    />
+    <UpdateProductModal
+      open={showUpdateModal}
+      handleClose={() => setShowUpdateModal(false)}
+      product={selectedProduct}
+      onUpdateSuccess={handleUpdateSuccess}
+      inventories={inventories} // <-- truyền inventories từ ProductList
+    />
+  </>
+)}
 
       <AddProduct
         open={showAddProductModal}
         handleClose={() => setShowAddProductModal(false)}
-        onSaveSuccess={fetchAllProducts}
+        onSaveSuccess={handleUpdateSuccess}
       />
+
+   
     </Container>
   );
 };

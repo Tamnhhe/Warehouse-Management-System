@@ -10,6 +10,7 @@ const UpdateProductModal = ({
   handleClose,
   product,
   onUpdateSuccess,
+  inventories = [], // <-- lấy từ props
 }) => {
   const [productData, setProductData] = useState({
     productName: "",
@@ -22,67 +23,63 @@ const UpdateProductModal = ({
 
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
-  const [inventories, setInventories] = useState([]);
   const [filteredInventories, setFilteredInventories] = useState([]);
   const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Fetch categories and inventories
+  // Fetch categories (KHÔNG fetch inventories nữa)
   useEffect(() => {
     if (open) {
       axios
         .get("http://localhost:9999/categories/getAllCategories")
         .then((response) => setCategories(response.data))
         .catch((error) => console.error("Error fetching categories:", error));
-      axios
-        .get("http://localhost:9999/inventory")
-        .then((response) => setInventories(response.data))
-        .catch((error) => console.error("Error fetching inventories:", error));
     }
   }, [open]);
 
-  // Update productData and filteredInventories after product, categories, inventories loaded
-  useEffect(() => {
-    if (product && categories.length > 0 && inventories.length > 0) {
-      const categoryId =
-        typeof product.categoryId === "object"
-          ? product.categoryId._id
-          : product.categoryId;
-      const inventoryId =
-        typeof product.inventoryId === "object"
-          ? product.inventoryId._id
-          : product.inventoryId || "";
-
-      setProductData({
-        productName: product.productName || "",
-        categoryId: categoryId || "",
-        productImage: product.productImage || "",
-        unit: product.unit || "",
-        inventoryId: inventoryId,
-        status: product.status || "active",
-      });
-
-      // Lọc kệ theo danh mục
-      const filtered = inventories.filter(inv =>
-        String(inv.categoryId) === String(categoryId) ||
-        (inv.category && String(inv.category._id) === String(categoryId))
-      );
-      setFilteredInventories(filtered);
-
-      // Nếu inventoryId không thuộc filtered thì reset về rỗng
-      if (!filtered.some(inv => inv._id === inventoryId)) {
-        setProductData(prev => ({ ...prev, inventoryId: "" }));
-      }
-
-      setImagePreview(
-        product.productImage
-          ? `http://localhost:9999${product.productImage}`
-          : null
-      );
+useEffect(() => {
+  if (product && categories.length > 0 && inventories.length > 0) {
+    const categoryId =
+      typeof product.categoryId === "object"
+        ? product.categoryId._id
+        : product.categoryId;
+    // Lấy inventoryId mới nhất từ product (có thể là object hoặc string)
+    let inventoryId = "";
+    if (typeof product.inventoryId === "object" && product.inventoryId !== null) {
+      inventoryId = product.inventoryId._id || product.inventoryId.id || "";
+    } else {
+      inventoryId = product.inventoryId || "";
     }
-  }, [product, categories, inventories]);
 
+    // Nếu inventoryId không có trong danh sách inventories thì lấy inventoryId đầu tiên của filteredInventories (nếu có)
+    const filtered = inventories.filter(inv =>
+      String(inv.categoryId) === String(categoryId) ||
+      (inv.category && String(inv.category._id) === String(categoryId))
+    );
+    let validInventoryId = inventoryId;
+    if (inventoryId && !filtered.some(inv => inv._id === inventoryId)) {
+      validInventoryId = filtered.length > 0 ? filtered[0]._id : "";
+    }
+
+    setProductData({
+      productName: product.productName || "",
+      categoryId: categoryId || "",
+      productImage: product.productImage || "",
+      unit: product.unit || "",
+      inventoryId: validInventoryId,
+      status: product.status || "active",
+    });
+
+    setFilteredInventories(filtered);
+
+    setImagePreview(
+      product.productImage
+        ? `http://localhost:9999${product.productImage}`
+        : null
+    );
+  }
+}, [product, categories, inventories]);
   // Lọc lại danh sách kệ khi chọn danh mục
   useEffect(() => {
     if (productData.categoryId) {

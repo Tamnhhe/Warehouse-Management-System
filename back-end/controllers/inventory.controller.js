@@ -122,6 +122,7 @@ async function autoDeductProductsFromInventories(products) {
   }
 }
 exports.autoDeductProductsFromInventories = autoDeductProductsFromInventories;
+
 // Nhập hàng tự động phân bổ vào nhiều kệ đúng loại sản phẩm
 exports.importProductAutoDistribute = async (req, res) => {
   try {
@@ -150,8 +151,12 @@ exports.importProductAutoDistribute = async (req, res) => {
       let addQty = Math.min(remain, available);
 
       if (addQty > 0) {
-        if (!inventory.products.includes(productId)) {
-          inventory.products.push(productId);
+        // Thêm sản phẩm vào mảng products nếu chưa có
+        let prodObj = inventory.products.find(p => p.productId.equals(productId));
+        if (prodObj) {
+          prodObj.quantity += addQty;
+        } else {
+          inventory.products.push({ productId, quantity: addQty });
         }
         inventory.currentQuantitative += addQty;
         await inventory.save();
@@ -186,14 +191,12 @@ exports.importProductAutoDistribute = async (req, res) => {
 // Thêm kệ mới
 exports.createInventory = async (req, res) => {
   try {
-    // ĐÃ BỎ creator khỏi destructuring
-    const { name, categoryId, maxQuantitative, maxWeight, status } = req.body;
+    const { name, categoryId, maxQuantitative, status } = req.body;
 
     if (
       !name ||
       !categoryId ||
-      !maxQuantitative ||
-      !maxWeight
+      !maxQuantitative
     ) {
       return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
     }
@@ -204,14 +207,12 @@ exports.createInventory = async (req, res) => {
       return res.status(400).json({ message: "Tên kệ đã tồn tại, vui lòng chọn tên khác!" });
     }
 
-    // Tạo kệ mới với số lượng hiện tại = 0, KHÔNG có trường creator
+    // Tạo kệ mới với số lượng hiện tại = 0
     const newInventory = new Inventory({
       name,
       categoryId,
       maxQuantitative,
-      maxWeight,
       currentQuantitative: 0,
-      currentWeight: 0,
       status: status || "active",
       products: []
     });
@@ -226,7 +227,6 @@ exports.createInventory = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 
 // Hàm phân bổ lại tồn kho cho tất cả kệ cùng category
@@ -254,21 +254,20 @@ async function redistributeStockForCategory(categoryId) {
 
     if (addQty > 0) {
       inv.currentQuantitative = addQty;
-      // Nếu chỉ muốn lưu tổng số lượng, không cần products chi tiết
-      // Nếu muốn lưu chi tiết từng sản phẩm, cần duyệt từng product
-      inv.products = []; // hoặc có thể push từng sản phẩm nếu muốn
+      inv.products = [];
       await inv.save();
       remain -= addQty;
     }
     if (remain <= 0) break;
   }
 }
-// Thêm sản phẩm với số lượng và cân nặng vào kệ
+
+// Thêm sản phẩm với số lượng vào kệ (KHÔNG còn cân nặng)
 exports.addProductWithQuantityToInventory = async (req, res) => {
   try {
-    const { inventoryId, productId, quantity, weight } = req.body;
-    if (!inventoryId || !productId || !quantity || quantity <= 0 || !weight || weight <= 0) {
-      return res.status(400).json({ message: "Thiếu thông tin hoặc số lượng/cân nặng không hợp lệ" });
+    const { inventoryId, productId, quantity } = req.body;
+    if (!inventoryId || !productId || !quantity || quantity <= 0) {
+      return res.status(400).json({ message: "Thiếu thông tin hoặc số lượng không hợp lệ" });
     }
 
     const inventory = await Inventory.findById(inventoryId);
@@ -281,19 +280,16 @@ exports.addProductWithQuantityToInventory = async (req, res) => {
       return res.status(400).json({ message: "Kệ không đủ chỗ trống về số lượng" });
     }
 
-    // Kiểm tra chỗ trống cân nặng
-    if (inventory.currentWeight + weight > inventory.maxWeight) {
-      return res.status(400).json({ message: "Kệ không đủ chỗ trống về cân nặng" });
-    }
-
     // Thêm sản phẩm vào mảng products nếu chưa có
-    if (!inventory.products.includes(productId)) {
-      inventory.products.push(productId);
+    let prodObj = inventory.products.find(p => p.productId.equals(productId));
+    if (prodObj) {
+      prodObj.quantity += quantity;
+    } else {
+      inventory.products.push({ productId, quantity });
     }
 
-    // Cập nhật số lượng và cân nặng hiện tại của kệ
+    // Cập nhật số lượng hiện tại của kệ
     inventory.currentQuantitative += quantity;
-    inventory.currentWeight += weight;
     await inventory.save();
 
     // Cập nhật tổng tồn kho sản phẩm
@@ -356,8 +352,8 @@ exports.getAllInventories = async (req, res) => {
               productName: p.productName,
               quantity: canAdd,
               totalStock: p.totalStock,
-              unit: p.unit,
-               weight: p.weight || 0
+              unit: p.unit
+              // KHÔNG còn weight
             });
             invCurrent += canAdd;
             productRemain[p._id.toString()] -= canAdd;
@@ -370,8 +366,6 @@ exports.getAllInventories = async (req, res) => {
           category: inv.categoryId,
           maxQuantitative: inv.maxQuantitative,
           currentQuantitative: invCurrent,
-          maxWeight: inv.maxWeight,
-          currentWeight: inv.currentWeight,
           status: inv.status,
           products: invProducts
         });
@@ -383,6 +377,7 @@ exports.getAllInventories = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 exports.deleteInventory = async (req, res) => {
   try {
     const { id } = req.params;

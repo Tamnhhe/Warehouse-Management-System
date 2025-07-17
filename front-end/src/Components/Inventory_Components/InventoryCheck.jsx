@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -33,7 +33,7 @@ const colorList = [
   "#90caf9", "#ce93d8", "#ffb74d", "#b0bec5", "#dce775"
 ];
 
-function InventoryCheck() {
+function InventoryCheck({ fetchInventoriesRef }) {
   const [inventories, setInventories] = useState([]);
   const [categories, setCategories] = useState([]);
   const [open, setOpen] = useState(false);
@@ -74,6 +74,7 @@ function InventoryCheck() {
     setOpen(true);
   };
 
+  // Hàm fetchInventories cho phép truyền ref ra ngoài
   const fetchInventories = async () => {
     try {
       const res = await axios.get(API_BASE);
@@ -99,6 +100,13 @@ function InventoryCheck() {
     fetchCategories();
     // eslint-disable-next-line
   }, []);
+
+  // Cho phép component cha gọi fetchInventories qua ref
+  useEffect(() => {
+    if (fetchInventoriesRef) {
+      fetchInventoriesRef.current = fetchInventories;
+    }
+  }, [fetchInventoriesRef]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -214,7 +222,7 @@ function InventoryCheck() {
           // Số hộp hàng trên kệ (tối đa 5 hộp/tầng, 3 tầng)
           const maxBoxes = 15;
           const products = inv.products || [];
-   const sumWeight = products.reduce((sum, p) => sum + (p.weight || 0), 0);
+          const sumWeight = products.reduce((sum, p) => sum + (p.weight || 0), 0);
 
           // Đảm bảo đủ số hộp: nếu có sản phẩm thì luôn có ít nhất 1 hộp màu
           let boxCount = 0;
@@ -453,11 +461,7 @@ function InventoryCheck() {
                     color="primary"
                     size="small"
                   />
- <Chip
-  label={`Cân nặng: ${sumWeight}/${inv.maxWeight}`}
-  color="secondary"
-  size="small"
-/>
+                
                 </Box>
               </Box>
             </Grid>
@@ -560,16 +564,7 @@ function InventoryCheck() {
               fullWidth
               required
             />
-            <TextField
-              margin="dense"
-              label="Cân nặng tối đa"
-              name="maxWeight"
-              type="number"
-              value={form.maxWeight}
-              onChange={handleChange}
-              fullWidth
-              required
-            />
+          
             <FormControl fullWidth margin="dense">
               <InputLabel id="status-label">Trạng thái</InputLabel>
               <Select
