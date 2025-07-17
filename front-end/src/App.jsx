@@ -5,6 +5,7 @@ import {
   Routes,
   useLocation,
   matchPath,
+  Navigate
 } from "react-router-dom";
 import ProtectedRoute from "./Components/Utils/ProtectedRoute";
 import ForgotPassword from "./Components/Login_Components/ForgotPassword";
@@ -32,6 +33,7 @@ import ProductList from "./Components/Product_Components/ProductList";
 import SupplierList from "./Components/Supplier_Components/SupplierList";
 import AddNewSuppliers from "./Components/Supplier_Components/AddNewSupplier";
 import EditSuppliers from "./Components/Supplier_Components/EditSuppliers";
+import ManageSupplierProducts from "./Components/Supplier_Components/ManageSupplierProducts";
 import AddCategory from "./Components/Category_Components/AddCategory";
 import Landing from "./Components/Utils/Landing";
 import ExportDetail from "./Components/Transaction_Components/ExportDetail";
@@ -39,6 +41,7 @@ import Register from "./Components/Login_Components/Register";
 import { Container } from "@mui/material"; // Import Container từ MUI
 import ListReceipts from "./Components/Transaction_Components/ListReceipts";
 import InventoryCheck from "./Components/Inventory_Components/InventoryCheck";
+import Stocktaking from "./Components/Inventory_Components/Stocktaking";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 
@@ -83,7 +86,11 @@ function App() {
       <Layout>
         <Routes>
           {/* Các Routes vẫn giữ nguyên không thay đổi */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={
+            <ProtectedRoute allowedRoles={["employee", "manager"]} redirectTo="/login">
+              <Landing />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -230,6 +237,14 @@ function App() {
             }
           />
           <Route
+            path="/manager/manage-supplier-products"
+            element={
+              <ProtectedRoute allowedRoles={["manager"]}>
+                <ManageSupplierProducts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/category/add-category"
             element={
               <ProtectedRoute allowedRoles={["manager"]}>
@@ -237,14 +252,22 @@ function App() {
               </ProtectedRoute>
             }
           />
-         <Route
-  path="/inventory-check"
-  element={
-    <ProtectedRoute allowedRoles={["manager", "employee"]}>
-      <InventoryCheck />
-    </ProtectedRoute>
-  }
-/>
+          <Route
+            path="/inventory-check"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                <InventoryCheck />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stocktaking"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                <Stocktaking />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

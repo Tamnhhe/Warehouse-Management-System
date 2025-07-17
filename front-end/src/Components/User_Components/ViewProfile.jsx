@@ -2,22 +2,20 @@ import React, { useEffect, useState } from "react";
 import { Container, Card, Row, Col, Button, Alert } from "react-bootstrap";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
+import useUser from "../../Hooks/useUser";
 const Profile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
-
+  const { getProfile } = useUser();
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem("authToken");
-        
-        const response = await axios.get("http://localhost:9999/users/view-profile", {
-          headers: { Authorization: token},
-        });
-
-        setProfile(response.data);
+        const response = await getProfile();
+        console.log(response);
+        if (response && response.data) {
+          setProfile(response.data);
+        }
       } catch (err) {
         setError( "Không thể tải thông tin người dùng.");
       }

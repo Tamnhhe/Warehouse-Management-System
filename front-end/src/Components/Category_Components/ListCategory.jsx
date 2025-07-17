@@ -1,6 +1,5 @@
 // File: ListCategory.js
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import axios from 'axios';
 import {
   Container, Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Checkbox, IconButton, Stack, Alert,
@@ -17,8 +16,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddCategoryDialog from './AddCategory';
 import EditCategoryDialog from './EditCategory';
 
+import useCategory from '../../Hooks/useCategory';
 function ListCategory() {
-  const [categories, setCategories] = useState([]);
+  const { categories, getAllCategories, createCategory, inactivateCategory } = useCategory();
   const [filterText, setFilterText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'categoryName', direction: 'asc' });
   const [statusFirst, setStatusFirst] = useState('active'); // 'active' hoặc 'inactive'
@@ -31,13 +31,7 @@ function ListCategory() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const fetchCategories = useCallback(async () => {
-    try {
-      const response = await axios.get("http://localhost:9999/categories/getAllCategories");
-      setCategories(response.data);
-      setError(null); // Clear previous errors on success
-    } catch (error) {
-      setError("Không thể tải danh sách danh mục. Vui lòng thử lại.");
-    }
+    await getAllCategories();
   }, []);
 
   useEffect(() => {
@@ -53,9 +47,9 @@ function ListCategory() {
     if (!window.confirm(`Bạn có chắc muốn ${currentStatus === 'active' ? 'vô hiệu hóa' : 'kích hoạt'} danh mục này?`)) return;
     
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    console.log(`Cập nhật trạng thái danh mục ${id} thành ${newStatus}`);
     try {
-      await axios.put(`http://localhost:9999/categories/inactivateCategory/${id}`, { status: newStatus });
-      await fetchCategories(); // Tải lại danh sách để đảm bảo dữ liệu mới nhất
+      await inactivateCategory(id, { status: newStatus });
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
       setError("Không thể cập nhật trạng thái danh mục.");
@@ -227,6 +221,7 @@ function ListCategory() {
         open={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onCategoryAdded={fetchCategories}
+        onAdd={createCategory}
       />
 
       {selectedCategory && (

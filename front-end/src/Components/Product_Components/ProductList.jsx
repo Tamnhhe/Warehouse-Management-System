@@ -19,7 +19,8 @@ import { visuallyHidden } from "@mui/utils";
 // --- BƯỚC 1: IMPORT FRAMER MOTION ---
 import { motion, AnimatePresence } from "framer-motion";
 
-// Giả sử các component Modal còn lại đã được cập nhật
+// Import the AddProduct component from the separate file
+import AddProduct from "./AddProduct";
 import UpdateProductModal from "./UpdateProductModal";
 import ProductDetails from "./ProductDetails";
 
@@ -54,6 +55,7 @@ const itemVariants = {
 };
 
 
+<<<<<<< HEAD
 // Component AddProduct (giữ nguyên không đổi)
 const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
   // ... code của AddProduct không thay đổi
@@ -234,6 +236,9 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
     </Dialog>
   );
 };
+=======
+// Remove the AddProduct component definition here since it's now in its own file
+>>>>>>> origin/inter3
 
 
 const ProductList = () => {
@@ -271,24 +276,26 @@ const ProductList = () => {
         axios.get("http://localhost:9999/supplierProducts/getAllSupplierProducts"),
       ]);
       const productsData = productsRes.data;
-      const supplierProducts = supplierProductsRes.data;
-      const latestPrices = {}, priceMap = {};
-      supplierProducts.forEach((sp) => {
-        const productId = sp.product?._id;
-        if (!productId) return;
-        if (!latestPrices[productId]) latestPrices[productId] = sp.price;
-        if (!priceMap[productId]) priceMap[productId] = [];
-        priceMap[productId].push(sp.price);
-      });
-      const avgPrices = Object.entries(priceMap).reduce((acc, [productId, prices]) => {
-        const sum = prices.reduce((total, price) => total + price, 0);
-        acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
-        return acc;
-      }, {});
+      // const supplierProducts = supplierProductsRes.data;
+      // const latestPrices = {}, priceMap = {};
+      // supplierProducts.forEach((sp) => {
+      //   const productId = sp.product?._id;
+      //   if (!productId) return;
+      //   if (!latestPrices[productId]) latestPrices[productId] = sp.price;
+      //   if (!priceMap[productId]) priceMap[productId] = [];
+      //   priceMap[productId].push(sp.price);
+      // });
+      // const avgPrices = Object.entries(priceMap).reduce((acc, [productId, prices]) => {
+      //   const sum = prices.reduce((total, price) => total + price, 0);
+      //   acc[productId] = prices.length > 0 ? Math.round(sum / prices.length) : 0;
+      //   return acc;
+      // }, {});
       const updatedProducts = productsData.map((p) => ({
         ...p,
-        latestPrice: latestPrices[p._id] || 0,
-        avgPrice: avgPrices[p._id] || 0,
+        // latestPrice: latestPrices[p._id] || 0,
+        // avgPrice: avgPrices[p._id] || 0,
+        latestPrice: 0,
+        avgPrice: 0,
       }));
       setProducts(updatedProducts);
       setError("");
@@ -375,7 +382,11 @@ const ProductList = () => {
   );
 
   const renderStatusChip = (status) => (<Box component="span" sx={{ color: "white", bgcolor: status === "active" ? "success.main" : "error.main", p: "4px 10px", borderRadius: "16px", display: "inline-block", fontSize: "0.75rem", fontWeight: "bold", textAlign: "center", }}>{status === "active" ? "Đang Bán" : "Ngừng Bán"}</Box>);
+<<<<<<< HEAD
   const headCells = [{ id: 'productImage', label: 'Hình Ảnh', sortable: false }, { id: 'productName', label: 'Tên Sản Phẩm', sortable: true }, { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' }, { id: 'categoryID', label: 'Danh mục', sortable: true, align: 'right' }, { id: 'netWeight', label: 'Khối lượng Tịnh', sortable: true, align: 'right' }, { id: 'unit', label: 'Đơn Vị', sortable: true }, { id: 'location', label: 'Vị Trí', sortable: true }, { id: 'status', label: 'Trạng Thái', sortable: true }, { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },];
+=======
+  const headCells = [{ id: 'productImage', label: 'Hình Ảnh', sortable: false }, { id: 'productName', label: 'Tên Sản Phẩm', sortable: true }, { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' }, { id: 'avgPrice', label: 'Giá TB', sortable: true, align: 'right' }, { id: 'latestPrice', label: 'Giá Mới', sortable: true, align: 'right' }, { id: 'unit', label: 'Đơn Vị', sortable: true }, { id: 'location', label: 'Vị Trí', sortable: true }, { id: 'status', label: 'Trạng Thái', sortable: true }, { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },];
+>>>>>>> origin/inter3
 
   if (loading && products.length === 0) {
     return (<Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>);
@@ -489,7 +500,18 @@ const ProductList = () => {
                       <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell>{product.unit}</TableCell>
+<<<<<<< HEAD
                       <TableCell>{product.location}</TableCell>
+=======
+                      {/* <TableCell>{product.location}</TableCell> */}
+                      <TableCell>
+                        {product.location.map((loc, idx) => (
+                          <Box key={idx} sx={{ display: 'inline-block', mr: 1, mb: 1, p: 0.5, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
+                            {loc.inventoryId} ({loc.stock})
+                          </Box>
+                        ))}
+                      </TableCell>
+>>>>>>> origin/inter3
                       <TableCell>{renderStatusChip(product.status)}</TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
                     </TableRow>

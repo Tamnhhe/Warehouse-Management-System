@@ -12,6 +12,15 @@ const authorApi = axios.create({
 
 // Request Interceptor
 authorApi.interceptors.request.use(config => {
+    // Get the token from localStorage or cookies
+    const token = localStorage.getItem('authToken');
+    console.log("Token from localStorage:", token);
+    if (token) {
+        // Attach the token to the Authorization header
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Optionally, you can log the request or modify it further
+    // Return the modified config
     return config;
 }, (error) => {
     return Promise.reject(error);
@@ -27,6 +36,7 @@ authorApi.interceptors.response.use(
             originalRequest._retry = true; // Prevent infinite loops
 
             const response = await authAPI.refreshToken();
+            localStorage.setItem('authToken', response.data.accessToken); // Update token in localStorage
             if (response) return authorApi(originalRequest);
             // If refresh fails, redirect to login
             window.location.href = '/login';

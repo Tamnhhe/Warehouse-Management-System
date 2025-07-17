@@ -1,5 +1,8 @@
 // Nguyễn Huy Tâm - HE173108 5/2/2025
 const db = require("../models/index");
+const Product = require('../models/product.model');
+const Category = require('../models/category.model');
+
 // Tạo mới một sản phẩm
 const createProduct = async (req, res, next) => {
   try {
@@ -8,16 +11,20 @@ const createProduct = async (req, res, next) => {
       categoryId,
       totalStock,
       thresholdStock,
+<<<<<<< HEAD
       netWeight, // THÊM netWeight VÀO ĐÂY
+=======
+      productImage,
+>>>>>>> origin/inter3
       unit,
       location,
-      status,
+      quantitative,
+      status
     } = req.body;
-
-    // Ảnh sẽ được lấy từ req.file nếu có, nếu không thì dùng req.body.productImage
-    const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
+    const image = req.file ? `/uploads/${req.file.filename}` : productImage;
 
     // Kiểm tra các trường bắt buộc
+<<<<<<< HEAD
     if (
       !productName ||
       !categoryId ||
@@ -29,22 +36,20 @@ const createProduct = async (req, res, next) => {
       return res
         .status(400)
         .json({ message: "Thiếu thông tin sản phẩm bắt buộc" });
+=======
+    if (!productName || !categoryId || !image || !unit || !location || typeof thresholdStock !== 'number') {
+      return res.status(400).json({ message: 'Thiếu thông tin sản phẩm bắt buộc' });
+>>>>>>> origin/inter3
     }
 
-    // Kiểm tra xem tên sản phẩm đã tồn tại trong cơ sở dữ liệu chưa
-    const existingProduct = await db.Product.findOne({ productName });
-    if (existingProduct) {
-      return res.status(400).json({ message: "Sản phẩm đã tồn tại trong kho." });
-    }
 
     // Kiểm tra danh mục
-    const checkCategory = await db.Category.find({ _id: categoryId });
-    if (!checkCategory || checkCategory.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Định dạng danh mục sách nhà cung cấp không hợp lệ" });
+    const checkCategory = await Category.findById(categoryId);
+    if (!checkCategory) {
+      return res.status(404).json({ message: 'Danh mục không hợp lệ' });
     }
 
+<<<<<<< HEAD
     // Validate netWeight là số và có giá trị hợp lệ
     const parsedNetWeight = Number(netWeight);
     if (isNaN(parsedNetWeight) || parsedNetWeight < 100) {
@@ -59,17 +64,35 @@ const createProduct = async (req, res, next) => {
       thresholdStock: thresholdStock ||0, // SỬ DỤNG GIÁ TRỊ ĐÃ PARSE
       netWeight: parsedNetWeight, // THÊM netWeight VÀ SỬ DỤNG GIÁ TRỊ ĐÃ PARSE
       productImage,
+=======
+    // Kiểm tra mảng vị trí
+    if (!Array.isArray(location) || location.length === 0) {
+      return res.status(400).json({ message: 'Location phải là một mảng và không được rỗng' });
+    }
+    for (const loc of location) {
+      if (!loc.inventoryId || typeof loc.stock !== 'number') {
+        return res.status(400).json({ message: 'Mỗi vị trí phải có inventoryId và stock là số' });
+      }
+    }
+    // Kiểm tra xem tên sản phẩm đã tồn tại trong cơ sở dữ liệu chưa
+    const existingProduct = await Product.findOne({ productName });
+    if (existingProduct) {
+      return res.status(400).json({ message: 'Sản phẩm đã tồn tại trong kho.' });
+    }
+    const newProduct = new Product({
+      productName,
+      categoryId,
+      totalStock: typeof totalStock === 'number' ? totalStock : 0,
+      thresholdStock,
+      productImage: image,
+>>>>>>> origin/inter3
       unit,
-      location,
-      status: status || "active",
+      location: location ? location.map(loc => ({ inventoryId: loc.inventoryId, stock: loc.stock })) : [],
+      quantitative: typeof quantitative === 'number' ? quantitative : 1,
+      status: status || 'active',
     });
-
-    console.log("San pham moi la: ", newProduct);
-
     await newProduct.save();
-    res
-      .status(201)
-      .json({ message: "Sản phẩm được tạo thành công", newProduct });
+    res.status(201).json({ message: 'Sản phẩm được tạo thành công', newProduct });
   } catch (err) {
     next(err);
   }
@@ -90,15 +113,16 @@ const getAllProducts = async (req, res) => {
 // Lấy một sản phẩm theo ID
 const getProductById = async (req, res) => {
   try {
-    const product = await db.Product.findById(req.params.id).populate("categoryId");
+    const product = await Product.findById(req.params.id).populate('categoryId', 'categoryName status');
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
+      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' });
     }
     res.status(200).json(product);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+<<<<<<< HEAD
 
 async function updateProduct(req, res, next) {
   try {
@@ -107,9 +131,29 @@ async function updateProduct(req, res, next) {
     const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
     console.log("San pham la" + id)
     const existingProduct = await db.Product.findById(id);
+=======
+// Cập nhật một sản phẩm theo ID
+const updateProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      productName,
+      categoryId,
+      totalStock,
+      thresholdStock,
+      productImage,
+      unit,
+      location,
+      quantitative,
+      status
+    } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : productImage;
+    const existingProduct = await Product.findById(id);
+>>>>>>> origin/inter3
     if (!existingProduct) {
-      return res.status(404).json({ message: "Khong tim thay san pham" });
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
     }
+<<<<<<< HEAD
 
     // Validate netWeight và thresholdStock nếu chúng được cung cấp
     const updatedFields = {};
@@ -145,27 +189,43 @@ async function updateProduct(req, res, next) {
 
     const products = await db.Product.findByIdAndUpdate(id, { $set: updatedFields }, { new: true });
     res.status(200).json({ message: "Cap nhat san pham thanh cong", products });
+=======
+    const updateFields = {};
+    if (productName) updateFields.productName = productName;
+    if (categoryId) updateFields.categoryId = categoryId;
+    if (typeof totalStock === 'number') updateFields.totalStock = totalStock;
+    if (typeof thresholdStock === 'number') updateFields.thresholdStock = thresholdStock;
+    if (image) updateFields.productImage = image;
+    if (unit) updateFields.unit = unit;
+    if (Array.isArray(location)) updateFields.location = location;
+    if (typeof quantitative === 'number') updateFields.quantitative = quantitative;
+    if (status) updateFields.status = status;
+    const updatedProduct = await Product.findByIdAndUpdate(id, { $set: updateFields }, { new: true });
+    res.status(200).json({ message: 'Cập nhật sản phẩm thành công', updatedProduct });
+>>>>>>> origin/inter3
   } catch (error) {
     next(error);
   }
 };
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> origin/inter3
 // Cập nhật trạng thái sản phẩm (inactive)
-async function inactiveProduct(req, res, next) {
+const inactiveProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    const changedProduct = await db.Product.findByIdAndUpdate(id, { status });
+    const changedProduct = await Product.findByIdAndUpdate(id, { status }, { new: true });
     if (!changedProduct) {
-      return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
+      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' });
     }
-    res.status(200).json({ message: "Trạng thái sản phẩm đã được thay đổi thành công", changedProduct });
+    res.status(200).json({ message: 'Trạng thái sản phẩm đã được thay đổi thành công', changedProduct });
   } catch (error) {
     next(error);
   }
-}
+};
 
 module.exports = {
   createProduct,
@@ -173,4 +233,8 @@ module.exports = {
   getProductById,
   updateProduct,
   inactiveProduct
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> origin/inter3

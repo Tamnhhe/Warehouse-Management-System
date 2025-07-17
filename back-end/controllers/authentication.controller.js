@@ -45,20 +45,16 @@ async function login(req, res) {
       return res.status(404).json({ message: "Tài khoản không tồn tại" });
     }
 
-    if (user.status === "inactive") {
-      return res
-        .status(401)
-        .json({ message: "Vui lòng xác minh tài khoản của bạn!" });
-    }
-    if (user.status === "banned") {
-      return res
-        .status(401)
-        .json({ message: "Tài khoản của bạn đã bị cấm đăng nhập" });
-    }
-    const isMatch = await bcrypt.compare(password, user.account.password);
-    // if (!isMatch) {
-    //     return res.status(401).json({ message: "Sai mật khẩu!" });
-    // }
+        if (user.status === "inactive") {
+            return res.status(401).json({ message: "Vui lòng xác minh tài khoản của bạn!" });
+        }
+        if (user.status === "banned") {
+            return res.status(401).json({ message: "Tài khoản của bạn đã bị cấm đăng nhập" });
+        }
+        const isMatch = await bcrypt.compare(password, user.account.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Sai mật khẩu!" });
+        }
 
     const token = jwt.sign(
       { id: user._id, email: user.account.email, role: user.role },

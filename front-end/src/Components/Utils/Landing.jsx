@@ -39,22 +39,10 @@ const mainFunctions = [
     allowedRoles: ["manager", "employee"],
   },
   {
-    title: "Kiểm kê",
-    icon: <FactCheckIcon />,
-    path: "/inventory",
-    allowedRoles: ["manager", "employee"],
-  },
-  {
     title: "Nhập hàng",
     icon: <MoveToInboxIcon />,
-    path: "/create-receipt",
+    path: "/receipt/create",
     allowedRoles: ["manager"],
-  },
-  {
-    title: "Kệ hàng",
-    icon: <Palette />,
-    path: "/inventory-check",
-    allowedRoles: ["manager", "employee"],
   },
   {
     title: "Xuất hàng",
@@ -259,16 +247,16 @@ function Landing() {
       </Container>
     </Paper>
   );
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <Header />
+      {/* Header already handled by Layout component in App.jsx */}
       <Box
         component="main"
         sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
       >
-        {userRole ? renderOdooStyleDashboard() : renderMarketingPage()}
+        {renderOdooStyleDashboard()}
       </Box>
-      {!userRole && <Footer />}
     </Box>
   );
 }
