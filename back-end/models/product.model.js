@@ -45,11 +45,6 @@ const ProductSchema = new mongoose.Schema({
         type: Number, // Đơn vị đo lường (ví dụ: kg, lít, cái, v.v.)
         default: 1, // Mặc định là 1 nếu không có giá trị
     },
-    netWeight: { //Khoi luong
-        type: Number,
-        min: 100,
-        default: null,
-    },
     status: { //Trang thái
         type: String,
         required: true,

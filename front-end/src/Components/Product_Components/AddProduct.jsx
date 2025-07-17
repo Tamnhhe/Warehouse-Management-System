@@ -1,4 +1,4 @@
-
+// AddProduct.js - Phiên bản Material-UI
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
@@ -301,4 +301,3 @@ const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
 };
 
 export default AddProduct;
->>>>>>> origin/inter3

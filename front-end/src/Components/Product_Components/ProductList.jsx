@@ -55,190 +55,7 @@ const itemVariants = {
 };
 
 
-<<<<<<< HEAD
-// Component AddProduct (giữ nguyên không đổi)
-const AddProduct = ({ open, handleClose, onSaveSuccess }) => {
-  // ... code của AddProduct không thay đổi
-  const availableLocations = [
-    'Kệ A1', 'Kệ B1', 'Kệ C1', 'Kệ D1', 'Kệ E1', 'Kệ F1'
-  ];
-  const [productData, setProductData] = useState({
-    productName: "", categoryId: "", totalStock: 0, netWeight: "",thresholdStock: 0,
-    productImage: null, unit: "", location: "", status: "active",
-  });
-  const [imagePreview, setImagePreview] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      axios.get("http://localhost:9999/categories/getAllCategories")
-        .then((response) => setCategories(response.data))
-        .catch((error) => console.error("Error fetching categories:", error));
-    } else {
-      setProductData({
-        productName: "", categoryId: "", totalStock: 0,netWeight:"",
-        productImage: null, unit: "", location: "", status: "active",
-      });
-      setErrors({});
-      setImagePreview(null);
-      setLoading(false);
-    }
-  }, [open]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProductData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProductData((prev) => ({ ...prev, productImage: file }));
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-    } else {
-      setProductData((prev) => ({ ...prev, productImage: null }));
-      setImagePreview(null);
-    }
-    if (errors.productImage) {
-      setErrors((prev) => ({ ...prev, productImage: "" }));
-    }
-  };
-
-  const validate = async () => {
-    let tempErrors = {};
-    tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
-    tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
-    tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
-    tempErrors.location = productData.location ? "" : "Vị trí không được bỏ trống.";
-    tempErrors.netWeight = productData.netWeight ? "" : "Khối lượng tịnh không được bỏ trống."; 
-    if (!productData.netWeight || Number(productData.netWeight) < 100) { // Đây là phần kiểm tra bạn cần chú ý
-      tempErrors.netWeight = "Khối lượng tịnh tối thiểu là 100 gram.";  
-    }   
-    if (!productData.productImage) {
-      tempErrors.productImage = "Vui lòng chọn hình ảnh sản phẩm.";
-    } else if (!["image/jpeg", "image/png"].includes(productData.productImage.type)) {
-      tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
-    } else {
-      tempErrors.productImage = "";
-    }
-    setErrors(tempErrors);
-
-    const isFormValid = Object.values(tempErrors).every((x) => x === "");
-
-    if (isFormValid) {
-      try {
-        const response = await axios.get(`http://localhost:9999/products/checkProductName?name=${productData.productName}`);
-        if (response.data.exists) {
-          setErrors(prev => ({ ...prev, productName: "Sản phẩm đã tồn tại trong kho." }));
-          return false;
-        }
-        return true;
-      } catch (error) {
-        console.error("Error checking product name:", error);
-        setErrors(prev => ({ ...prev, general: "Có lỗi khi kiểm tra tên sản phẩm." }));
-        return false;
-      }
-    }
-    return false;
-  };
-
-  const handleSave = async () => {
-    setErrors(prev => ({ ...prev, general: "" }));
-    if (await validate()) {
-      setLoading(true);
-      const formData = new FormData();
-      Object.entries(productData).forEach(([key, value]) => formData.append(key, value));
-
-      try {
-        await axios.post("http://localhost:9999/products/createProduct", formData, { headers: { "Content-Type": "multipart/form-data" } });
-        onSaveSuccess();
-        handleClose();
-      } catch (error) {
-        console.error("Error creating product:", error);
-        setErrors((prev) => ({ ...prev, general: error.response?.data?.message || "Có lỗi xảy ra." }));
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {errors.general && <Alert severity="error">{errors.general}</Alert>}
-          <TextField autoFocus name="productName" label="Tên Sản Phẩm" value={productData.productName} onChange={handleChange} error={!!errors.productName} helperText={errors.productName} fullWidth />
-          <FormControl fullWidth error={!!errors.categoryId}>
-            <InputLabel id="category-select-label">Danh Mục</InputLabel>
-            <Select labelId="category-select-label" name="categoryId" value={productData.categoryId} label="Danh Mục" onChange={handleChange}>
-              <MenuItem value=""><em>Chọn danh mục</em></MenuItem>
-              {categories.map((cat) => (<MenuItem key={cat._id} value={cat._id}>{cat.categoryName}</MenuItem>))}
-            </Select>
-            {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
-          </FormControl>
-          <TextField name="unit" label="Đơn Vị (ví dụ: cái, hộp, kg)" value={productData.unit} onChange={handleChange} error={!!errors.unit} helperText={errors.unit} fullWidth />
-          <TextField
-            name="netWeight"
-            label="Khối Lượng Tịnh (gram)"
-            type="number" // Đảm bảo chỉ nhập số
-            value={productData.netWeight}
-            onChange={handleChange}
-            error={!!errors.netWeight}
-            helperText={errors.netWeight || (productData.netWeight !== "" && Number(productData.netWeight) < 100 ? "Khối lượng tịnh tối thiểu là 100 gram." : "")}
-            fullWidth
-            inputProps={{ min: 100 }} // Gợi ý client-side
-          />
-          <FormControl fullWidth error={!!errors.location}>
-            <InputLabel id="location-select-label">Vị Trí</InputLabel>
-            <Select
-              labelId="location-select-label"
-              name="location"
-              value={productData.location}
-              label="Vị Trí" // Quan trọng: label prop cho Select để hiển thị nhãn nổi
-              onChange={handleChange}
-            >
-              <MenuItem value="">
-                <em>Chọn vị trí</em>
-              </MenuItem>
-              {availableLocations.map((locName) => (
-                <MenuItem key={locName} value={locName}>
-                  {locName}
-                </MenuItem>
-              ))}
-            </Select>
-            {errors.location && <FormHelperText>{errors.location}</FormHelperText>}
-          </FormControl>          <FormControl fullWidth>
-            <InputLabel id="status-select-label">Trạng Thái</InputLabel>
-            <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>
-              <MenuItem value="active">Đang bán</MenuItem>
-              <MenuItem value="inactive">Ngừng bán</MenuItem>
-            </Select>
-          </FormControl>
-          <Button variant="outlined" component="label" color={errors.productImage ? "error" : "primary"}>
-            Chọn Hình Ảnh
-            <input type="file" hidden accept="image/png, image/jpeg" onChange={handleFileChange} />
-          </Button>
-          {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
-          {imagePreview && <Box sx={{ mt: 2, textAlign: 'center' }}><img src={imagePreview} alt="Xem trước sản phẩm" style={{ maxWidth: "200px", height: "auto", borderRadius: '8px' }} /></Box>}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
-        <Button onClick={handleClose} disabled={loading} color="secondary">Hủy</Button>
-        <Button onClick={handleSave} variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : "Lưu Sản Phẩm"}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-=======
 // Remove the AddProduct component definition here since it's now in its own file
->>>>>>> origin/inter3
 
 
 const ProductList = () => {
@@ -382,11 +199,7 @@ const ProductList = () => {
   );
 
   const renderStatusChip = (status) => (<Box component="span" sx={{ color: "white", bgcolor: status === "active" ? "success.main" : "error.main", p: "4px 10px", borderRadius: "16px", display: "inline-block", fontSize: "0.75rem", fontWeight: "bold", textAlign: "center", }}>{status === "active" ? "Đang Bán" : "Ngừng Bán"}</Box>);
-<<<<<<< HEAD
-  const headCells = [{ id: 'productImage', label: 'Hình Ảnh', sortable: false }, { id: 'productName', label: 'Tên Sản Phẩm', sortable: true }, { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' }, { id: 'categoryID', label: 'Danh mục', sortable: true, align: 'right' }, { id: 'netWeight', label: 'Khối lượng Tịnh', sortable: true, align: 'right' }, { id: 'unit', label: 'Đơn Vị', sortable: true }, { id: 'location', label: 'Vị Trí', sortable: true }, { id: 'status', label: 'Trạng Thái', sortable: true }, { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },];
-=======
   const headCells = [{ id: 'productImage', label: 'Hình Ảnh', sortable: false }, { id: 'productName', label: 'Tên Sản Phẩm', sortable: true }, { id: 'totalStock', label: 'Tổng SL', sortable: true, align: 'center' }, { id: 'avgPrice', label: 'Giá TB', sortable: true, align: 'right' }, { id: 'latestPrice', label: 'Giá Mới', sortable: true, align: 'right' }, { id: 'unit', label: 'Đơn Vị', sortable: true }, { id: 'location', label: 'Vị Trí', sortable: true }, { id: 'status', label: 'Trạng Thái', sortable: true }, { id: 'actions', label: 'Hành Động', sortable: false, align: 'center' },];
->>>>>>> origin/inter3
 
   if (loading && products.length === 0) {
     return (<Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>);
@@ -500,9 +313,6 @@ const ProductList = () => {
                       <TableCell align="right">{product.avgPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell align="right">{product.latestPrice.toLocaleString("vi-VN")} VND</TableCell>
                       <TableCell>{product.unit}</TableCell>
-<<<<<<< HEAD
-                      <TableCell>{product.location}</TableCell>
-=======
                       {/* <TableCell>{product.location}</TableCell> */}
                       <TableCell>
                         {product.location.map((loc, idx) => (
@@ -511,7 +321,6 @@ const ProductList = () => {
                           </Box>
                         ))}
                       </TableCell>
->>>>>>> origin/inter3
                       <TableCell>{renderStatusChip(product.status)}</TableCell>
                       <TableCell align="center"><Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}><Button variant="outlined" color="warning" size="small" onClick={() => handleOpenUpdateModal(product)}>Sửa</Button><Button variant="outlined" color={product.status === "active" ? "error" : "success"} size="small" onClick={() => handleChangeStatus(product._id, product.status)}>{product.status === "active" ? "Vô hiệu" : "Kích hoạt"}</Button></Stack></TableCell>
                     </TableRow>
