@@ -148,22 +148,26 @@ const updateTransactionStatus = async (req, res) => {
     }));
 
     //Update product when status is 'completed' and transaction type is 'import'
-    if (status === "completed" && transaction.transactionType === "import") {
-      for (const product of products) {
-        const supplierProduct = await SupplierProduct.findById(
-          product.supplierProductId
-        ).populate("product");
-        if (supplierProduct && supplierProduct.product) {
-          const productId = supplierProduct.product._id;
-          // Cập nhật tồn kho của sản phẩm
-          await
-            Product.findByIdAndUpdate(
-              productId,
-              { $inc: { totalStock: product.achievedProduct } }
-            );
-        }
-      }
+  if (status === "completed" && transaction.transactionType === "import") {
+  for (const product of products) {
+    const supplierProduct = await SupplierProduct.findById(
+      product.supplierProductId
+    ).populate("product");
+    if (supplierProduct && supplierProduct.product) {
+      const productId = supplierProduct.product._id;
+      // Cập nhật tồn kho và cân nặng của sản phẩm
+      await Product.findByIdAndUpdate(
+  productId,
+  {
+    $inc: {
+      totalStock: product.achievedProduct,
+      totalWeight: product.weight ? product.weight * product.achievedProduct : 0
     }
+  }
+);
+    }
+  }
+}
 
 
     //Update product when status is 'completed' and transaction type is 'export'
@@ -175,11 +179,15 @@ const updateTransactionStatus = async (req, res) => {
         if (supplierProduct && supplierProduct.product) {
           const productId = supplierProduct.product._id;
           // Cập nhật tồn kho của sản phẩm
-          await
-            Product.findByIdAndUpdate(
-              productId,
-              { $inc: { totalStock: -product.requestQuantity } }
-            );
+          await Product.findByIdAndUpdate(
+  productId,
+  {
+    $inc: {
+      totalStock: product.achievedProduct,
+      totalWeight: product.weight ? product.weight * product.achievedProduct : 0
+    }
+  }
+);
         }
       }
     }
@@ -398,6 +406,7 @@ const createReceipt = async (req, res) => {
           defectiveProduct: 0,
           achievedProduct: Number(product.quantity),
           price: Number(product.price),
+          weight: Number(product.weight)
         });
       } catch (error) {
         console.error(`Error processing product:`, error);

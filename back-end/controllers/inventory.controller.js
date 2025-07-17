@@ -399,6 +399,7 @@ exports.getAllInventories = async (req, res) => {
               quantity: canAdd,
               totalStock: p.totalStock,
               unit: p.unit,
+              weight: p.weight || 0
             });
             invCurrent += canAdd;
             productRemain[p._id.toString()] -= canAdd;

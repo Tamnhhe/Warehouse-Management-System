@@ -45,8 +45,9 @@ const inventoryTransactionSchema = new mongoose.Schema({
                 min: 0,
             },
             expiry: { //nngaf heetts hạn
-                type: Date,
-            }
+                type: Date,       
+            },
+              weight: { type: Number, default: 0 }
         },
     ],
     operator: { //Nhân viên chiu trách  nhiệm cho đơn
