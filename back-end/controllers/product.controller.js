@@ -103,7 +103,7 @@ const createProduct = async (req, res, next) => {
           if (inventory) {
             inventory.products.push({
               productId: newProduct._id,
-              stock: loc.stock || 0
+              quantity: loc.stock || 0
             });
             await inventory.save();
           }
@@ -111,9 +111,24 @@ const createProduct = async (req, res, next) => {
       }
     }
 
+    // Nếu có supplierId, thêm sản phẩm vào danh sách sản phẩm của nhà cung cấp
+    if (supplierId) {
+      const supplierProduct = new SupplierProduct({
+        supplier: supplierId,
+        stock: totalStock || 0,
+        categoryId: categoryId,
+        productImage,
+        productName: productName.trim(),
+        quantitative,
+        unit: unit.trim()
+      });
+      await supplierProduct.save();
+    }
+
+
     res.status(201).json({ message: 'Sản phẩm được tạo thành công', newProduct });
   } catch (err) {
-    next(err);
+    res.status(500).json({ message: err.message });
   }
 };
 
