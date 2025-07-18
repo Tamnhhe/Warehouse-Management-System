@@ -1,4 +1,3 @@
-
 const db = require("../models/index");
 const InventoryTransaction = db.InventoryTransaction;
 const User = db.User;
@@ -148,26 +147,26 @@ const updateTransactionStatus = async (req, res) => {
     }));
 
     //Update product when status is 'completed' and transaction type is 'import'
-  if (status === "completed" && transaction.transactionType === "import") {
-  for (const product of products) {
-    const supplierProduct = await SupplierProduct.findById(
-      product.supplierProductId
-    ).populate("product");
-    if (supplierProduct && supplierProduct.product) {
-      const productId = supplierProduct.product._id;
-      // Cập nhật tồn kho và cân nặng của sản phẩm
-      await Product.findByIdAndUpdate(
-  productId,
-  {
-    $inc: {
-      totalStock: product.achievedProduct,
-      totalWeight: product.weight ? product.weight * product.achievedProduct : 0
+    if (status === "completed" && transaction.transactionType === "import") {
+      for (const product of products) {
+        const supplierProduct = await SupplierProduct.findById(
+          product.supplierProductId
+        ).populate("product");
+        if (supplierProduct && supplierProduct.product) {
+          const productId = supplierProduct.product._id;
+          // Cập nhật tồn kho và cân nặng của sản phẩm
+          await Product.findByIdAndUpdate(
+            productId,
+            {
+              $inc: {
+                totalStock: product.achievedProduct,
+                totalWeight: product.weight ? product.weight * product.achievedProduct : 0
+              }
+            }
+          );
+        }
+      }
     }
-  }
-);
-    }
-  }
-}
 
 
     //Update product when status is 'completed' and transaction type is 'export'
@@ -180,14 +179,14 @@ const updateTransactionStatus = async (req, res) => {
           const productId = supplierProduct.product._id;
           // Cập nhật tồn kho của sản phẩm
           await Product.findByIdAndUpdate(
-  productId,
-  {
-    $inc: {
-      totalStock: product.achievedProduct,
-      totalWeight: product.weight ? product.weight * product.achievedProduct : 0
-    }
-  }
-);
+            productId,
+            {
+              $inc: {
+                totalStock: product.achievedProduct,
+                totalWeight: product.weight ? product.weight * product.achievedProduct : 0
+              }
+            }
+          );
         }
       }
     }
@@ -345,8 +344,7 @@ const createReceipt = async (req, res) => {
           !product.price
         ) {
           throw new Error(
-            `Missing required fields for product ${product.productName || "unknown"
-            }`
+            `Missing required fields for product ${product.productName || "unknown"}`
           );
         }
 
@@ -364,41 +362,46 @@ const createReceipt = async (req, res) => {
         }
 
         // Find product in system
-        const productDoc = await Product.findOne({
+        let productDoc = await Product.findOne({
           productName: { $regex: new RegExp(`^${product.productName}$`, "i") },
         });
 
+        // If product does not exist, create a temp product
         if (!productDoc) {
-          throw new Error(`Product ${product.productName} not found in system`);
-        }
-
-        // Handle SupplierProduct relationship
-        let supplierProduct = await SupplierProduct.findOne({
-          product: productDoc._id,
-          supplier: supplierDoc._id,
-        });
-
-        if (supplierProduct) {
-          // Update existing supplier product
-          supplierProduct = await SupplierProduct.findByIdAndUpdate(
-            supplierProduct._id,
-            {
-              price: product.price,
-              stock: supplierProduct.stock + Number(product.quantity),
-            },
-            { new: true }
-          );
-        } else {
-          // Create new supplier product relationship
-          supplierProduct = await SupplierProduct.create({
-            product: productDoc._id,
-            supplier: supplierDoc._id,
-            price: product.price,
-            stock: product.quantity,
+          productDoc = await Product.create({
+            productName: product.productName,
+            categoryId: category._id,
+            totalStock: product.quantity,
+            thresholdStock: 0,
+            productImage: product.productImage || "",
+            unit: product.unit,
+            quantitative: product.weight || 0,
+            location: [],
+            status: "active",
           });
         }
 
-        // Add to processed products array
+        // Find SupplierProduct relationship (no update, just find or create)
+        let supplierProduct = await SupplierProduct.findOne({
+          productName: product.productName,
+          supplier: supplierDoc._id,
+        });
+
+        if (!supplierProduct) {
+          // Create new supplier product relationship
+          supplierProduct = await SupplierProduct.create({
+            supplier: supplierDoc._id,
+            stock: product.quantity,
+            expiry: product.expiry,
+            categoryId: category._id,
+            productImage: product.productImage || "",
+            productName: product.productName,
+            quantitative: product.weight || 0,
+            unit: product.unit,
+          });
+        }
+
+        // Add to processed products array for inventory transaction
         processedProducts.push({
           supplierProductId: supplierProduct._id,
           requestQuantity: Number(product.quantity),
@@ -406,7 +409,8 @@ const createReceipt = async (req, res) => {
           defectiveProduct: 0,
           achievedProduct: Number(product.quantity),
           price: Number(product.price),
-          weight: Number(product.weight)
+          weight: Number(product.weight) || 0,
+          expiry: product.expiry || null,
         });
       } catch (error) {
         console.error(`Error processing product:`, error);
@@ -422,12 +426,12 @@ const createReceipt = async (req, res) => {
     // Create inventory transaction
     const receipt = await InventoryTransaction.create({
       transactionType: "import",
-      transactionDate: new Date(), // Ngày nhập
+      transactionDate: new Date(),
       products: processedProducts,
-      supplier: supplierDoc._id, // ID nhà cung cấp
-      supplierName: supplierDoc.name, // Tên nhà cung cấp
+      supplier: supplierDoc._id,
+      supplierName: supplierDoc.name,
       totalPrice,
-      status: "pending", // Trạng thái mặc định là pending
+      status: "pending",
       branch: "Main Branch",
     });
 
