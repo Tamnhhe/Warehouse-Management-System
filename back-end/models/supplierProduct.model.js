@@ -26,9 +26,10 @@ const SupplierProductSchema = new mongoose.Schema({
     productName: { // Tên sản phẩm
         type: String,
         trim: true,
-        required: true 
+        required: true,
+        unique: true
     },
-    quantitative:{
+    quantitative: {
         type: Number, // Đơn vị đo lường (ví dụ: kg, lít, cái, v.v.)
         trim: true,
         required: true

@@ -9,11 +9,11 @@ const useTransaction = () => {
     const [total, setTotal] = useState(0);
     const [count, setCount] = useState(0);
 
-    const getAllTransactions = async (params) => {
+    const getAllTransactions = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await transactionAPI.getAllTransactions(params);
+            const res = await transactionAPI.getAll();
             setTransactions(res.data || res);
             setTotal(res.total || 0);
             setCount(res.count || 0);
@@ -24,13 +24,13 @@ const useTransaction = () => {
             setLoading(false);
             return null;
         }
-    }
+    };
 
     const getTransactionById = async (id) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await transactionAPI.getTransactionById(id);
+            const res = await transactionAPI.getById(id);
             setTransaction(res.data || res);
             setLoading(false);
             return res;
@@ -45,7 +45,7 @@ const useTransaction = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await transactionAPI.createTransaction(data);
+            const res = await transactionAPI.create(data);
             setLoading(false);
             return res;
         } catch (err) {
@@ -59,7 +59,7 @@ const useTransaction = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await transactionAPI.updateTransaction(id, data);
+            const res = await transactionAPI.update(id, data);
             setLoading(false);
             return res;
         } catch (err) {
@@ -73,7 +73,7 @@ const useTransaction = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await transactionAPI.updateTransactionStatus(id, data);
+            const res = await transactionAPI.updateStatus(id, data);
             setLoading(false);
             return res;
         } catch (err) {
@@ -96,6 +96,7 @@ const useTransaction = () => {
             return null;
         }
     };
+
     return {
         loading,
         error,
@@ -111,4 +112,5 @@ const useTransaction = () => {
         createReceipt
     };
 };
+
 export default useTransaction;

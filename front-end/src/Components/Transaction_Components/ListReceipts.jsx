@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   Container,
@@ -39,8 +38,8 @@ import { motion } from "framer-motion";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import SyncLockIcon from "@mui/icons-material/SyncLock";
+import useTransaction from "../../Hooks/useTransaction";
 
-// Bảng màu tham khảo từ Header.js
 const palette = {
   dark: "#155E64",
   medium: "#75B39C",
@@ -61,8 +60,6 @@ const getStatusChipColor = (status) => {
 };
 
 const ListReceipts = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [sortByDateOrder, setSortByDateOrder] = useState("desc");
   const [filterStatus, setFilterStatus] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -72,25 +69,16 @@ const ListReceipts = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const fetchTransactions = () => {
-    setLoading(true);
-    axios
-      .get("http://localhost:9999/inventoryTransactions/getAllTransactions")
-      .then((response) => {
-        const importTransactions = response.data.filter(
-          (t) => t.transactionType === "import"
-        );
-        const sortedData = importTransactions.sort(
-          (a, b) => new Date(b.transactionDate) - new Date(a.transactionDate)
-        );
-        setTransactions(sortedData);
-      })
-      .catch((error) => console.error("Lỗi gọi API:", error))
-      .finally(() => setLoading(false));
-  };
+  // Use transaction custom hook
+  const {
+    transactions,
+    loading,
+    getAllTransactions,
+    updateTransactionStatus,
+  } = useTransaction();
 
   useEffect(() => {
-    fetchTransactions();
+    getAllTransactions();
   }, []);
 
   const handleStatusFilterChange = (event) => {
@@ -109,21 +97,15 @@ const ListReceipts = () => {
     setShowModal(true);
   };
 
-  const handleStatusChange = () => {
+  const handleStatusChange = async () => {
     if (!selectedTransaction || !newStatus) return;
-    axios
-      .put(
-        `http://localhost:9999/inventoryTransactions/updateTransactionStatus/${selectedTransaction._id}`,
-        { status: newStatus }
-      )
-      .then(() => {
-        fetchTransactions(); // Tải lại dữ liệu mới nhất
-        setShowModal(false);
-      })
-      .catch((error) => console.error("Lỗi khi cập nhật trạng thái:", error));
+    await updateTransactionStatus(selectedTransaction._id, { status: newStatus });
+    getAllTransactions(); // Refresh data
+    setShowModal(false);
   };
 
   const filteredAndSortedTransactions = transactions
+    .filter((t) => t.transactionType === "import")
     .filter((t) => filterStatus.length === 0 || filterStatus.includes(t.status))
     .sort((a, b) => {
       const dateA = new Date(a.transactionDate);

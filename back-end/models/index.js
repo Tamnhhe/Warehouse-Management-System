@@ -8,7 +8,7 @@ const SupplierProduct = require("./supplierProduct.model");
 const Supplier = require("./supplier.model");
 const StocktakingTask = require("./stocktakingTask.model");
 const Adjustment = require("./adjustment.model");
-
+const Inventory = require("./inventory.model");
 const db = {};
 
 db.User = User;
@@ -20,6 +20,7 @@ db.SupplierProduct = SupplierProduct;
 db.Supplier = Supplier;
 db.StocktakingTask = StocktakingTask;
 db.Adjustment = Adjustment;
+db.Inventory = Inventory;
 
 db.connectDB = async () => {
   try {

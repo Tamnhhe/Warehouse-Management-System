@@ -1,22 +1,20 @@
 //Nguyễn Bảo Phi-HE173187-28/2/2025
-import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "react-bootstrap";
 import html2pdf from "html2pdf.js";
 import "./InvoiceStyles.css";
+import useTransaction from "../../Hooks/useTransaction";
 
 const DetailTransaction = () => {
   const { id } = useParams();
-  const [transaction, setTransaction] = useState(null);
+  const { transaction, loading, getTransactionById } = useTransaction();
   const navigate = useNavigate();
   const invoiceRef = useRef();
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
-      .then((response) => setTransaction(response.data))
-      .catch((error) => console.error("Lỗi khi lấy chi tiết giao dịch:", error));
+    getTransactionById(id);
+    // eslint-disable-next-line
   }, [id]);
 
   const handlePrint = () => {
@@ -35,7 +33,7 @@ const DetailTransaction = () => {
     html2pdf().set(opt).from(element).save();
   };
 
-  if (!transaction) return <p>Đang tải dữ liệu...</p>;
+  if (loading || !transaction) return <p>Đang tải dữ liệu...</p>;
 
   return (
     <div className="container my-4 invoice-container">
@@ -99,7 +97,7 @@ const DetailTransaction = () => {
               return (
                 <tr key={index}>
                   <td>{index + 1}</td>
-                  <td>{product.supplierProductId?.product?.productName || "--"}</td>
+                  <td>{product.supplierProductId?.productName || "--"}</td>
                   <td>{product.requestQuantity}</td>
                   <td>{product.receiveQuantity}</td>
                   <td>{product.defectiveProduct}</td>

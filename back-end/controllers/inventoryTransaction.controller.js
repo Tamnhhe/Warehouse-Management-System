@@ -1,10 +1,4 @@
 const db = require("../models/index");
-const InventoryTransaction = db.InventoryTransaction;
-const User = db.User;
-const Product = db.Product;
-const Category = db.Category;
-const Supplier = db.Supplier;
-const SupplierProduct = db.SupplierProduct;
 const mongoose = require("mongoose");
 
 // Tạo mới một giao dịch xuất/nhập kho
@@ -26,12 +20,12 @@ const createTransaction = async (req, res, next) => {
   }
 
   // Tìm một user với vai trò 'manager'
-  const manager = await User.findOne({ role: "manager" });
+  const manager = await db.User.findOne({ role: "manager" });
   if (!manager) {
     return res.status(400).json({ message: "Manager not found." });
   }
 
-  const newTransaction = new InventoryTransaction({
+  const newTransaction = new db.InventoryTransaction({
     supplier,
     transactionType,
     transactionDate: transactionDate || Date.now(),
@@ -73,7 +67,7 @@ const createTransaction = async (req, res, next) => {
 // Lấy tất cả giao dịch xuất/nhập kho
 const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await InventoryTransaction.find()
+    const transactions = await db.InventoryTransaction.find()
       .populate("supplier", "name") // Lấy TÊN thay vì chỉ ID
       .sort({ transactionDate: -1 });
 
@@ -87,15 +81,10 @@ const getAllTransactions = async (req, res) => {
 // Lấy một giao dịch theo ID
 const getTransactionById = async (req, res) => {
   try {
-    const transaction = await InventoryTransaction.findById(req.params.id)
+    const transaction = await db.InventoryTransaction.findById(req.params.id)
       .populate({
         path: "products.supplierProductId",
         model: "SupplierProduct",
-        populate: {
-          path: "product",
-          model: "Product",
-          select: "productName",
-        },
       })
       .populate("operator");
 
@@ -119,15 +108,10 @@ const updateTransactionStatus = async (req, res) => {
     const { status } = req.body;
     const transactionId = req.params.id;
 
-    const transaction = await InventoryTransaction.findById(transactionId)
+    const transaction = await db.InventoryTransaction.findById(transactionId)
       .populate({
         path: "products.supplierProductId",
         model: "SupplierProduct",
-        populate: {
-          path: "product",
-          model: "Product",
-          select: "productName",
-        },
       })
       .populate("operator");
 
@@ -135,7 +119,7 @@ const updateTransactionStatus = async (req, res) => {
       return res.status(404).json({ message: "Giao dịch không tồn tại!" });
     }
 
-    //Extract products from the transaction
+    // Extract products from the transaction
     const products = transaction.products.map((p) => ({
       supplierProductId: p.supplierProductId._id,
       requestQuantity: p.requestQuantity,
@@ -144,65 +128,67 @@ const updateTransactionStatus = async (req, res) => {
       achievedProduct: p.achievedProduct,
       price: p.price,
       expiry: p.expiry,
+      weight: p.weight,
     }));
 
-    //Update product when status is 'completed' and transaction type is 'import'
+    console.log("Products to update:", products);
+
+    // Update product and choose inventory is best match to update product into inventory when status is 'completed' and transaction type is 'import'
     if (status === "completed" && transaction.transactionType === "import") {
       for (const product of products) {
-        const supplierProduct = await SupplierProduct.findById(
+        const supplierProduct = await db.SupplierProduct.findById(
           product.supplierProductId
-        ).populate("product");
-        if (supplierProduct && supplierProduct.product) {
-          const productId = supplierProduct.product._id;
-          // Cập nhật tồn kho và cân nặng của sản phẩm
-          await Product.findByIdAndUpdate(
-            productId,
-            {
-              $inc: {
-                totalStock: product.achievedProduct,
-                totalWeight: product.weight ? product.weight * product.achievedProduct : 0
-              }
-            }
+        );
+
+        if (!supplierProduct) {
+          res.status(404).json("Supplier product not found:", product.supplierProductId); // Log the missing supplier product
+        }
+
+        // Cập nhật tồn kho của sản phẩm
+        const updatedProduct = await db.Product.findOneAndUpdate(
+          { productName: supplierProduct.productName },
+          { $inc: { totalStock: product.receiveQuantity } },
+          { new: true }
+        );
+
+
+        // Cập nhật vị trí của sản phẩm trong kho
+        const inventory = await db.Inventory.findOne({
+          products: { $elemMatch: { productId: updatedProduct._id } },
+        });
+
+        if (inventory) {
+          const productIndex = inventory.products.findIndex(
+            (p) => p.productId.toString() === supplierProduct.productName
           );
+
+          if (productIndex !== -1) {
+            inventory.products[productIndex].quantity += product.receiveQuantity;
+            await inventory.save();
+          }
         }
       }
     }
 
-
-    //Update product when status is 'completed' and transaction type is 'export'
+    // Update product and supplier product when status is 'completed' and transaction type is 'export'
     if (status === "completed" && transaction.transactionType === "export") {
       for (const product of products) {
-        const supplierProduct = await SupplierProduct.findById(
-          product.supplierProductId
-        ).populate("product");
-        if (supplierProduct && supplierProduct.product) {
-          const productId = supplierProduct.product._id;
-          // Cập nhật tồn kho của sản phẩm
-          await Product.findByIdAndUpdate(
-            productId,
-            {
-              $inc: {
-                totalStock: product.achievedProduct,
-                totalWeight: product.weight ? product.weight * product.achievedProduct : 0
-              }
-            }
-          );
-        }
       }
     }
 
-
-    const updatedTransaction1 = await InventoryTransaction.findByIdAndUpdate(
+    const updatedTransaction = await db.InventoryTransaction.findByIdAndUpdate(
       transactionId,
       { status },
       { new: true }
     );
 
-    if (!updatedTransaction1) {
+    if (!updatedTransaction) {
       return res.status(404).json({ message: "Giao dịch không tồn tại!" });
     }
 
-    res.json(updatedTransaction1);
+    //Sau khi giao dịch cập nhật hàng hóa vào kho
+
+    res.json(updatedTransaction);
   } catch (error) {
     console.error("Lỗi khi cập nhật giao dịch:", error);
     res.status(500).json({ message: "Lỗi server!" });
@@ -223,7 +209,7 @@ const updateTransaction = async (req, res) => {
     }
 
     // Kiểm tra xem giao dịch có tồn tại không
-    const transaction = await InventoryTransaction.findById(id);
+    const transaction = await db.InventoryTransaction.findById(id);
     if (!transaction) {
       return res.status(404).json({ message: "Giao dịch không tồn tại" });
     }
@@ -278,7 +264,7 @@ const updateTransaction = async (req, res) => {
     );
 
     // Cập nhật transaction trong database
-    const updatedTransaction = await InventoryTransaction.findOneAndUpdate(
+    const updatedTransaction = await db.InventoryTransaction.findOneAndUpdate(
       { _id: id },
       { $set: { ...updateFields, totalPrice } }, // Thêm totalPrice vào cập nhật
       { arrayFilters, new: true }
@@ -321,7 +307,7 @@ const createReceipt = async (req, res) => {
     }
 
     // Find supplier by name
-    const supplierDoc = await Supplier.findOne({
+    const supplierDoc = await db.Supplier.findOne({
       name: { $regex: new RegExp(`^${supplierName}$`, "i") },
     });
 
@@ -349,7 +335,7 @@ const createReceipt = async (req, res) => {
         }
 
         // Find category in system
-        const category = await Category.findOne({
+        const category = await db.Category.findOne({
           categoryName: {
             $regex: new RegExp(`^${product.categoryName}$`, "i"),
           },
@@ -362,13 +348,13 @@ const createReceipt = async (req, res) => {
         }
 
         // Find product in system
-        let productDoc = await Product.findOne({
+        let productDoc = await db.Product.findOne({
           productName: { $regex: new RegExp(`^${product.productName}$`, "i") },
         });
 
         // If product does not exist, create a temp product
         if (!productDoc) {
-          productDoc = await Product.create({
+          productDoc = await db.Product.create({
             productName: product.productName,
             categoryId: category._id,
             totalStock: product.quantity,
@@ -382,14 +368,14 @@ const createReceipt = async (req, res) => {
         }
 
         // Find SupplierProduct relationship (no update, just find or create)
-        let supplierProduct = await SupplierProduct.findOne({
+        let supplierProduct = await db.SupplierProduct.findOne({
           productName: product.productName,
           supplier: supplierDoc._id,
         });
 
         if (!supplierProduct) {
           // Create new supplier product relationship
-          supplierProduct = await SupplierProduct.create({
+          supplierProduct = await db.SupplierProduct.create({
             supplier: supplierDoc._id,
             stock: product.quantity,
             expiry: product.expiry,
@@ -424,7 +410,7 @@ const createReceipt = async (req, res) => {
     }, 0);
 
     // Create inventory transaction
-    const receipt = await InventoryTransaction.create({
+    const receipt = await db.InventoryTransaction.create({
       transactionType: "import",
       transactionDate: new Date(),
       products: processedProducts,

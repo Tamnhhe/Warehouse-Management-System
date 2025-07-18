@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form, Row, Col, Card, Spinner } from "react-bootstrap";
+import useTransaction from "../../Hooks/useTransaction";
 
 const ListTransaction = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [newStatus, setNewStatus] = useState("");
@@ -17,23 +15,16 @@ const ListTransaction = () => {
   const [filterStatus, setFilterStatus] = useState([]);
   const navigate = useNavigate();
 
+  // Use transaction custom hook
+  const {
+    transactions,
+    loading,
+    getAllTransactions,
+    updateTransactionStatus,
+  } = useTransaction();
+
   useEffect(() => {
-    axios
-      .get("http://localhost:9999/inventoryTransactions/getAllTransactions")
-      .then((response) => {
-        const data = Array.isArray(response.data) ? response.data : [];
-        const sortedData = data.sort(
-          (a, b) =>
-            new Date(b.transactionDate || 0) - new Date(a.transactionDate || 0)
-        );
-        setTransactions(sortedData);
-        setFilteredTransactions(sortedData);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Lỗi gọi API:", error);
-        setLoading(false);
-      });
+    getAllTransactions();
   }, []);
 
   useEffect(() => {
@@ -72,26 +63,20 @@ const ListTransaction = () => {
     setShowModal(true);
   };
 
-  const handleStatusChange = () => {
+  const handleStatusChange = async () => {
     if (!selectedTransaction) return;
-    axios
-      .put(
-        `http://localhost:9999/inventoryTransactions/updateTransactionStatus/${selectedTransaction._id}`,
-        { status: newStatus }
-      )
-      .then((res) => {
-        const updatedList = transactions.map((t) =>
-          t._id === selectedTransaction._id
-            ? { ...t, status: res.data.status }
-            : t
-        );
-        setTransactions(updatedList);
-        setEditedTransactions((prev) =>
-          new Set(prev).add(selectedTransaction._id)
-        );
-        setShowModal(false);
-      })
-      .catch((error) => console.error("Lỗi khi cập nhật trạng thái:", error));
+    const res = await updateTransactionStatus(selectedTransaction._id, { status: newStatus });
+    if (res && res.status) {
+      const updatedList = transactions.map((t) =>
+        t._id === selectedTransaction._id
+          ? { ...t, status: res.status }
+          : t
+      );
+      setEditedTransactions((prev) =>
+        new Set(prev).add(selectedTransaction._id)
+      );
+      setShowModal(false);
+    }
   };
 
   const handleFilterChange = (event) =>
@@ -218,11 +203,10 @@ const ListTransaction = () => {
                 </td>
                 <td>
                   <span
-                    className={`badge ${
-                      transaction.transactionType === "import"
-                        ? "bg-success"
-                        : "bg-danger"
-                    }`}
+                    className={`badge ${transaction.transactionType === "import"
+                      ? "bg-success"
+                      : "bg-danger"
+                      }`}
                   >
                     {transaction.transactionType === "import"
                       ? "Nhập"
@@ -301,11 +285,10 @@ const ListTransaction = () => {
                 </strong>
               </div>
               <span
-                className={`badge ${
-                  transaction.transactionType === "import"
-                    ? "bg-success"
-                    : "bg-danger"
-                }`}
+                className={`badge ${transaction.transactionType === "import"
+                  ? "bg-success"
+                  : "bg-danger"
+                  }`}
               >
                 {transaction.transactionType === "import" ? "Nhập" : "Xuất"}
               </span>
