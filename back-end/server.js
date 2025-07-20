@@ -6,6 +6,8 @@ const bodyParser = require("body-parser");
 const httpsErrors = require("http-errors");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+// Import Swagger setup
+const setupSwagger = require("./docs/swagger/setup");
 
 // Khởi tạo ứng dụng Express
 const app = express();
@@ -19,13 +21,13 @@ app.use(morgan("dev"));
 
 const db = require("./models/index");
 const router = require("./routes");
-const inventoryRouter = require('./routes/inventory.router');
-const categoryRouter = require('./routes/category.route');
+const inventoryRouter = require("./routes/inventory.router");
+const categoryRouter = require("./routes/category.route");
 //Cung cấp URl công khai để lấy ảnh thông qua thư mục /uploads
-//cho phep truy cap anh bang url tren server 
+//cho phep truy cap anh bang url tren server
 //hien thi bang url /../.. nho express staticstatic
 app.use("/uploads", express.static("uploads"));
-// Sử dụng cors middleware để cho phép request từ localhost:3000
+// Sử dụng cors middleware để cho phép request từ localhost:3000
 app.use(
   cors({
     origin: "http://localhost:3000",
@@ -34,8 +36,11 @@ app.use(
   })
 );
 
-app.use('/inventory', inventoryRouter);
-app.use('/category', categoryRouter); 
+// Setup Swagger documentation
+setupSwagger(app);
+
+app.use("/inventory", inventoryRouter);
+app.use("/category", categoryRouter);
 app.get("/", async (req, res, next) => {
   res.status(200).json({ message: "Server is running" });
 });
@@ -56,6 +61,7 @@ const port = process.env.PORT;
 
 app.listen(port, host, () => {
   console.log(`Server is running at http://${host}:${port}`);
+  console.log(`API documentation available at http://${host}:${port}/api-docs`);
   // Thực thi kết nối CSDL
   db.connectDB();
 });

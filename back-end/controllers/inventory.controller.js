@@ -163,11 +163,37 @@ exports.importProductAutoDistribute = async (req, res) => {
       let addQty = Math.min(remain, available);
 
       if (addQty > 0) {
-        if (!inventory.products.includes(productId)) {
-          inventory.products.push(productId);
+        // Cập nhật kệ
+        const productInShelf = inventory.products.find(
+          (p) => p.productId.toString() === productId
+        );
+
+        if (productInShelf) {
+          // Cập nhật số lượng nếu đã có sản phẩm
+          productInShelf.quantity += addQty;
+        } else {
+          // Thêm sản phẩm mới vào kệ
+          inventory.products.push({ productId, quantity: addQty });
         }
+
         inventory.currentQuantitative += addQty;
         await inventory.save();
+
+        // Cập nhật location trong sản phẩm
+        const locationInProduct = product.location.find(
+          (loc) => loc.inventoryId.toString() === inventory._id.toString()
+        );
+
+        if (locationInProduct) {
+          // Cập nhật số lượng nếu đã có location
+          locationInProduct.stock += addQty;
+        } else {
+          // Thêm location mới
+          product.location.push({
+            inventoryId: inventory._id,
+            stock: addQty,
+          });
+        }
 
         distributed.push({ inventoryId: inventory._id, added: addQty });
         remain -= addQty;
@@ -176,10 +202,9 @@ exports.importProductAutoDistribute = async (req, res) => {
       if (remain <= 0) break;
     }
 
-    // Cập nhật tổng tồn kho sản phẩm
-    await Product.findByIdAndUpdate(productId, {
-      $inc: { totalStock: quantity - remain },
-    });
+    // Cập nhật tổng tồn kho sản phẩm và lưu location
+    product.totalStock = (product.totalStock || 0) + (quantity - remain);
+    await product.save();
 
     if (remain > 0) {
       return res.status(200).json({
@@ -448,183 +473,143 @@ exports.addProductToShelf = async (req, res) => {
   try {
     const { inventoryId, productId, quantity, weight } = req.body;
 
-    if (
-      !inventoryId ||
-      !productId ||
-      !quantity ||
-      quantity <= 0 ||
-      !weight ||
-      weight <= 0
-    ) {
-      return res
-        .status(400)
-        .json({
-          message: "Thiếu thông tin hoặc số lượng/cân nặng không hợp lệ",
-        });
+    if (!inventoryId || !productId || !quantity) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
     }
 
-    // Kiểm tra kệ tồn tại
     const inventory = await Inventory.findById(inventoryId);
     if (!inventory) {
-      return res.status(404).json({ message: "Không tìm thấy kệ" });
+      return res.status(404).json({ message: "Không tìm thấy kệ hàng" });
     }
 
-    // Kiểm tra sản phẩm tồn tại
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    // Kiểm tra sản phẩm có phù hợp với loại kệ không
-    if (product.categoryId.toString() !== inventory.categoryId.toString()) {
-      return res
-        .status(400)
-        .json({ message: "Sản phẩm không phù hợp với loại kệ này" });
+    // Kiểm tra trùng khớp danh mục
+    if (!inventory.categoryId.equals(product.categoryId)) {
+      return res.status(400).json({
+        message: "Sản phẩm không thuộc danh mục của kệ này",
+      });
     }
 
-    // Kiểm tra sức chứa kệ
+    // Kiểm tra sức chứa của kệ
     if (inventory.currentQuantitative + quantity > inventory.maxQuantitative) {
-      return res
-        .status(400)
-        .json({ message: "Kệ không đủ chỗ trống về số lượng" });
+      return res.status(400).json({
+        message: "Số lượng vượt quá sức chứa của kệ",
+      });
     }
 
-    // Kiểm tra cân nặng kệ
-    if (inventory.currentWeight + weight > inventory.maxWeight) {
-      return res
-        .status(400)
-        .json({ message: "Kệ không đủ chỗ trống về cân nặng" });
-    }
+    // Tìm sản phẩm trong kệ (nếu đã có)
+    const existingProduct = inventory.products.find(
+      (p) => p.productId.toString() === productId
+    );
 
-    // Cập nhật sản phẩm trong kệ
-    let productExists = false;
-    for (let i = 0; i < inventory.products.length; i++) {
-      if (inventory.products[i].productId.toString() === productId) {
-        inventory.products[i].quantity += quantity;
-        productExists = true;
-        break;
-      }
-    }
-
-    if (!productExists) {
+    if (existingProduct) {
+      // Cập nhật số lượng nếu sản phẩm đã có trong kệ
+      existingProduct.quantity += quantity;
+    } else {
+      // Thêm sản phẩm mới vào kệ
       inventory.products.push({ productId, quantity });
     }
 
-    // Cập nhật số lượng và cân nặng kệ
+    // Cập nhật tổng số lượng và cân nặng của kệ
     inventory.currentQuantitative += quantity;
-    inventory.currentWeight += weight;
+    inventory.currentWeight += weight || 0;
+
     await inventory.save();
 
-    // Cập nhật tổng tồn kho sản phẩm
-    await Product.findByIdAndUpdate(productId, {
-      $inc: { totalStock: quantity },
-    });
+    // CẬP NHẬT LOCATION TRONG MODEL SẢN PHẨM
+    const existingLocation = product.location.find(
+      (loc) => loc.inventoryId.toString() === inventoryId
+    );
 
-    // Cập nhật location trong Product
-    let locationExists = false;
-    for (let i = 0; i < product.location.length; i++) {
-      if (product.location[i].inventoryId.toString() === inventoryId) {
-        product.location[i].stock += quantity;
-        locationExists = true;
-        break;
-      }
+    if (existingLocation) {
+      // Cập nhật số lượng nếu vị trí đã tồn tại
+      existingLocation.stock += quantity;
+    } else {
+      // Thêm vị trí mới
+      product.location.push({
+        inventoryId,
+        stock: quantity,
+      });
     }
 
-    if (!locationExists) {
-      product.location.push({ inventoryId, stock: quantity });
-    }
     await product.save();
 
-    res.json({
-      message: "Nhập hàng vào kệ thành công",
-      inventory,
-      product,
-    });
+    res.json({ message: "Thêm sản phẩm vào kệ thành công", inventory });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Xuất hàng từ kệ
 exports.removeProductFromShelf = async (req, res) => {
   try {
     const { inventoryId, productId, quantity } = req.body;
 
-    if (!inventoryId || !productId || !quantity || quantity <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Thiếu thông tin hoặc số lượng không hợp lệ" });
+    if (!inventoryId || !productId || !quantity) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
     }
 
-    // Kiểm tra kệ tồn tại
     const inventory = await Inventory.findById(inventoryId);
     if (!inventory) {
-      return res.status(404).json({ message: "Không tìm thấy kệ" });
+      return res.status(404).json({ message: "Không tìm thấy kệ hàng" });
     }
 
-    // Kiểm tra sản phẩm tồn tại
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-    }
-
-    // Kiểm tra sản phẩm có trong kệ không
+    // Tìm sản phẩm trong kệ
     const productIndex = inventory.products.findIndex(
       (p) => p.productId.toString() === productId
     );
+
     if (productIndex === -1) {
-      return res.status(400).json({ message: "Sản phẩm không có trong kệ" });
+      return res.status(404).json({
+        message: "Không tìm thấy sản phẩm trong kệ này",
+      });
     }
 
-    // Kiểm tra số lượng đủ không
-    if (inventory.products[productIndex].quantity < quantity) {
-      return res
-        .status(400)
-        .json({ message: "Số lượng xuất vượt quá số lượng hiện có trong kệ" });
+    const currentQty = inventory.products[productIndex].quantity;
+
+    // Kiểm tra số lượng xuất không vượt quá số lượng hiện có
+    if (quantity > currentQty) {
+      return res.status(400).json({
+        message: `Số lượng xuất (${quantity}) vượt quá số lượng hiện có (${currentQty})`,
+      });
     }
 
-    // Tính toán cân nặng dựa trên tỷ lệ số lượng
-    const weightPerItem =
-      inventory.currentWeight / inventory.currentQuantitative;
-    const weightToRemove = weightPerItem * quantity;
-
-    // Cập nhật số lượng sản phẩm trong kệ
-    inventory.products[productIndex].quantity -= quantity;
-
-    // Nếu số lượng = 0, xóa sản phẩm khỏi kệ
-    if (inventory.products[productIndex].quantity === 0) {
+    // Cập nhật hoặc xóa sản phẩm khỏi kệ
+    if (quantity === currentQty) {
       inventory.products.splice(productIndex, 1);
+    } else {
+      inventory.products[productIndex].quantity -= quantity;
     }
 
-    // Cập nhật số lượng và cân nặng kệ
+    // Cập nhật tổng số lượng của kệ
     inventory.currentQuantitative -= quantity;
-    inventory.currentWeight -= weightToRemove;
+
     await inventory.save();
 
-    // Cập nhật tổng tồn kho sản phẩm
-    await Product.findByIdAndUpdate(productId, {
-      $inc: { totalStock: -quantity },
-    });
+    // CẬP NHẬT LOCATION TRONG MODEL SẢN PHẨM
+    const product = await Product.findById(productId);
+    if (product) {
+      const locationIndex = product.location.findIndex(
+        (loc) => loc.inventoryId.toString() === inventoryId
+      );
 
-    // Cập nhật location trong Product
-    for (let i = 0; i < product.location.length; i++) {
-      if (product.location[i].inventoryId.toString() === inventoryId) {
-        product.location[i].stock -= quantity;
-
-        // Nếu stock = 0, xóa location
-        if (product.location[i].stock <= 0) {
-          product.location.splice(i, 1);
+      if (locationIndex !== -1) {
+        if (quantity === product.location[locationIndex].stock) {
+          // Xóa vị trí nếu xuất hết sản phẩm
+          product.location.splice(locationIndex, 1);
+        } else {
+          // Giảm số lượng
+          product.location[locationIndex].stock -= quantity;
         }
-        break;
+
+        await product.save();
       }
     }
-    await product.save();
 
-    res.json({
-      message: "Xuất hàng từ kệ thành công",
-      inventory,
-      product,
-    });
+    res.json({ message: "Xuất sản phẩm từ kệ thành công", inventory });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
