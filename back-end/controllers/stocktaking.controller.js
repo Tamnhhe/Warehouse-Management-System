@@ -127,13 +127,13 @@ exports.createAdjustment = async (req, res) => {
   try {
     const { stocktakingTaskId, createdBy } = req.body;
 
-    // 验证是否为manager角色
+    // Kiểm tra người dùng tồn tại
     const user = await User.findById(createdBy);
     if (!user) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
-    // 检查用户角色是否为manager
+    // Kiểm tra quyền của người dùng
     if (user.role !== "manager") {
       return res
         .status(403)
@@ -145,6 +145,7 @@ exports.createAdjustment = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
     if (task.status !== "completed")
       return res.status(400).json({ message: "Phiếu kiểm kê chưa hoàn thành" });
+
     // Kiểm tra có lệch không
     const diffProducts = task.products.filter((p) => p.difference !== 0);
     if (diffProducts.length === 0) {
@@ -152,6 +153,7 @@ exports.createAdjustment = async (req, res) => {
         .status(200)
         .json({ message: "Không có lệch kho, không cần điều chỉnh" });
     }
+
     // Tạo phiếu điều chỉnh
     const adjustmentProducts = diffProducts.map((p) => ({
       productId: p.productId,
@@ -159,6 +161,7 @@ exports.createAdjustment = async (req, res) => {
       newQuantity: p.actualQuantity,
       difference: p.difference,
     }));
+
     const adjustment = new Adjustment({
       stocktakingTaskId,
       inventoryId: task.inventoryId,
@@ -204,15 +207,13 @@ exports.createAdjustment = async (req, res) => {
       const product = await Product.findById(productId);
       if (product) {
         product.totalStock += difference;
+        product.location = product.location.map((loc) => {
+          if (loc.inventoryId.toString() === inventory._id.toString()) {
+            loc.stock += difference;
+          }
+          return loc;
+        });
         await product.save();
-        console.log(
-          `Đã cập nhật totalStock của sản phẩm ${productId}: ${product.totalStock}`
-        );
-
-        // Kiểm tra và phân bổ lại số lượng giữa các kệ nếu có sự thay đổi
-        if (difference !== 0) {
-          await redistributeProductAcrossShelves(productId);
-        }
       }
     }
 
@@ -228,71 +229,6 @@ exports.createAdjustment = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// Hàm phân bổ lại sản phẩm giữa các kệ theo giới hạn của mỗi kệ
-async function redistributeProductAcrossShelves(productId) {
-  try {
-    // Lấy tất cả các kệ chứa sản phẩm này
-    const inventories = await Inventory.find({
-      "products.productId": productId,
-    }).sort({ priority: 1 }); // Giả sử có trường priority để xác định thứ tự ưu tiên của kệ
-
-    if (inventories.length === 0) return;
-
-    // Lấy thông tin sản phẩm
-    const product = await Product.findById(productId);
-    if (!product) return;
-
-    let remainingQuantity = product.totalStock;
-
-    // Duyệt qua từng kệ theo thứ tự ưu tiên
-    for (const inventory of inventories) {
-      // Tìm sản phẩm trong kệ hiện tại
-      const productIndex = inventory.products.findIndex(
-        (p) => p.productId.toString() === productId
-      );
-
-      // Nếu sản phẩm không có trong kệ này
-      if (productIndex === -1) {
-        // Kiểm tra xem còn hàng để phân bổ không
-        if (remainingQuantity > 0) {
-          // Thêm sản phẩm vào kệ
-          const maxCapacity = inventory.maxCapacityPerProduct || Infinity; // Giả sử có thuộc tính maxCapacityPerProduct
-          const quantityToAdd = Math.min(remainingQuantity, maxCapacity);
-
-          inventory.products.push({
-            productId: productId,
-            quantity: quantityToAdd,
-          });
-
-          remainingQuantity -= quantityToAdd;
-          await inventory.save();
-        }
-      } else {
-        // Sản phẩm đã có trong kệ
-        const maxCapacity = inventory.maxCapacityPerProduct || Infinity;
-        const quantityForThisShelf = Math.min(remainingQuantity, maxCapacity);
-
-        // Cập nhật số lượng
-        inventory.products[productIndex].quantity = quantityForThisShelf;
-        remainingQuantity -= quantityForThisShelf;
-        await inventory.save();
-      }
-
-      if (remainingQuantity <= 0) break;
-    }
-
-    // Nếu vẫn còn hàng chưa phân bổ được
-    if (remainingQuantity > 0) {
-      console.log(
-        `Còn ${remainingQuantity} sản phẩm ${productId} chưa được phân bổ vào kệ`
-      );
-      // Có thể tạo kệ mới hoặc thông báo cho quản lý
-    }
-  } catch (err) {
-    console.error("Lỗi khi phân bổ lại sản phẩm:", err);
-  }
-}
 
 // Lấy lịch sử kiểm kê
 exports.getStocktakingHistory = async (req, res) => {
