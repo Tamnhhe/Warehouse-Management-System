@@ -82,7 +82,7 @@ exports.createPendingStocktakingTask = async (req, res) => {
 exports.updateStocktakingTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { products } = req.body; // [{productId, actualQuantity}]
+    const { products } = req.body; // [{productId, actualQuantity, note}]
     const task = await StocktakingTask.findById(id);
     if (!task)
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
@@ -98,6 +98,7 @@ exports.updateStocktakingTask = async (req, res) => {
           ...tp.toObject(),
           actualQuantity: found.actualQuantity,
           difference: found.actualQuantity - tp.systemQuantity,
+          note: found.note || "",
         };
       }
       return tp;
@@ -115,6 +116,20 @@ exports.updateStocktakingTask = async (req, res) => {
 exports.createAdjustment = async (req, res) => {
   try {
     const { stocktakingTaskId, createdBy } = req.body;
+
+    // 验证是否为manager角色
+    const user = await User.findById(createdBy);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    // 检查用户角色是否为manager
+    if (user.role !== "manager") {
+      return res
+        .status(403)
+        .json({ message: "Chỉ quản lý mới có quyền tạo phiếu điều chỉnh" });
+    }
+
     const task = await StocktakingTask.findById(stocktakingTaskId);
     if (!task)
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
@@ -141,24 +156,60 @@ exports.createAdjustment = async (req, res) => {
       createdBy,
     });
     await adjustment.save();
+
     // Cập nhật lại số lượng sản phẩm trong kệ
     const inventory = await Inventory.findById(task.inventoryId);
+
+    // Chuẩn bị cập nhật totalStock của sản phẩm
+    const productUpdates = {};
+
     for (const adj of adjustmentProducts) {
       const prod = inventory.products.find(
         (p) => p.productId.toString() === adj.productId.toString()
       );
       if (prod) {
+        // Tính toán sự chênh lệch giữa số lượng mới và cũ
+        const quantityDifference = adj.newQuantity - prod.quantity;
+
+        // Cập nhật số lượng trong kệ
         prod.quantity = adj.newQuantity;
+
+        // Lưu lại chênh lệch để cập nhật totalStock
+        if (!productUpdates[adj.productId]) {
+          productUpdates[adj.productId] = quantityDifference;
+        } else {
+          productUpdates[adj.productId] += quantityDifference;
+        }
       }
     }
+
+    // Lưu thay đổi cho inventory
     await inventory.save();
+
+    // Cập nhật totalStock cho từng sản phẩm
+    for (const productId in productUpdates) {
+      const difference = productUpdates[productId];
+
+      // Tìm và cập nhật sản phẩm
+      const product = await Product.findById(productId);
+      if (product) {
+        product.totalStock += difference;
+        await product.save();
+        console.log(
+          `Đã cập nhật totalStock của sản phẩm ${productId}: ${product.totalStock}`
+        );
+      }
+    }
+
     // Gắn adjustmentId vào task
     task.adjustmentId = adjustment._id;
     await task.save();
+
     res
       .status(201)
       .json({ message: "Tạo phiếu điều chỉnh thành công", adjustment });
   } catch (err) {
+    console.error("Lỗi khi tạo phiếu điều chỉnh:", err);
     res.status(500).json({ message: err.message });
   }
 };
