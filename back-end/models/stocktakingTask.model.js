@@ -16,8 +16,9 @@ const StocktakingTaskSchema = new Schema(
           required: true,
         },
         systemQuantity: { type: Number, required: true }, // Số lượng hệ thống
-        actualQuantity: { type: Number, required: true }, // Số lượng thực tế kiểm kê
+        actualQuantity: { type: Number }, // Số lượng thực tế kiểm kê - không bắt buộc khi pending
         difference: { type: Number }, // Lệch kho
+        note: { type: String }, // Ghi chú cho sản phẩm kiểm kê
       },
     ],
     auditor: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Người kiểm kê

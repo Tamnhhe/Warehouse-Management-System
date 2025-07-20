@@ -141,38 +141,78 @@ const updateTransactionStatus = async (req, res) => {
         );
 
         if (!supplierProduct) {
-          res.status(404).json("Supplier product not found:", product.supplierProductId); // Log the missing supplier product
+          res
+            .status(404)
+            .json("Supplier product not found:", product.supplierProductId); // Log the missing supplier product
+          continue;
         }
 
-        // Cập nhật tồn kho của sản phẩm
-        const updatedProduct = await db.Product.findOneAndUpdate(
-          { productName: supplierProduct.productName },
+        // Tìm sản phẩm trong hệ thống
+        const dbProduct = await db.Product.findOne({
+          productName: supplierProduct.productName,
+        });
+
+        if (!dbProduct) {
+          console.error(
+            `Không tìm thấy sản phẩm ${supplierProduct.productName} trong hệ thống`
+          );
+          continue;
+        }
+
+        // Cập nhật tổng tồn kho của sản phẩm
+        const updatedProduct = await db.Product.findByIdAndUpdate(
+          dbProduct._id,
           { $inc: { totalStock: product.receiveQuantity } },
           { new: true }
         );
 
-
-        // Cập nhật vị trí của sản phẩm trong kho
-        const inventory = await db.Inventory.findOne({
-          products: { $elemMatch: { productId: updatedProduct._id } },
-        });
-
-        if (inventory) {
-          const productIndex = inventory.products.findIndex(
-            (p) => p.productId.toString() === supplierProduct.productName
-          );
-
-          if (productIndex !== -1) {
-            inventory.products[productIndex].quantity += product.receiveQuantity;
-            await inventory.save();
-          }
-        }
+        // Phân bổ sản phẩm vào các kệ theo thứ tự ưu tiên và giới hạn dung lượng
+        await distributeProductToInventories(
+          updatedProduct._id,
+          product.receiveQuantity,
+          product.weight || 0
+        );
       }
     }
 
     // Update product and supplier product when status is 'completed' and transaction type is 'export'
     if (status === "completed" && transaction.transactionType === "export") {
       for (const product of products) {
+        const supplierProduct = await db.SupplierProduct.findById(
+          product.supplierProductId
+        );
+
+        if (!supplierProduct) {
+          res
+            .status(404)
+            .json("Supplier product not found:", product.supplierProductId);
+          continue;
+        }
+
+        // Tìm sản phẩm trong hệ thống
+        const dbProduct = await db.Product.findOne({
+          productName: supplierProduct.productName,
+        });
+
+        if (!dbProduct) {
+          console.error(
+            `Không tìm thấy sản phẩm ${supplierProduct.productName} trong hệ thống`
+          );
+          continue;
+        }
+
+        // Cập nhật tổng tồn kho của sản phẩm
+        const updatedProduct = await db.Product.findByIdAndUpdate(
+          dbProduct._id,
+          { $inc: { totalStock: -product.receiveQuantity } },
+          { new: true }
+        );
+
+        // Giảm số lượng sản phẩm từ các kệ theo thứ tự FIFO
+        await removeProductFromInventories(
+          updatedProduct._id,
+          product.receiveQuantity
+        );
       }
     }
 
@@ -185,8 +225,6 @@ const updateTransactionStatus = async (req, res) => {
     if (!updatedTransaction) {
       return res.status(404).json({ message: "Giao dịch không tồn tại!" });
     }
-
-    //Sau khi giao dịch cập nhật hàng hóa vào kho
 
     res.json(updatedTransaction);
   } catch (error) {
@@ -330,7 +368,9 @@ const createReceipt = async (req, res) => {
           !product.price
         ) {
           throw new Error(
-            `Missing required fields for product ${product.productName || "unknown"}`
+            `Missing required fields for product ${
+              product.productName || "unknown"
+            }`
           );
         }
 
@@ -365,6 +405,24 @@ const createReceipt = async (req, res) => {
             location: [],
             status: "active",
           });
+
+          // Phân bổ sản phẩm mới vào các kệ
+          await distributeProductToInventories(
+            productDoc._id,
+            product.quantity,
+            product.weight || 0
+          );
+        } else {
+          // Sản phẩm đã tồn tại, cập nhật tổng tồn kho
+          productDoc.totalStock += Number(product.quantity);
+          await productDoc.save();
+
+          // Phân bổ số lượng sản phẩm vào các kệ
+          await distributeProductToInventories(
+            productDoc._id,
+            product.quantity,
+            product.weight || 0
+          );
         }
 
         // Find SupplierProduct relationship (no update, just find or create)
@@ -417,7 +475,7 @@ const createReceipt = async (req, res) => {
       supplier: supplierDoc._id,
       supplierName: supplierDoc.name,
       totalPrice,
-      status: "pending",
+      status: "completed", // Đánh dấu là đã hoàn thành để sản phẩm đã được phân bổ vào kệ
       branch: "Main Branch",
     });
 
@@ -434,6 +492,177 @@ const createReceipt = async (req, res) => {
     });
   }
 };
+
+// Hàm phân bổ sản phẩm vào các kệ
+async function distributeProductToInventories(productId, quantity, weight) {
+  try {
+    // Lấy danh sách các kệ phù hợp với sản phẩm (theo category)
+    const product = await db.Product.findById(productId);
+    if (!product) return;
+
+    // Tìm tất cả kệ phù hợp với loại sản phẩm và sắp xếp theo ưu tiên
+    const inventories = await db.Inventory.find({
+      categoryId: product.categoryId,
+      status: "active",
+    }).sort({ priority: 1 });
+
+    if (inventories.length === 0) {
+      console.log(`Không tìm thấy kệ phù hợp cho sản phẩm ${productId}`);
+      return;
+    }
+
+    let remainingQuantity = quantity;
+    let remainingWeight = weight;
+
+    // Phân bổ sản phẩm vào từng kệ theo thứ tự ưu tiên và dung lượng
+    for (const inventory of inventories) {
+      if (remainingQuantity <= 0) break;
+
+      // Kiểm tra xem kệ còn không gian không (số lượng và trọng lượng)
+      const remainingCapacity =
+        inventory.maxQuantitative - inventory.currentQuantitative;
+      const remainingWeightCapacity =
+        inventory.maxWeight - inventory.currentWeight;
+
+      // Tính toán số lượng tối đa có thể đặt vào kệ này
+      let maxCapacityPerProduct = Infinity;
+      if (inventory.maxCapacityPerProduct !== null) {
+        maxCapacityPerProduct = inventory.maxCapacityPerProduct;
+      }
+
+      // Tìm sản phẩm trong kệ
+      const productIndex = inventory.products.findIndex(
+        (p) => p.productId.toString() === productId.toString()
+      );
+
+      let quantityToAdd;
+
+      if (productIndex !== -1) {
+        // Sản phẩm đã tồn tại trong kệ, tính toán số lượng có thể thêm
+        const currentProductQuantity =
+          inventory.products[productIndex].quantity;
+        const availableSpace = Math.min(
+          maxCapacityPerProduct - currentProductQuantity,
+          remainingCapacity
+        );
+        quantityToAdd = Math.min(availableSpace, remainingQuantity);
+
+        // Cập nhật số lượng sản phẩm trong kệ
+        if (quantityToAdd > 0) {
+          inventory.products[productIndex].quantity += quantityToAdd;
+          remainingQuantity -= quantityToAdd;
+
+          // Cập nhật số lượng và trọng lượng hiện tại của kệ
+          inventory.currentQuantitative += quantityToAdd;
+          const weightToAdd = (weight / quantity) * quantityToAdd;
+          inventory.currentWeight += weightToAdd;
+          remainingWeight -= weightToAdd;
+
+          await inventory.save();
+        }
+      } else {
+        // Sản phẩm chưa tồn tại trong kệ
+        quantityToAdd = Math.min(
+          maxCapacityPerProduct,
+          remainingCapacity,
+          remainingQuantity
+        );
+
+        if (quantityToAdd > 0) {
+          // Thêm sản phẩm mới vào kệ
+          inventory.products.push({
+            productId: productId,
+            quantity: quantityToAdd,
+          });
+
+          // Cập nhật số lượng và trọng lượng hiện tại của kệ
+          inventory.currentQuantitative += quantityToAdd;
+          const weightToAdd = (weight / quantity) * quantityToAdd;
+          inventory.currentWeight += weightToAdd;
+          remainingQuantity -= quantityToAdd;
+          remainingWeight -= weightToAdd;
+
+          await inventory.save();
+        }
+      }
+    }
+
+    // Nếu vẫn còn sản phẩm chưa được phân bổ
+    if (remainingQuantity > 0) {
+      console.log(
+        `Không đủ không gian trong kệ cho ${remainingQuantity} sản phẩm ${productId}`
+      );
+    }
+  } catch (err) {
+    console.error("Lỗi khi phân bổ sản phẩm vào kệ:", err);
+  }
+}
+
+// Hàm loại bỏ sản phẩm từ các kệ (xuất kho)
+async function removeProductFromInventories(productId, quantity) {
+  try {
+    // Lấy tất cả kệ có chứa sản phẩm này, sắp xếp theo FIFO (có thể dùng createdAt hoặc priority)
+    const inventories = await db.Inventory.find({
+      "products.productId": productId,
+    }).sort({ createdAt: 1 }); // FIFO: First In First Out
+
+    if (inventories.length === 0) {
+      console.log(`Không tìm thấy kệ chứa sản phẩm ${productId}`);
+      return;
+    }
+
+    let remainingQuantityToRemove = quantity;
+
+    // Lấy sản phẩm từ các kệ theo thứ tự
+    for (const inventory of inventories) {
+      if (remainingQuantityToRemove <= 0) break;
+
+      // Tìm sản phẩm trong kệ
+      const productIndex = inventory.products.findIndex(
+        (p) => p.productId.toString() === productId.toString()
+      );
+
+      if (productIndex !== -1) {
+        const currentQuantity = inventory.products[productIndex].quantity;
+        const quantityToRemove = Math.min(
+          currentQuantity,
+          remainingQuantityToRemove
+        );
+
+        if (quantityToRemove > 0) {
+          // Tính trọng lượng tương ứng cần giảm
+          const product = await db.Product.findById(productId);
+          const weightPerUnit = product.quantitative || 0;
+          const weightToRemove = quantityToRemove * weightPerUnit;
+
+          // Cập nhật số lượng sản phẩm trong kệ
+          inventory.products[productIndex].quantity -= quantityToRemove;
+
+          // Cập nhật số lượng và trọng lượng hiện tại của kệ
+          inventory.currentQuantitative -= quantityToRemove;
+          inventory.currentWeight -= weightToRemove;
+
+          // Nếu số lượng sản phẩm trong kệ bằng 0, xóa khỏi danh sách
+          if (inventory.products[productIndex].quantity <= 0) {
+            inventory.products.splice(productIndex, 1);
+          }
+
+          await inventory.save();
+          remainingQuantityToRemove -= quantityToRemove;
+        }
+      }
+    }
+
+    // Nếu không tìm đủ sản phẩm để loại bỏ
+    if (remainingQuantityToRemove > 0) {
+      console.log(
+        `Không đủ sản phẩm ${productId} trong kệ để xuất ${remainingQuantityToRemove} đơn vị`
+      );
+    }
+  } catch (err) {
+    console.error("Lỗi khi loại bỏ sản phẩm từ kệ:", err);
+  }
+}
 
 module.exports = {
   createTransaction,

@@ -45,20 +45,24 @@ async function login(req, res) {
       return res.status(404).json({ message: "Tài khoản không tồn tại" });
     }
 
-        if (user.status === "inactive") {
-            return res.status(401).json({ message: "Vui lòng xác minh tài khoản của bạn!" });
-        }
-        if (user.status === "banned") {
-            return res.status(401).json({ message: "Tài khoản của bạn đã bị cấm đăng nhập" });
-        }
-        const isMatch = await bcrypt.compare(password, user.account.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Sai mật khẩu!" });
-        }
+    if (user.status === "inactive") {
+      return res
+        .status(401)
+        .json({ message: "Vui lòng xác minh tài khoản của bạn!" });
+    }
+    if (user.status === "banned") {
+      return res
+        .status(401)
+        .json({ message: "Tài khoản của bạn đã bị cấm đăng nhập" });
+    }
+    const isMatch = await bcrypt.compare(password, user.account.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Sai mật khẩu!" });
+    }
 
     const token = jwt.sign(
       { id: user._id, email: user.account.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.ACCESS_TOKEN_SECRET_KEY,
       { expiresIn: "30d" }
     );
 
@@ -160,20 +164,16 @@ async function addEmployee(req, res) {
 
     // Kiểm tra dữ liệu lịch làm việc
     if (type === "fulltime" && (!workDays || !startTime || !endTime)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Nhân viên fulltime cần có ngày làm việc, giờ bắt đầu và giờ kết thúc.",
-        });
+      return res.status(400).json({
+        message:
+          "Nhân viên fulltime cần có ngày làm việc, giờ bắt đầu và giờ kết thúc.",
+      });
     }
 
     if (type === "parttime" && (!workDays || !shifts)) {
-      return res
-        .status(400)
-        .json({
-          message: "Nhân viên parttime cần có ngày làm việc và ca làm việc.",
-        });
+      return res.status(400).json({
+        message: "Nhân viên parttime cần có ngày làm việc và ca làm việc.",
+      });
     }
 
     // Kiểm tra email, ID card, số điện thoại đã tồn tại hay chưa
@@ -239,18 +239,16 @@ async function addEmployee(req, res) {
     // Tạo token xác minh
     const verificationToken = jwt.sign(
       { id: newUser._id, email: newUser.account.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      process.env.ACCESS_TOKEN_SECRET_KEY,
+      { expiresIn: "1d" }
     );
 
     const verificationLink = `http://localhost:3000/verify/${verificationToken}`;
     await sendEmail("verify", email, verificationLink);
 
-    res
-      .status(201)
-      .json({
-        message: "Tạo tài khoản thành công, vui lòng xác minh tài khoản sớm!",
-      });
+    res.status(201).json({
+      message: "Tạo tài khoản thành công, vui lòng xác minh tài khoản sớm!",
+    });
   } catch (error) {
     console.error("Error adding employee:", error);
     if (error.name === "ValidationError") {
@@ -278,7 +276,7 @@ async function forgotPassword(req, res) {
 
     const resetToken = jwt.sign(
       { id: oldUser._id, email: oldUser.account.email },
-      process.env.JWT_SECRET,
+      process.env.ACCESS_TOKEN_SECRET_KEY,
       { expiresIn: "15m" } // Hết hạn sau 15 phút
     );
 
@@ -309,19 +307,23 @@ async function resetPassword(req, res) {
     }
 
     // Xác minh JWT token
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-      if (err || decoded.id !== oldUser._id.toString()) {
-        return res.status(400).json({ message: "Invalid or expired token!" });
+    jwt.verify(
+      token,
+      process.env.ACCESS_TOKEN_SECRET_KEY,
+      async (err, decoded) => {
+        if (err || decoded.id !== oldUser._id.toString()) {
+          return res.status(400).json({ message: "Invalid or expired token!" });
+        }
+
+        const encryptedPassword = await bcrypt.hash(password, 10);
+        await db.User.updateOne(
+          { _id: id },
+          { $set: { "account.password": encryptedPassword } }
+        );
+
+        res.json({ message: "Đổi mật khẩu thành công!" });
       }
-
-      const encryptedPassword = await bcrypt.hash(password, 10);
-      await db.User.updateOne(
-        { _id: id },
-        { $set: { "account.password": encryptedPassword } }
-      );
-
-      res.json({ message: "Đổi mật khẩu thành công!" });
-    });
+    );
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Có lỗi xảy ra!" });
@@ -334,7 +336,7 @@ async function verifyAccount(req, res) {
   const { newPassword, confirmPassword } = req.body;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY);
     const user = await db.User.findById(decoded.id);
 
     if (!user) {

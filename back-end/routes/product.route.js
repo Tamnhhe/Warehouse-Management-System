@@ -6,8 +6,25 @@ const upload = require("../utils/Upload");
 
 productRouter.get("/getAllProducts", ProductController.getAllProducts);
 productRouter.get("/getProductById/:id", ProductController.getProductById);
-productRouter.post("/createProduct", upload.single("productImage"), ProductController.createProduct);
-productRouter.put("/updateProduct/:id", upload.single("productImage"), ProductController.updateProduct);
+productRouter.post(
+  "/createProduct",
+  upload.single("productImage"),
+  ProductController.createProduct
+);
+productRouter.put(
+  "/updateProduct/:id",
+  upload.single("productImage"),
+  ProductController.updateProduct
+);
+productRouter.put(
+  "/updateProductWithSupplier/:id",
+  upload.single("productImage"),
+  ProductController.updateProductWithSupplier
+);
 productRouter.put("/inactivateProduct/:id", ProductController.inactiveProduct);
 productRouter.get("/checkProductName", ProductController.checkProductName);
+productRouter.get(
+  "/getProductSupplier/:productId",
+  ProductController.getProductSupplier
+);
 module.exports = productRouter;

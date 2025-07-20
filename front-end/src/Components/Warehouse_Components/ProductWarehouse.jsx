@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Row,
@@ -31,17 +31,52 @@ function ProductWarehouse() {
   const [weight, setWeight] = useState(1);
   const [optimizedShelves, setOptimizedShelves] = useState([]);
 
-  useEffect(() => {
-    // Lấy danh sách kệ
-    inventoryAPI.getLayout().then((res) => {
-      setShelves(res.data);
-    });
+  // 创建一个可以重用的加载数据函数
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // 获取货架布局数据，这会包含货架上的产品信息
+      const shelvesRes = await inventoryAPI.getLayout();
+      setShelves(shelvesRes.data);
 
-    // Lấy danh sách sản phẩm
-    productAPI.getAll().then((res) => {
-      setProducts(res.data);
-    });
+      // 获取所有产品
+      const productsRes = await productAPI.getAll();
+      setProducts(productsRes.data);
+
+      setLoading(false);
+    } catch (err) {
+      console.error("加载数据错误:", err);
+      setError("Đã xảy ra lỗi khi tải dữ liệu");
+      setLoading(false);
+    }
   }, []);
+
+  // 首次加载时获取数据
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 刷新选定货架的信息
+  const refreshSelectedShelf = useCallback(async () => {
+    if (!selectedShelf) return;
+
+    try {
+      const shelvesRes = await inventoryAPI.getLayout();
+      const updatedShelves = shelvesRes.data;
+      setShelves(updatedShelves);
+
+      // 更新选中的货架信息
+      const updatedSelectedShelf = updatedShelves.find(
+        (s) => s._id === selectedShelf._id
+      );
+
+      if (updatedSelectedShelf) {
+        setSelectedShelf(updatedSelectedShelf);
+      }
+    } catch (err) {
+      console.error("刷新货架数据错误:", err);
+    }
+  }, [selectedShelf]);
 
   // Tạo grid layout đơn giản dựa trên location (ví dụ: A1, B2...)
   // Giả sử location là dạng "A1", "A2", "B1", ...
@@ -73,6 +108,12 @@ function ProductWarehouse() {
                 <span style={{ fontSize: 12 }}>
                   {shelf.location || "Không có vị trí"}
                 </span>
+                {/* 显示货架上的产品数量 */}
+                {shelf.products && shelf.products.length > 0 && (
+                  <Badge bg="warning" style={{ marginLeft: 5 }}>
+                    {shelf.products.length} sản phẩm
+                  </Badge>
+                )}
               </Button>
             </Col>
           ))}
@@ -90,17 +131,28 @@ function ProductWarehouse() {
             (s) => s._id === shelf?._id
           );
 
+          // 计算货架的使用率
+          const usageRate = shelf
+            ? Math.round(
+                (shelf.currentQuantitative / shelf.maxQuantitative) * 100
+              )
+            : 0;
+
+          // 根据使用率设置颜色
+          let shelfColorClass = "primary";
+          if (shelf && shelf.status === "active") {
+            if (usageRate >= 90) shelfColorClass = "danger";
+            else if (usageRate >= 70) shelfColorClass = "warning";
+            else shelfColorClass = "primary";
+          } else {
+            shelfColorClass = "secondary";
+          }
+
           return (
             <Col key={col} md={2} className="p-2">
               {shelf ? (
                 <Button
-                  variant={
-                    isOptimized
-                      ? "success"
-                      : shelf.status === "active"
-                      ? "primary"
-                      : "secondary"
-                  }
+                  variant={isOptimized ? "success" : shelfColorClass}
                   style={{
                     width: "100%",
                     height: 80,
@@ -119,6 +171,30 @@ function ProductWarehouse() {
                   {shelf.name}
                   <br />
                   <span style={{ fontSize: 12 }}>{shelf.location}</span>
+                  {/* 显示产品数量徽章 */}
+                  {shelf.products && shelf.products.length > 0 && (
+                    <Badge
+                      bg="info"
+                      style={{
+                        position: "absolute",
+                        bottom: 2,
+                        right: 5,
+                      }}
+                    >
+                      {shelf.products.length} SP
+                    </Badge>
+                  )}
+                  {/* 显示使用率 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 2,
+                      left: 5,
+                      fontSize: "10px",
+                    }}
+                  >
+                    {usageRate}%
+                  </div>
                   {isOptimized && (
                     <Badge
                       bg="warning"
@@ -161,10 +237,10 @@ function ProductWarehouse() {
         weight: parseFloat(weight),
       });
 
-      // Refresh data
-      const res = await inventoryAPI.getLayout();
-      setShelves(res.data);
-      setSelectedShelf(res.data.find((s) => s._id === selectedShelf._id));
+      // 刷新数据
+      await loadData();
+      // 更新选定的货架信息
+      await refreshSelectedShelf();
 
       setSuccess("Nhập hàng thành công");
       setFormMode("");
@@ -193,10 +269,10 @@ function ProductWarehouse() {
         quantity: parseInt(quantity),
       });
 
-      // Refresh data
-      const res = await inventoryAPI.getLayout();
-      setShelves(res.data);
-      setSelectedShelf(res.data.find((s) => s._id === selectedShelf._id));
+      // 刷新数据
+      await loadData();
+      // 更新选定的货架信息
+      await refreshSelectedShelf();
 
       setSuccess("Xuất hàng thành công");
       setFormMode("");
@@ -208,7 +284,7 @@ function ProductWarehouse() {
   };
 
   // Tìm kệ tối ưu cho sản phẩm
-  const handleOptimize = () => {
+  const handleOptimize = async () => {
     if (!selectedProduct) {
       setError("Vui lòng chọn sản phẩm");
       return;
@@ -225,6 +301,9 @@ function ProductWarehouse() {
         setLoading(false);
         return;
       }
+
+      // 首先获取最新的货架数据
+      await loadData();
 
       // Tìm các kệ phù hợp với loại sản phẩm và còn trống
       const compatibleShelves = shelves.filter(
@@ -350,23 +429,64 @@ function ProductWarehouse() {
         <Modal.Body>
           {selectedShelf && (
             <>
-              <div>
-                <b>Loại sản phẩm:</b>{" "}
-                {selectedShelf.category?.categoryName ||
-                  selectedShelf.category?._id}
-              </div>
-              <div>
-                <b>Sức chứa:</b> {selectedShelf.currentQuantitative}/
-                {selectedShelf.maxQuantitative}
-              </div>
-              <div>
-                <b>Cân nặng:</b> {selectedShelf.currentWeight}/
-                {selectedShelf.maxWeight}
-              </div>
-              <div>
-                <b>Trạng thái:</b>{" "}
-                {selectedShelf.status === "active" ? "Hoạt động" : "Ngừng"}
-              </div>
+              <Row>
+                <Col md={6}>
+                  <Card className="mb-3">
+                    <Card.Header>Thông tin cơ bản</Card.Header>
+                    <Card.Body>
+                      <div>
+                        <b>Loại sản phẩm:</b>{" "}
+                        {selectedShelf.category?.categoryName ||
+                          selectedShelf.category?._id}
+                      </div>
+                      <div>
+                        <b>Sức chứa:</b> {selectedShelf.currentQuantitative}/
+                        {selectedShelf.maxQuantitative} (
+                        {Math.round(
+                          (selectedShelf.currentQuantitative /
+                            selectedShelf.maxQuantitative) *
+                            100
+                        )}
+                        %)
+                      </div>
+                      <div>
+                        <b>Cân nặng:</b> {selectedShelf.currentWeight}/
+                        {selectedShelf.maxWeight} (
+                        {Math.round(
+                          (selectedShelf.currentWeight /
+                            selectedShelf.maxWeight) *
+                            100
+                        )}
+                        %)
+                      </div>
+                      <div>
+                        <b>Trạng thái:</b>{" "}
+                        {selectedShelf.status === "active" ? (
+                          <Badge bg="success">Hoạt động</Badge>
+                        ) : (
+                          <Badge bg="secondary">Ngừng</Badge>
+                        )}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+                <Col md={6}>
+                  <Card className="mb-3">
+                    <Card.Header>Thông tin sản phẩm</Card.Header>
+                    <Card.Body>
+                      <div>
+                        <b>Số lượng sản phẩm:</b>{" "}
+                        {selectedShelf.products?.length || 0}
+                      </div>
+                      <div>
+                        <b>Tổng số lượng:</b>{" "}
+                        {selectedShelf.currentQuantitative}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+
               <hr />
 
               {error && <Alert variant="danger">{error}</Alert>}
@@ -516,33 +636,84 @@ function ProductWarehouse() {
                 </Form>
               )}
 
-              <h5>Sản phẩm trên kệ</h5>
-              {selectedShelf.products && selectedShelf.products.length > 0 ? (
-                <Table bordered size="sm">
-                  <thead>
-                    <tr>
-                      <th>Tên sản phẩm</th>
-                      <th>Số lượng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedShelf.products.map((p, idx) => (
-                      <tr key={p.productId || idx}>
-                        <td>{p.productName || p.productId}</td>
-                        <td>{p.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              ) : (
-                <div>Không có sản phẩm</div>
-              )}
+              <Card>
+                <Card.Header>
+                  <h5 className="mb-0">Sản phẩm trên kệ</h5>
+                </Card.Header>
+                <Card.Body>
+                  {selectedShelf.products &&
+                  selectedShelf.products.length > 0 ? (
+                    <Table bordered hover responsive>
+                      <thead className="bg-light">
+                        <tr>
+                          <th>#</th>
+                          <th>Mã sản phẩm</th>
+                          <th>Tên sản phẩm</th>
+                          <th>Số lượng</th>
+                          <th>Đơn vị</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedShelf.products.map((p, idx) => {
+                          // 查找完整的产品信息
+                          const productDetails = products.find(
+                            (prod) => prod._id === p.productId
+                          );
+
+                          return (
+                            <tr key={p.productId || idx}>
+                              <td>{idx + 1}</td>
+                              <td>
+                                <small>
+                                  {p.productId &&
+                                    p.productId.toString().substring(0, 8)}
+                                  ...
+                                </small>
+                              </td>
+                              <td>
+                                <b>
+                                  {p.productName ||
+                                    (productDetails &&
+                                      productDetails.productName) ||
+                                    "Sản phẩm không xác định"}
+                                </b>
+                              </td>
+                              <td className="text-center">
+                                <Badge bg="primary" pill>
+                                  {p.quantity}
+                                </Badge>
+                              </td>
+                              <td>
+                                {p.unit ||
+                                  (productDetails && productDetails.unit) ||
+                                  "-"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  ) : (
+                    <Alert variant="info">
+                      Kệ này hiện không có sản phẩm nào. Bạn có thể nhập hàng
+                      vào kệ bằng cách nhấn nút "Nhập hàng vào kệ" phía trên.
+                    </Alert>
+                  )}
+                </Card.Body>
+              </Card>
             </>
           )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Đóng
+          </Button>
+          <Button
+            variant="primary"
+            onClick={refreshSelectedShelf}
+            disabled={loading}
+          >
+            Làm mới dữ liệu
           </Button>
         </Modal.Footer>
       </Modal>
