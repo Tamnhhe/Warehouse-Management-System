@@ -3,65 +3,130 @@ const mongoose = require("mongoose");
 
 // Tạo mới một giao dịch xuất/nhập kho
 const createTransaction = async (req, res, next) => {
-  //try {
-  const {
-    supplier,
-    transactionType,
-    transactionDate,
-    products,
-    totalPrice,
-    status,
-    branch,
-  } = req.body;
+  try {
+    const {
+      supplier,
+      transactionType,
+      transactionDate,
+      products,
+      totalPrice,
+      status,
+      branch,
+    } = req.body;
 
-  // Kiểm tra các trường bắt buộc
-  if (!products || products.length === 0 || totalPrice == null) {
-    return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    // Kiểm tra các trường bắt buộc
+    if (!products || products.length === 0) {
+      return res.status(400).json({ message: "Thiếu thông tin sản phẩm" });
+    }
+
+    // Tính toán tổng tiền nếu không được cung cấp (cho trường hợp xuất kho)
+    let calculatedTotalPrice = totalPrice;
+    if (calculatedTotalPrice == null && transactionType === "export") {
+      // Đối với xuất kho, không cần tính giá tiền
+      calculatedTotalPrice = 0;
+    }
+
+    // Tìm một user với vai trò 'manager'
+    const manager = await db.User.findOne({ role: "manager" });
+    if (!manager) {
+      return res.status(400).json({ message: "Manager not found." });
+    }
+
+    // Tìm một supplier mặc định nếu không được cung cấp
+    let transactionSupplier = supplier;
+    if (!transactionSupplier) {
+      const defaultSupplier = await db.Supplier.findOne();
+      if (!defaultSupplier) {
+        return res
+          .status(400)
+          .json({ message: "Cần ít nhất một nhà cung cấp trong hệ thống." });
+      }
+      transactionSupplier = defaultSupplier._id;
+    }
+
+    // Xử lý sản phẩm và chuyển đổi productId thành supplierProductId
+    const processedProducts = [];
+    for (const item of products) {
+      try {
+        // Trường hợp gửi lên productId thay vì supplierProductId
+        if (item.productId && !item.supplierProductId) {
+          // Tìm sản phẩm
+          const product = await db.Product.findById(item.productId);
+          if (!product) {
+            console.error(`Không tìm thấy sản phẩm với ID: ${item.productId}`);
+            continue;
+          }
+
+          // Tìm hoặc tạo mới supplier product
+          let supplierProduct = await db.SupplierProduct.findOne({
+            productName: product.productName,
+          });
+
+          if (!supplierProduct) {
+            // Tạo mới một supplier product liên kết đến sản phẩm này
+            supplierProduct = new db.SupplierProduct({
+              supplier: transactionSupplier,
+              productName: product.productName,
+              stock: 0, // Không cần có stock
+              productImage: product.productImage || "",
+              categoryId: product.categoryId,
+              quantitative: product.quantitative || 1,
+              unit: product.unit || "cái",
+            });
+
+            await supplierProduct.save();
+          }
+
+          processedProducts.push({
+            supplierProductId: supplierProduct._id,
+            requestQuantity: parseInt(item.requestQuantity) || 1,
+            receiveQuantity: parseInt(item.requestQuantity) || 1,
+            defectiveProduct: 0,
+            achievedProduct: parseInt(item.requestQuantity) || 1,
+            price: 0,
+          });
+        } else if (item.supplierProductId) {
+          // Trường hợp đã có supplierProductId
+          processedProducts.push(item);
+        }
+      } catch (error) {
+        console.error("Lỗi xử lý sản phẩm:", error);
+      }
+    }
+
+    // Kiểm tra nếu không có sản phẩm nào hợp lệ
+    if (processedProducts.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Không có sản phẩm nào hợp lệ để xử lý" });
+    }
+
+    const newTransaction = new db.InventoryTransaction({
+      supplier: transactionSupplier,
+      transactionType,
+      transactionDate: transactionDate || Date.now(),
+      products: processedProducts,
+      operator: manager._id,
+      totalPrice: calculatedTotalPrice,
+      status: status || "pending",
+      branch,
+    });
+
+    const savedTransaction = await newTransaction.save();
+    console.log("Transaction created successfully:", savedTransaction._id);
+
+    return res
+      .status(201)
+      .json({
+        message: "Giao dịch được tạo thành công",
+        newTransaction: savedTransaction,
+      });
+  } catch (err) {
+    console.error("Error creating transaction:", err);
+    return res
+      .status(500)
+      .json({ message: "Failed to create transaction: " + err.message });
   }
-
-  // Tìm một user với vai trò 'manager'
-  const manager = await db.User.findOne({ role: "manager" });
-  if (!manager) {
-    return res.status(400).json({ message: "Manager not found." });
-  }
-
-  const newTransaction = new db.InventoryTransaction({
-    supplier,
-    transactionType,
-    transactionDate: transactionDate || Date.now(),
-    products,
-    operator: manager._id, // Sử dụng ObjectId của manager
-    totalPrice,
-    status: status || "pending",
-    branch,
-  });
-
-  await newTransaction.save();
-
-  // Nếu là giao dịch xuất kho, cập nhật tồn kho
-  // if (transactionType === "export") {
-  //   for (const p of products) {
-  //     const supplierProduct = await SupplierProduct.findById(p.supplierProductId).populate("product");
-
-  //     if (supplierProduct && supplierProduct.product) {
-  //       const productId = supplierProduct.product._id;
-
-  //       // Trừ đi số lượng hàng xuất
-  //       await Product.findByIdAndUpdate(
-  //         productId,
-  //         { $inc: { totalStock: -p.requestQuantity } }
-  //       );
-  //     }
-  //   }
-  // }
-
-  return res
-    .status(201)
-    .json({ message: "Giao dịch được tạo thành công", newTransaction });
-  // } catch (err) {
-  //   console.error("Error creating transaction:", err);
-  //   return res.status(500).json({ message: "Failed to create transaction." });
-  // }
 };
 
 // Lấy tất cả giao dịch xuất/nhập kho
