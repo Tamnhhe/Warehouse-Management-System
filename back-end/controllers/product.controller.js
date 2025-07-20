@@ -25,7 +25,6 @@ const createProduct = async (req, res, next) => {
       // location is array of objects, but each field is sent as string
       location = location.map((loc) => {
         if (typeof loc === "string") {
-          // If loc is '[object Object]', parse it
           try {
             return JSON.parse(loc);
           } catch {
@@ -39,13 +38,11 @@ const createProduct = async (req, res, next) => {
       location !== null &&
       !Array.isArray(location)
     ) {
-      // If location is an object, wrap in array
       location = [location];
     }
 
     // If location is undefined, try to reconstruct from req.body
     if (!location) {
-      // Try to reconstruct from fields like location[0][inventoryId], location[0][stock], etc.
       location = [];
       Object.keys(req.body).forEach((key) => {
         const match = key.match(/^location\[(\d+)\]\[(\w+)\]$/);
@@ -86,7 +83,7 @@ const createProduct = async (req, res, next) => {
       productName,
       categoryId,
       totalStock:
-        location.reduce((sum, loc) => sum + (loc.stock || 0), 0) ||
+        location.reduce((sum, loc) => sum + Number(loc.stock || 0), 0) ||
         totalStock ||
         0,
       thresholdStock: thresholdStock || 0,
@@ -104,7 +101,9 @@ const createProduct = async (req, res, next) => {
       for (const loc of location) {
         if (loc.inventoryId) {
           const inventory = await Inventory.findById(loc.inventoryId);
+          //Update quantitative left and stock in inventory
           if (inventory) {
+            inventory.currentQuantitative += loc.stock*quantitative || 0;
             inventory.products.push({
               productId: newProduct._id,
               quantity: loc.stock || 0,
@@ -187,14 +186,22 @@ async function updateProduct(req, res, next) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
+    const formattedLocation = Array.isArray(location)
+      ? location.map((loc) => ({
+        inventoryId: loc.inventoryId?._id || loc.inventoryId,
+        stock: loc.stock,
+      }))
+    : location;
+
+
     const updatedProduct = {
       productName,
       categoryId,
-      totalStock,
+      totalStock: location.reduce((sum, loc) => sum + Number(loc.stock || 0), 0) || totalStock || 0,
       thresholdStock,
       unit,
       quantitative,
-      location,
+      location: formattedLocation,
       status,
     };
     if (productImage) updatedProduct.productImage = productImage;
@@ -204,8 +211,35 @@ async function updateProduct(req, res, next) {
       { $set: updatedProduct },
       { new: true }
     );
+
+    //Update inventory stock and quantitative left
+    if (location && Array.isArray(location)) {
+      for (const loc of location) {
+        if (loc.inventoryId) {
+          const inventory = await Inventory.findById(loc.inventoryId);
+          //Update quantitative left and stock in inventory with updated values
+          if (inventory) {
+            const existingProductInInventory = inventory.products.find(
+              (p) => p.productId.toString() === product._id.toString()
+            );
+            if (existingProductInInventory) {
+              inventory.currentQuantitative -= existingProductInInventory.quantity * quantitative || 0;
+              existingProductInInventory.quantity = loc.stock || 0;
+            } else {
+              inventory.products.push({
+                productId: product._id,
+                quantity: loc.stock || 0,
+              });
+            }
+            inventory.currentQuantitative += loc.stock * quantitative || 0;
+            await inventory.save();
+          }
+        }
+      }
+    }
     res.status(200).json({ message: "Cập nhật sản phẩm thành công", product });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 }
@@ -227,6 +261,7 @@ const updateProductWithSupplier = async (req, res, next) => {
       originalSupplierId,
       createSupplierProduct,
     } = req.body;
+    console.log("Location:", location);
     const productImage = req.file
       ? `/uploads/${req.file.filename}`
       : req.body.productImage;
@@ -267,7 +302,7 @@ const updateProductWithSupplier = async (req, res, next) => {
     const updatedProduct = {
       productName,
       categoryId,
-      totalStock,
+      totalStock: location.reduce((sum, loc) => sum + (loc.stock || 0), 0) || totalStock || 0,
       thresholdStock,
       unit,
       quantitative,

@@ -1,15 +1,21 @@
 Product:Sai, Thiếu xót
-Tạo sản phẩm:Tạo kệ bên trong tạo sản phẩm,tạo danh mục bên trong tạo sản phẩm,(Chọn kho và nhập tồn kho cho từng kho: => chọn kệ và nhập tồn kho), kiểm tra kệ có đủ dung tích chứa hay không trước khi nhập, và tất cả các vị trí đặt sản phẩm tối đa sẽ bằng total stock, và thường thì là chọn kệ là sẽ đẩy hết total stock hiện tại
+Tạo sản phẩm:
 
-Thêm 1 trường ngưỡng tồn kho(để nếu sản phẩm thấp dưới mức này sẽ cần nhập),
+- Tạo kệ bên trong tạo sản phẩm
+- Tạo danh mục bên trong tạo sản phẩm
+- Có thể thêm supplier ngay bên trong tạo sản phẩm
 
-Hình ảnh khi tạo sản phẩm là không bắt buộc,
+- Trong trường hợp update product thì khi sửa lại tồn kho của từng kệ thì tổng số lượng sản phẩm bắt buộc phải bằng với giá trị của total stock ban đầu khi mới tạo sản phẩm
 
-Có thể thêm supplier ngay bên trong tạo sản phẩm
+- Sửa lại từ chọn kho thành chọn kệ và sau đó nhập tồn kho (v)
+- Kiểm tra kệ có đủ dung tích chứa hay không trước khi nhập
+- Sửa lại tổng tất cả sản phẩm đặt ở các vị trí sẽ bằng total stock, và thường thì là chọn kệ là sẽ đẩy hết total stock hiện tại
+- Thêm 1 trường ngưỡng tồn kho(để nếu sản phẩm thấp dưới mức này sẽ cần nhập),
+- Hình ảnh khi tạo sản phẩm là không bắt buộc
+- Tất cả các phần thêm bên trong tạo sản phẩm đều là modal hiển thị và có nút x
 
-Tất cả các phần thêm bên trong tạo sản phẩm đều là modal hiển thị và có nút x
-
-Xem danh sách sản phẩm:thêm bộ lọc filter bên gocs bên phải để chỉnh những gì muốn xem trong danh sách: tất cả bao gồm, hình ảnh, tên sản phẩm,đơn vị, nhà cung cấp, kệ, danh mục, trạng thái,
+Xem danh sách sản phẩm:
+- Thêm bộ lọc filter bên gocs bên phải để chỉnh những gì muốn xem trong danh sách: tất cả bao gồm, hình ảnh, tên sản phẩm,đơn vị, nhà cung cấp, kệ, danh mục, trạng thái,
 
 Update sản phẩm: danh mục cũng được tạo bên trong cập nhật sản phẩm,
 

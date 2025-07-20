@@ -30,6 +30,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
     // Use supplier hook
     const { suppliers, fetchSuppliers } = useSupplier();
 
+    console.log("Invetories:", inventories);
     useEffect(() => {
         if (open) {
             getAllCategories();
@@ -90,7 +91,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
         if (!selectedInventory || inventoryStock === "" || Number(inventoryStock) < 0) {
             setErrors((prev) => ({
                 ...prev,
-                location: "Vui lòng chọn kho và nhập số lượng tồn kho hợp lệ."
+                location: "Vui lòng chọn kệ và nhập số lượng tồn kho hợp lệ."
             }));
             return;
         }
@@ -98,7 +99,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
         if (productData.location.some(inv => inv.inventoryId === selectedInventory)) {
             setErrors((prev) => ({
                 ...prev,
-                location: "Kho đã được thêm."
+                location: "Kệ đã được thêm."
             }));
             return;
         }
@@ -149,7 +150,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
         }
         // Validate inventories
         if (!productData.location.length) {
-            tempErrors.location = "Vui lòng thêm ít nhất một kho và số lượng tồn kho.";
+            tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
         } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
             tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
         } else {
@@ -222,17 +223,17 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                     />
                     {/* Inventory selection */}
                     <Box>
-                        <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kho và nhập tồn kho cho từng kho:</Typography>
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kệ và nhập tồn kho cho từng kệ:</Typography>
                         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                             <FormControl sx={{ minWidth: 160 }}>
-                                <InputLabel id="inventory-select-label">Kho</InputLabel>
+                                <InputLabel id="inventory-select-label">Kệ</InputLabel>
                                 <Select
                                     labelId="inventory-select-label"
                                     value={selectedInventory}
-                                    label="Kho"
+                                    label="Kệ"
                                     onChange={handleInventorySelect}
                                 >
-                                    <MenuItem value=""><em>Chọn kho</em></MenuItem>
+                                    <MenuItem value=""><em>Chọn kệ</em></MenuItem>
                                     {inventories
                                         .filter(inv => !productData.location.some(i => i.inventoryId === inv._id))
                                         .map(inv => (
@@ -253,7 +254,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                         </Stack>
                         {productData.location.length > 0 && (
                             <Box sx={{ mt: 1 }}>
-                                <Typography variant="subtitle2">Danh sách kho đã chọn:</Typography>
+                                <Typography variant="subtitle2">Danh sách kệ đã chọn:</Typography>
                                 {productData.location.map(inv => {
                                     const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
                                     return (

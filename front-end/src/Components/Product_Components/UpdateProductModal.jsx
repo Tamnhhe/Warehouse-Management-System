@@ -51,7 +51,15 @@ const UpdateProductModal = ({
           totalStock: product.totalStock || 0,
           productImage: null,
           unit: product.unit || "",
-          location: product.location || [],
+          // Chuẩn hóa location: mỗi item là { inventoryId, stock }
+          location: Array.isArray(product.location)
+            ? product.location.map(loc => ({
+                inventoryId: typeof loc.inventoryId === "object" && loc.inventoryId._id
+                  ? loc.inventoryId._id
+                  : loc.inventoryId,
+                stock: loc.stock
+              }))
+            : [],
           status: product.status || "active",
           supplierId: product.supplierId || "",
           quantitative: product.quantitative || "",
@@ -288,7 +296,7 @@ const UpdateProductModal = ({
                         <InputLabel id={`inventory-select-label-${idx}`}>Kho</InputLabel>
                         <Select
                           labelId={`inventory-select-label-${idx}`}
-                          value={inv.inventoryId._id}
+                          value={inv.inventoryId}
                           label="Kho"
                           onChange={e => {
                             const newLocation = [...productData.location];
