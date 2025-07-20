@@ -149,6 +149,11 @@ function Header() {
       path: "/inventory-check",
       allowedRoles: ["manager", "employee"],
     },
+    {
+      label: "Sơ đồ kho",
+      path: "/warehouse",
+      allowedRoles: ["manager", "employee"],
+    },
   ];
 
   const partnerMenuItems = [
@@ -266,9 +271,7 @@ function Header() {
             {/* --- Logo (Căn giữa trên mobile) --- */}
             <Typography
               variant="h6"
-              onClick={() =>
-                navigate(userRole ? "/" : "/login")
-              }
+              onClick={() => navigate(userRole ? "/" : "/login")}
               sx={{
                 fontWeight: "bold",
                 cursor: "pointer",

@@ -153,42 +153,41 @@ exports.importProductAutoDistribute = async (req, res) => {
     let remain = quantity;
     let distributed = [];
 
-    // Lấy danh sách các kệ cùng categoryId (ưu tiên kệ đã có sản phẩm, sau đó kệ còn trống)
-    let inventories = await Inventory.find({ categoryId }).sort({ _id: 1 });
+    // 1. 优先考虑已经有该产品的货架（按优先级排序）
+    let inventoriesWithProduct = await Inventory.find({
+      categoryId,
+      "products.productId": productId,
+      status: "active",
+    }).sort({ priority: 1, createdAt: 1 });
 
-    for (let inventory of inventories) {
+    // 2. 处理已有产品的货架
+    for (let inventory of inventoriesWithProduct) {
+      if (remain <= 0) break;
+
       if (inventory.currentQuantitative >= inventory.maxQuantitative) continue;
 
       let available = inventory.maxQuantitative - inventory.currentQuantitative;
       let addQty = Math.min(remain, available);
 
       if (addQty > 0) {
-        // Cập nhật kệ
+        // 找到该产品在货架中的记录
         const productInShelf = inventory.products.find(
           (p) => p.productId.toString() === productId
         );
 
-        if (productInShelf) {
-          // Cập nhật số lượng nếu đã có sản phẩm
-          productInShelf.quantity += addQty;
-        } else {
-          // Thêm sản phẩm mới vào kệ
-          inventory.products.push({ productId, quantity: addQty });
-        }
-
+        // 更新产品数量
+        productInShelf.quantity += addQty;
         inventory.currentQuantitative += addQty;
         await inventory.save();
 
-        // Cập nhật location trong sản phẩm
+        // 更新产品的location记录
         const locationInProduct = product.location.find(
           (loc) => loc.inventoryId.toString() === inventory._id.toString()
         );
 
         if (locationInProduct) {
-          // Cập nhật số lượng nếu đã có location
           locationInProduct.stock += addQty;
         } else {
-          // Thêm location mới
           product.location.push({
             inventoryId: inventory._id,
             stock: addQty,
@@ -198,11 +197,45 @@ exports.importProductAutoDistribute = async (req, res) => {
         distributed.push({ inventoryId: inventory._id, added: addQty });
         remain -= addQty;
       }
-
-      if (remain <= 0) break;
     }
 
-    // Cập nhật tổng tồn kho sản phẩm và lưu location
+    // 3. 如果还有剩余，考虑同类别的空货架
+    if (remain > 0) {
+      let emptyInventories = await Inventory.find({
+        categoryId,
+        "products.productId": { $ne: productId },
+        status: "active",
+      }).sort({ priority: 1, createdAt: 1 });
+
+      for (let inventory of emptyInventories) {
+        if (remain <= 0) break;
+
+        if (inventory.currentQuantitative >= inventory.maxQuantitative)
+          continue;
+
+        let available =
+          inventory.maxQuantitative - inventory.currentQuantitative;
+        let addQty = Math.min(remain, available);
+
+        if (addQty > 0) {
+          // 添加新产品到货架
+          inventory.products.push({ productId, quantity: addQty });
+          inventory.currentQuantitative += addQty;
+          await inventory.save();
+
+          // 添加新location到产品
+          product.location.push({
+            inventoryId: inventory._id,
+            stock: addQty,
+          });
+
+          distributed.push({ inventoryId: inventory._id, added: addQty });
+          remain -= addQty;
+        }
+      }
+    }
+
+    // 更新产品总库存并保存
     product.totalStock = (product.totalStock || 0) + (quantity - remain);
     await product.save();
 
@@ -222,9 +255,13 @@ exports.importProductAutoDistribute = async (req, res) => {
 // API trả về layout kệ cho sơ đồ kho
 exports.getInventoryLayout = async (req, res) => {
   try {
+    // 获取所有货架，并填充categoryId和products.productId字段
     const inventories = await Inventory.find()
       .populate("categoryId")
+      .populate("products.productId")
       .sort({ createdAt: 1 });
+
+    // 构建返回结果，包含货架上实际存放的产品
     const result = inventories.map((inv) => ({
       _id: inv._id,
       name: inv.name,
@@ -235,8 +272,18 @@ exports.getInventoryLayout = async (req, res) => {
       maxWeight: inv.maxWeight,
       currentWeight: inv.currentWeight,
       status: inv.status,
-      products: inv.products,
+      priority: inv.priority || 0,
+      products: inv.products.map((p) => ({
+        productId: p.productId._id,
+        productName: p.productId.productName || "未知产品",
+        quantity: p.quantity,
+        unit: p.productId.unit || "",
+        totalStock: p.productId.totalStock || 0,
+        categoryId: p.productId.categoryId,
+        quantitative: p.productId.quantitative || 0,
+      })),
     }));
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -270,10 +317,12 @@ exports.createInventory = async (req, res) => {
       products: [],
     });
     await newInventory.save();
-    // Sau khi tạo kệ mới, phân bổ lại tồn kho cho toàn bộ kệ cùng category
-    await redistributeStockForCategory(categoryId);
+
+    // 不再调用redistributeStockForCategory函数
+    // 新建的货架应该是空的，不需要自动分配产品
+
     res.status(201).json({
-      message: "Tạo kệ mới thành công và đã phân bổ lại tồn kho!",
+      message: "Tạo kệ mới thành công!",
       inventory: newInventory,
     });
   } catch (err) {
@@ -282,52 +331,84 @@ exports.createInventory = async (req, res) => {
 };
 
 // Hàm phân bổ lại tồn kho cho tất cả kệ cùng category, cập nhật cả Product.location
-async function redistributeStockForCategory(categoryId) {
-  // Lấy tất cả sản phẩm thuộc category này
-  const products = await Product.find({ categoryId });
-  // Lấy tất cả kệ cùng category, sắp xếp theo ngày tạo
-  const inventories = await Inventory.find({ categoryId }).sort({
-    createdAt: 1,
-  });
+// 修改函数逻辑，只处理指定的产品，不会自动重新分配所有产品
+async function redistributeStockForCategory(categoryId, productId = null) {
+  // 如果指定了productId，只处理该产品
+  if (productId) {
+    const product = await Product.findById(productId);
+    if (!product) return;
 
-  // Reset lại số lượng từng kệ
-  for (let inv of inventories) {
-    inv.currentQuantitative = 0;
-    inv.products = [];
-    await inv.save();
-  }
+    // 重置该产品的location
+    product.location = [];
 
-  // Reset location trong từng sản phẩm
-  for (let p of products) {
-    p.location = [];
-    await p.save();
-  }
+    // 获取同类别的所有货架，按优先级排序
+    const inventories = await Inventory.find({
+      categoryId,
+      status: "active",
+    }).sort({ priority: 1, createdAt: 1 });
 
-  // Phân bổ lại tồn kho từng sản phẩm vào các kệ
-  for (let p of products) {
-    let remain = p.totalStock;
+    // 从该产品在每个货架上移除
+    for (let inv of inventories) {
+      inv.products = inv.products.filter((p) => !p.productId.equals(productId));
+      inv.currentQuantitative = inv.products.reduce(
+        (sum, p) => sum + p.quantity,
+        0
+      );
+      await inv.save();
+    }
+
+    // 重新分配该产品
+    let remain = product.totalStock;
     for (let inv of inventories) {
       if (remain <= 0) break;
-      let available = inv.maxQuantitative - inv.currentQuantitative;
-      let addQty = Math.min(remain, available);
-      if (addQty > 0) {
-        // Cập nhật products trong Inventory
-        let prodObj = inv.products.find(
-          (obj) => obj.productId.toString() === p._id.toString()
-        );
-        if (prodObj) {
-          prodObj.quantity = addQty;
-        } else {
-          inv.products.push({ productId: p._id, quantity: addQty });
+
+      // 检查货架上是否已有该产品
+      let productInShelf = inv.products.find((p) =>
+        p.productId.equals(productId)
+      );
+      if (productInShelf) {
+        // 优先考虑已有产品的货架
+        let available = inv.maxQuantitative - inv.currentQuantitative;
+        let addQty = Math.min(remain, available);
+
+        if (addQty > 0) {
+          productInShelf.quantity += addQty;
+          inv.currentQuantitative += addQty;
+          await inv.save();
+
+          product.location.push({ inventoryId: inv._id, stock: addQty });
+          remain -= addQty;
         }
-        inv.currentQuantitative += addQty;
-        await inv.save();
-        // Cập nhật location trong Product
-        p.location.push({ inventoryId: inv._id, stock: addQty });
-        remain -= addQty;
       }
     }
-    await p.save();
+
+    // 如果还有剩余，尝试分配到空货架
+    if (remain > 0) {
+      for (let inv of inventories) {
+        if (remain <= 0) break;
+
+        // 只考虑还没有该产品的货架
+        if (!inv.products.some((p) => p.productId.equals(productId))) {
+          let available = inv.maxQuantitative - inv.currentQuantitative;
+          let addQty = Math.min(remain, available);
+
+          if (addQty > 0) {
+            inv.products.push({ productId, quantity: addQty });
+            inv.currentQuantitative += addQty;
+            await inv.save();
+
+            product.location.push({ inventoryId: inv._id, stock: addQty });
+            remain -= addQty;
+          }
+        }
+      }
+    }
+
+    await product.save();
+  } else {
+    // 如果没有指定productId，则不进行任何分配操作
+    // 原有的自动分配所有产品的行为已经被移除
+    console.log("未指定productId，不进行重新分配");
   }
 }
 // Thêm sản phẩm với số lượng và cân nặng vào kệ
@@ -389,61 +470,53 @@ exports.addProductWithQuantityToInventory = async (req, res) => {
 
 exports.getAllInventories = async (req, res) => {
   try {
+    // 获取所有货架，并填充categoryId字段
     const inventories = await Inventory.find()
       .populate("categoryId")
       .sort({ createdAt: 1 });
+
+    // 查询所有产品（用于获取完整的产品信息）
     const allProducts = await Product.find();
-    const categoryMap = {};
-    inventories.forEach((inv) => {
-      const catId = inv.categoryId._id.toString();
-      if (!categoryMap[catId]) categoryMap[catId] = [];
-      categoryMap[catId].push(inv);
+
+    // 构建返回结果，保留货架的真实状态
+    const result = inventories.map((inv) => {
+      // 将货架上的每个产品ID转换为完整产品信息
+      const productsOnShelf = inv.products
+        .map((item) => {
+          const product = allProducts.find(
+            (p) => p._id.toString() === item.productId.toString()
+          );
+          if (!product) return null; // 如果找不到产品，返回null
+
+          return {
+            productId: item.productId,
+            productName: product.productName,
+            quantity: item.quantity,
+            totalStock: product.totalStock,
+            unit: product.unit,
+            weight: product.weight || 0,
+            quantitative: product.quantitative || 0,
+            categoryId: product.categoryId,
+          };
+        })
+        .filter((p) => p !== null); // 过滤掉空值
+
+      // 返回货架信息，包括其上实际存放的产品
+      return {
+        _id: inv._id,
+        name: inv.name,
+        location: inv.location,
+        category: inv.categoryId,
+        maxQuantitative: inv.maxQuantitative,
+        currentQuantitative: inv.currentQuantitative,
+        maxWeight: inv.maxWeight,
+        currentWeight: inv.currentWeight,
+        status: inv.status,
+        priority: inv.priority || 0,
+        products: productsOnShelf,
+      };
     });
-    let result = [];
-    for (const catId in categoryMap) {
-      const productsInCategory = allProducts.filter(
-        (p) => p.categoryId.toString() === catId
-      );
-      let productRemain = {};
-      productsInCategory.forEach((p) => {
-        productRemain[p._id.toString()] = p.totalStock;
-      });
-      const invs = categoryMap[catId];
-      for (let inv of invs) {
-        let invProducts = [];
-        let invCurrent = 0;
-        for (let p of productsInCategory) {
-          if (invCurrent >= inv.maxQuantitative) break;
-          let remain = productRemain[p._id.toString()];
-          if (!remain || remain <= 0) continue;
-          let canAdd = Math.min(remain, inv.maxQuantitative - invCurrent);
-          if (canAdd > 0) {
-            invProducts.push({
-              productId: p._id,
-              productName: p.productName,
-              quantity: canAdd,
-              totalStock: p.totalStock,
-              unit: p.unit,
-              weight: p.weight || 0
-            });
-            invCurrent += canAdd;
-            productRemain[p._id.toString()] -= canAdd;
-          }
-        }
-        result.push({
-          _id: inv._id,
-          name: inv.name,
-          location: inv.location,
-          category: inv.categoryId,
-          maxQuantitative: inv.maxQuantitative,
-          currentQuantitative: invCurrent,
-          maxWeight: inv.maxWeight,
-          currentWeight: inv.currentWeight,
-          status: inv.status,
-          products: invProducts,
-        });
-      }
-    }
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -494,51 +567,163 @@ exports.addProductToShelf = async (req, res) => {
       });
     }
 
-    // Kiểm tra sức chứa của kệ
-    if (inventory.currentQuantitative + quantity > inventory.maxQuantitative) {
-      return res.status(400).json({
-        message: "Số lượng vượt quá sức chứa của kệ",
-      });
+    // 计算能放入当前货架的数量
+    const availableSpace =
+      inventory.maxQuantitative - inventory.currentQuantitative;
+    let addToCurrentShelf = Math.min(quantity, availableSpace);
+    let remainingQuantity = quantity - addToCurrentShelf;
+
+    // 处理当前货架
+    if (addToCurrentShelf > 0) {
+      // 找到产品在货架中的记录（如果存在）
+      const existingProduct = inventory.products.find(
+        (p) => p.productId.toString() === productId
+      );
+
+      if (existingProduct) {
+        // 已有产品，增加数量
+        existingProduct.quantity += addToCurrentShelf;
+      } else {
+        // 添加新产品到货架
+        inventory.products.push({ productId, quantity: addToCurrentShelf });
+      }
+
+      // 更新货架总数量和重量
+      inventory.currentQuantitative += addToCurrentShelf;
+      inventory.currentWeight += ((weight || 0) * addToCurrentShelf) / quantity;
+
+      await inventory.save();
+
+      // 更新产品location
+      const existingLocation = product.location.find(
+        (loc) => loc.inventoryId.toString() === inventoryId
+      );
+
+      if (existingLocation) {
+        existingLocation.stock += addToCurrentShelf;
+      } else {
+        product.location.push({
+          inventoryId,
+          stock: addToCurrentShelf,
+        });
+      }
     }
 
-    // Tìm sản phẩm trong kệ (nếu đã có)
-    const existingProduct = inventory.products.find(
-      (p) => p.productId.toString() === productId
-    );
+    // 处理剩余数量（自动分配到其他货架）
+    let distributed = [
+      {
+        inventoryId: inventory._id,
+        added: addToCurrentShelf,
+      },
+    ];
 
-    if (existingProduct) {
-      // Cập nhật số lượng nếu sản phẩm đã có trong kệ
-      existingProduct.quantity += quantity;
-    } else {
-      // Thêm sản phẩm mới vào kệ
-      inventory.products.push({ productId, quantity });
+    if (remainingQuantity > 0) {
+      // 获取同类别、除当前货架外的所有货架，按优先级排序
+      const otherInventories = await Inventory.find({
+        _id: { $ne: inventoryId },
+        categoryId: product.categoryId,
+        status: "active",
+        $expr: { $lt: ["$currentQuantitative", "$maxQuantitative"] },
+      }).sort({ priority: 1, createdAt: 1 });
+
+      // 1. 先考虑已有该产品的货架
+      for (const inv of otherInventories) {
+        if (remainingQuantity <= 0) break;
+
+        // 检查货架是否已有该产品
+        const hasProduct = inv.products.some(
+          (p) => p.productId.toString() === productId
+        );
+        if (!hasProduct) continue;
+
+        const available = inv.maxQuantitative - inv.currentQuantitative;
+        const addQty = Math.min(remainingQuantity, available);
+
+        if (addQty > 0) {
+          // 找到产品记录并更新
+          const productInShelf = inv.products.find(
+            (p) => p.productId.toString() === productId
+          );
+          productInShelf.quantity += addQty;
+
+          inv.currentQuantitative += addQty;
+          await inv.save();
+
+          // 更新产品location
+          const existingLoc = product.location.find(
+            (loc) => loc.inventoryId.toString() === inv._id.toString()
+          );
+
+          if (existingLoc) {
+            existingLoc.stock += addQty;
+          } else {
+            product.location.push({
+              inventoryId: inv._id,
+              stock: addQty,
+            });
+          }
+
+          distributed.push({
+            inventoryId: inv._id,
+            added: addQty,
+          });
+
+          remainingQuantity -= addQty;
+        }
+      }
+
+      // 2. 再考虑空货架
+      if (remainingQuantity > 0) {
+        for (const inv of otherInventories) {
+          if (remainingQuantity <= 0) break;
+
+          // 检查货架是否已有该产品
+          const hasProduct = inv.products.some(
+            (p) => p.productId.toString() === productId
+          );
+          if (hasProduct) continue;
+
+          const available = inv.maxQuantitative - inv.currentQuantitative;
+          const addQty = Math.min(remainingQuantity, available);
+
+          if (addQty > 0) {
+            // 添加新产品到货架
+            inv.products.push({ productId, quantity: addQty });
+            inv.currentQuantitative += addQty;
+            await inv.save();
+
+            // 添加新location到产品
+            product.location.push({
+              inventoryId: inv._id,
+              stock: addQty,
+            });
+
+            distributed.push({
+              inventoryId: inv._id,
+              added: addQty,
+            });
+
+            remainingQuantity -= addQty;
+          }
+        }
+      }
     }
 
-    // Cập nhật tổng số lượng và cân nặng của kệ
-    inventory.currentQuantitative += quantity;
-    inventory.currentWeight += weight || 0;
-
-    await inventory.save();
-
-    // CẬP NHẬT LOCATION TRONG MODEL SẢN PHẨM
-    const existingLocation = product.location.find(
-      (loc) => loc.inventoryId.toString() === inventoryId
-    );
-
-    if (existingLocation) {
-      // Cập nhật số lượng nếu vị trí đã tồn tại
-      existingLocation.stock += quantity;
-    } else {
-      // Thêm vị trí mới
-      product.location.push({
-        inventoryId,
-        stock: quantity,
-      });
-    }
-
+    // 更新产品总库存
+    product.totalStock += quantity - remainingQuantity;
     await product.save();
 
-    res.json({ message: "Thêm sản phẩm vào kệ thành công", inventory });
+    if (remainingQuantity > 0) {
+      return res.status(200).json({
+        message: `Đã phân bổ một phần, còn dư ${remainingQuantity} sản phẩm chưa được phân bổ do kệ đã đầy.`,
+        distributed,
+      });
+    }
+
+    res.json({
+      message: "Thêm sản phẩm vào kệ thành công",
+      distributed,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

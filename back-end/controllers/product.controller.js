@@ -14,14 +14,16 @@ const createProduct = async (req, res, next) => {
       status,
       quantitative,
       location,
-      supplierId
+      supplierId,
     } = req.body;
-    const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
+    const productImage = req.file
+      ? `/uploads/${req.file.filename}`
+      : req.body.productImage;
 
     // Parse location if sent as array of objects in multipart/form-data
     if (Array.isArray(location)) {
       // location is array of objects, but each field is sent as string
-      location = location.map(loc => {
+      location = location.map((loc) => {
         if (typeof loc === "string") {
           // If loc is '[object Object]', parse it
           try {
@@ -32,7 +34,11 @@ const createProduct = async (req, res, next) => {
         }
         return loc;
       });
-    } else if (typeof location === "object" && location !== null && !Array.isArray(location)) {
+    } else if (
+      typeof location === "object" &&
+      location !== null &&
+      !Array.isArray(location)
+    ) {
       // If location is an object, wrap in array
       location = [location];
     }
@@ -41,7 +47,7 @@ const createProduct = async (req, res, next) => {
     if (!location) {
       // Try to reconstruct from fields like location[0][inventoryId], location[0][stock], etc.
       location = [];
-      Object.keys(req.body).forEach(key => {
+      Object.keys(req.body).forEach((key) => {
         const match = key.match(/^location\[(\d+)\]\[(\w+)\]$/);
         if (match) {
           const idx = Number(match[1]);
@@ -53,13 +59,7 @@ const createProduct = async (req, res, next) => {
     }
 
     // Kiểm tra các trường bắt buộc
-    if (
-      !productName ||
-      !categoryId ||
-      !productImage ||
-      !unit ||
-      !status
-    ) {
+    if (!productName || !categoryId || !productImage || !unit || !status) {
       return res
         .status(400)
         .json({ message: "Thiếu thông tin sản phẩm bắt buộc" });
@@ -68,9 +68,10 @@ const createProduct = async (req, res, next) => {
     // Kiểm tra xem tên sản phẩm đã tồn tại trong cơ sở dữ liệu chưa
     const existingProduct = await Product.findOne({ productName });
     if (existingProduct) {
-      return res.status(400).json({ message: 'Sản phẩm đã tồn tại trong kho.' });
+      return res
+        .status(400)
+        .json({ message: "Sản phẩm đã tồn tại trong kho." });
     }
-
 
     // Kiểm tra danh mục
     const checkCategory = await Category.findById(categoryId);
@@ -84,7 +85,10 @@ const createProduct = async (req, res, next) => {
     const newProduct = new Product({
       productName,
       categoryId,
-      totalStock: location.reduce((sum, loc) => sum + (loc.stock || 0), 0) || totalStock || 0,
+      totalStock:
+        location.reduce((sum, loc) => sum + (loc.stock || 0), 0) ||
+        totalStock ||
+        0,
       thresholdStock: thresholdStock || 0,
       productImage,
       unit,
@@ -103,7 +107,7 @@ const createProduct = async (req, res, next) => {
           if (inventory) {
             inventory.products.push({
               productId: newProduct._id,
-              quantity: loc.stock || 0
+              quantity: loc.stock || 0,
             });
             await inventory.save();
           }
@@ -120,13 +124,14 @@ const createProduct = async (req, res, next) => {
         productImage,
         productName: productName.trim(),
         quantitative,
-        unit: unit.trim()
+        unit: unit.trim(),
       });
       await supplierProduct.save();
     }
 
-
-    res.status(201).json({ message: 'Sản phẩm được tạo thành công', newProduct });
+    res
+      .status(201)
+      .json({ message: "Sản phẩm được tạo thành công", newProduct });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -136,8 +141,8 @@ const createProduct = async (req, res, next) => {
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .populate('categoryId', 'categoryName status')
-      .populate('location.inventoryId', 'name');
+      .populate("categoryId", "categoryName status")
+      .populate("location.inventoryId", "name");
     res.status(200).json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -151,7 +156,7 @@ const getProductById = async (req, res) => {
       .populate("categoryId")
       .populate("location.inventoryId");
     if (!product) {
-      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' });
+      return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
     }
     res.status(200).json(product);
   } catch (err) {
@@ -173,7 +178,9 @@ async function updateProduct(req, res, next) {
       location,
       status,
     } = req.body;
-    const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
+    const productImage = req.file
+      ? `/uploads/${req.file.filename}`
+      : req.body.productImage;
 
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
@@ -188,16 +195,125 @@ async function updateProduct(req, res, next) {
       unit,
       quantitative,
       location,
-      status
+      status,
     };
     if (productImage) updatedProduct.productImage = productImage;
 
-    const product = await Product.findByIdAndUpdate(id, { $set: updatedProduct }, { new: true });
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { $set: updatedProduct },
+      { new: true }
+    );
     res.status(200).json({ message: "Cập nhật sản phẩm thành công", product });
   } catch (error) {
     next(error);
   }
 }
+
+// Cập nhật sản phẩm và xử lý thay đổi nhà cung cấp
+const updateProductWithSupplier = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      productName,
+      categoryId,
+      totalStock,
+      thresholdStock,
+      unit,
+      quantitative,
+      location,
+      status,
+      supplierId,
+      originalSupplierId,
+      createSupplierProduct,
+    } = req.body;
+    const productImage = req.file
+      ? `/uploads/${req.file.filename}`
+      : req.body.productImage;
+
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // 1. Xóa supplier product hiện có nếu có originalSupplierId
+    if (originalSupplierId) {
+      // Tìm supplier product liên quan đến sản phẩm này với supplier cũ
+      const existingSupplierProduct = await SupplierProduct.findOne({
+        productName: existingProduct.productName,
+        supplier: originalSupplierId,
+      });
+
+      if (existingSupplierProduct) {
+        await SupplierProduct.findByIdAndDelete(existingSupplierProduct._id);
+      }
+    }
+
+    // 2. Tạo supplier product mới nếu chọn supplier mới
+    if (createSupplierProduct === "true" && supplierId) {
+      const newSupplierProduct = new SupplierProduct({
+        supplier: supplierId,
+        stock: totalStock || 0,
+        categoryId: categoryId,
+        productImage: productImage || existingProduct.productImage,
+        productName: productName.trim(),
+        quantitative: quantitative || 0,
+        unit: unit.trim(),
+      });
+      await newSupplierProduct.save();
+    }
+
+    // 3. Cập nhật sản phẩm
+    const updatedProduct = {
+      productName,
+      categoryId,
+      totalStock,
+      thresholdStock,
+      unit,
+      quantitative,
+      location,
+      status,
+    };
+    if (productImage) updatedProduct.productImage = productImage;
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { $set: updatedProduct },
+      { new: true }
+    );
+    res.status(200).json({
+      message: "Cập nhật sản phẩm và thông tin nhà cung cấp thành công",
+      product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Lấy thông tin nhà cung cấp của sản phẩm
+const getProductSupplier = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+
+    // Lấy thông tin sản phẩm
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // Tìm supplier product dựa trên tên sản phẩm
+    const supplierProduct = await SupplierProduct.findOne({
+      productName: product.productName,
+    }).populate("supplier", "name email phone address");
+
+    res.status(200).json({
+      success: true,
+      supplierProduct,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Cập nhật trạng thái sản phẩm (inactive)
 const inactiveProduct = async (req, res, next) => {
@@ -205,11 +321,20 @@ const inactiveProduct = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const changedProduct = await Product.findByIdAndUpdate(id, { status }, { new: true });
+    const changedProduct = await Product.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
     if (!changedProduct) {
-      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' });
+      return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
     }
-    res.status(200).json({ message: 'Trạng thái sản phẩm đã được thay đổi thành công', changedProduct });
+    res
+      .status(200)
+      .json({
+        message: "Trạng thái sản phẩm đã được thay đổi thành công",
+        changedProduct,
+      });
   } catch (error) {
     next(error);
   }
@@ -222,12 +347,12 @@ const checkProductName = async (req, res, next) => {
     if (existingProduct) {
       return res.status(400).json({
         exists: true,
-        message: 'Sản phẩm đã tồn tại trong kho.'
+        message: "Sản phẩm đã tồn tại trong kho.",
       });
     }
     res.status(200).json({
       exists: false,
-      message: 'Tên sản phẩm hợp lệ'
+      message: "Tên sản phẩm hợp lệ",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -239,6 +364,8 @@ module.exports = {
   getAllProducts,
   getProductById,
   updateProduct,
+  updateProductWithSupplier,
+  getProductSupplier,
   inactiveProduct,
-  checkProductName
+  checkProductName,
 };

@@ -1,13 +1,30 @@
 import React, { useState, useEffect } from "react";
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  FormControl, InputLabel, Select, MenuItem, FormHelperText, Stack, Alert, Box, CircularProgress, Typography,
-  FormControlLabel, Checkbox, IconButton
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Stack,
+  Alert,
+  Box,
+  CircularProgress,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+  IconButton,
 } from "@mui/material";
 import useCategory from "../../Hooks/useCategory";
 import useInventory from "../../Hooks/useInventory";
 import useSupplier from "../../Hooks/useSupplier";
 import useProduct from "../../Hooks/useProduct";
+import useSupplierProduct from "../../Hooks/useSupplierProduct";
 
 const UpdateProductModal = ({
   open,
@@ -32,12 +49,15 @@ const UpdateProductModal = ({
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [hasSupplier, setHasSupplier] = useState(false);
+  const [originalSupplierId, setOriginalSupplierId] = useState(""); // 存储原始供应商ID，用于检测变更
 
   // Hooks for category, inventory, supplier, and product
   const { categories, getAllCategories } = useCategory();
   const { inventories, fetchInventories } = useInventory();
   const { suppliers, fetchSuppliers } = useSupplier();
-  const { updateProduct } = useProduct();
+  const { updateProduct, updateProductWithSupplier, fetchProductSupplier } =
+    useProduct();
+  const { deleteSupplierProduct } = useSupplierProduct();
 
   useEffect(() => {
     if (open) {
@@ -56,8 +76,14 @@ const UpdateProductModal = ({
           supplierId: product.supplierId || "",
           quantitative: product.quantitative || "",
         });
-        setImagePreview(product.productImage ? `http://localhost:9999${product.productImage}` : null);
-        setHasSupplier(!!product.supplierId);
+        setImagePreview(
+          product.productImage
+            ? `http://localhost:9999${product.productImage}`
+            : null
+        );
+
+        // 查询产品是否有关联的供应商
+        loadProductSupplier(product._id);
       }
     } else {
       setProductData({
@@ -77,8 +103,31 @@ const UpdateProductModal = ({
       setImagePreview(null);
       setLoading(false);
       setHasSupplier(false);
+      setOriginalSupplierId("");
     }
   }, [open, product]);
+
+  const loadProductSupplier = async (productId) => {
+    try {
+      const supplierProduct = await fetchProductSupplier(productId);
+      if (supplierProduct && supplierProduct.supplier) {
+        setHasSupplier(true);
+        setProductData((prev) => ({
+          ...prev,
+          supplierId: supplierProduct.supplier._id || supplierProduct.supplier,
+        }));
+        setOriginalSupplierId(
+          supplierProduct.supplier._id || supplierProduct.supplier
+        );
+      } else {
+        setHasSupplier(false);
+        setProductData((prev) => ({ ...prev, supplierId: "" }));
+        setOriginalSupplierId("");
+      }
+    } catch (error) {
+      console.error("Error loading product supplier:", error);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,17 +163,23 @@ const UpdateProductModal = ({
   };
 
   const handleAddInventory = () => {
-    if (!selectedInventory || inventoryStock === "" || Number(inventoryStock) < 0) {
+    if (
+      !selectedInventory ||
+      inventoryStock === "" ||
+      Number(inventoryStock) < 0
+    ) {
       setErrors((prev) => ({
         ...prev,
-        location: "Vui lòng chọn kho và nhập số lượng tồn kho hợp lệ."
+        location: "Vui lòng chọn kho và nhập số lượng tồn kho hợp lệ.",
       }));
       return;
     }
-    if (productData.location.some(inv => inv.inventoryId === selectedInventory)) {
+    if (
+      productData.location.some((inv) => inv.inventoryId === selectedInventory)
+    ) {
       setErrors((prev) => ({
         ...prev,
-        location: "Kho đã được thêm."
+        location: "Kho đã được thêm.",
       }));
       return;
     }
@@ -132,8 +187,8 @@ const UpdateProductModal = ({
       ...prev,
       location: [
         ...prev.location,
-        { inventoryId: selectedInventory, stock: Number(inventoryStock) }
-      ]
+        { inventoryId: selectedInventory, stock: Number(inventoryStock) },
+      ],
     }));
     setSelectedInventory("");
     setInventoryStock("");
@@ -142,7 +197,7 @@ const UpdateProductModal = ({
   const handleRemoveInventory = (inventoryId) => {
     setProductData((prev) => ({
       ...prev,
-      location: prev.location.filter(inv => inv.inventoryId !== inventoryId)
+      location: prev.location.filter((inv) => inv.inventoryId !== inventoryId),
     }));
   };
 
@@ -162,18 +217,31 @@ const UpdateProductModal = ({
 
   const validate = () => {
     let tempErrors = {};
-    tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
-    tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
+    tempErrors.productName = productData.productName
+      ? ""
+      : "Tên sản phẩm không được bỏ trống.";
+    tempErrors.categoryId = productData.categoryId
+      ? ""
+      : "Vui lòng chọn danh mục.";
     tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
-    tempErrors.quantitative = productData.quantitative !== "" && !isNaN(productData.quantitative) ? "" : "Định lượng không hợp lệ.";
-    if (productData.productImage && !["image/jpeg", "image/png"].includes(productData.productImage.type)) {
+    tempErrors.quantitative =
+      productData.quantitative !== "" && !isNaN(productData.quantitative)
+        ? ""
+        : "Định lượng không hợp lệ.";
+    if (
+      productData.productImage &&
+      !["image/jpeg", "image/png"].includes(productData.productImage.type)
+    ) {
       tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
     } else {
       tempErrors.productImage = "";
     }
     if (!productData.location.length) {
-      tempErrors.location = "Vui lòng thêm ít nhất một kho và số lượng tồn kho.";
-    } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
+      tempErrors.location =
+        "Vui lòng thêm ít nhất một kho và số lượng tồn kho.";
+    } else if (
+      productData.location.some((inv) => !inv.stock || inv.stock < 0)
+    ) {
       tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
     } else {
       tempErrors.location = "";
@@ -189,7 +257,7 @@ const UpdateProductModal = ({
   };
 
   const handleUpdate = async () => {
-    setErrors(prev => ({ ...prev, general: "" }));
+    setErrors((prev) => ({ ...prev, general: "" }));
     if (validate()) {
       setLoading(true);
       const formData = new FormData();
@@ -199,19 +267,48 @@ const UpdateProductModal = ({
             formData.append(`location[${idx}][inventoryId]`, loc.inventoryId);
             formData.append(`location[${idx}][stock]`, loc.stock);
           });
-        } else if (key === "productImage" && value && typeof value !== "string") {
+        } else if (
+          key === "productImage" &&
+          value &&
+          typeof value !== "string"
+        ) {
           formData.append(key, value);
         } else {
           formData.append(key, value);
         }
       });
 
+      // 处理供应商变更情况
+      const supplierChanged = hasSupplier
+        ? productData.supplierId !== originalSupplierId
+        : !!originalSupplierId;
+
       try {
-        await updateProduct(product._id, formData);
+        // 如果供应商发生变更，使用特殊的更新方法
+        if (supplierChanged) {
+          // 添加原始供应商ID，后端会据此删除旧的supplier product
+          if (originalSupplierId) {
+            formData.append("originalSupplierId", originalSupplierId);
+          }
+
+          // 标记是否需要创建新的供应商产品关联
+          formData.append(
+            "createSupplierProduct",
+            hasSupplier ? "true" : "false"
+          );
+
+          await updateProductWithSupplier(product._id, formData);
+        } else {
+          await updateProduct(product._id, formData);
+        }
+
         onUpdateSuccess();
         handleClose();
       } catch (error) {
-        setErrors((prev) => ({ ...prev, general: error?.message || "Có lỗi xảy ra." }));
+        setErrors((prev) => ({
+          ...prev,
+          general: error?.message || "Có lỗi xảy ra.",
+        }));
       } finally {
         setLoading(false);
       }
@@ -224,16 +321,47 @@ const UpdateProductModal = ({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {errors.general && <Alert severity="error">{errors.general}</Alert>}
-          <TextField autoFocus name="productName" label="Tên Sản Phẩm" value={productData.productName} onChange={handleChange} error={!!errors.productName} helperText={errors.productName} fullWidth />
+          <TextField
+            autoFocus
+            name="productName"
+            label="Tên Sản Phẩm"
+            value={productData.productName}
+            onChange={handleChange}
+            error={!!errors.productName}
+            helperText={errors.productName}
+            fullWidth
+          />
           <FormControl fullWidth error={!!errors.categoryId}>
             <InputLabel id="category-select-label">Danh Mục</InputLabel>
-            <Select labelId="category-select-label" name="categoryId" value={productData.categoryId} label="Danh Mục" onChange={handleChange}>
-              <MenuItem value=""><em>Chọn danh mục</em></MenuItem>
-              {categories.map((cat) => (<MenuItem key={cat._id} value={cat._id}>{cat.categoryName}</MenuItem>))}
+            <Select
+              labelId="category-select-label"
+              name="categoryId"
+              value={productData.categoryId}
+              label="Danh Mục"
+              onChange={handleChange}
+            >
+              <MenuItem value="">
+                <em>Chọn danh mục</em>
+              </MenuItem>
+              {categories.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.categoryName}
+                </MenuItem>
+              ))}
             </Select>
-            {errors.categoryId && <FormHelperText>{errors.categoryId}</FormHelperText>}
+            {errors.categoryId && (
+              <FormHelperText>{errors.categoryId}</FormHelperText>
+            )}
           </FormControl>
-          <TextField name="unit" label="Đơn Vị (ví dụ: cái, hộp, kg)" value={productData.unit} onChange={handleChange} error={!!errors.unit} helperText={errors.unit} fullWidth />
+          <TextField
+            name="unit"
+            label="Đơn Vị (ví dụ: cái, hộp, kg)"
+            value={productData.unit}
+            onChange={handleChange}
+            error={!!errors.unit}
+            helperText={errors.unit}
+            fullWidth
+          />
           <TextField
             name="quantitative"
             label="Định lượng (Quantitative)"
@@ -246,8 +374,15 @@ const UpdateProductModal = ({
           />
           {/* Inventory selection */}
           <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kho và nhập tồn kho cho từng kho:</Typography>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Chọn kho và nhập tồn kho cho từng kho:
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              sx={{ mb: 1 }}
+            >
               <FormControl sx={{ minWidth: 160 }}>
                 <InputLabel id="inventory-select-label">Kho</InputLabel>
                 <Select
@@ -256,11 +391,20 @@ const UpdateProductModal = ({
                   label="Kho"
                   onChange={handleInventorySelect}
                 >
-                  <MenuItem value=""><em>Chọn kho</em></MenuItem>
+                  <MenuItem value="">
+                    <em>Chọn kho</em>
+                  </MenuItem>
                   {inventories
-                    .filter(inv => !productData.location.some(i => i.inventoryId === inv._id))
-                    .map(inv => (
-                      <MenuItem key={inv._id} value={inv._id}>{inv.name}</MenuItem>
+                    .filter(
+                      (inv) =>
+                        !productData.location.some(
+                          (i) => i.inventoryId === inv._id
+                        )
+                    )
+                    .map((inv) => (
+                      <MenuItem key={inv._id} value={inv._id}>
+                        {inv.name}
+                      </MenuItem>
                     ))}
                 </Select>
               </FormControl>
@@ -273,38 +417,96 @@ const UpdateProductModal = ({
                 onChange={handleInventoryStockInput}
                 sx={{ width: 120 }}
               />
-              <Button variant="contained" onClick={handleAddInventory}>Thêm</Button>
+              <Button variant="contained" onClick={handleAddInventory}>
+                Thêm
+              </Button>
             </Stack>
             {productData.location.length > 0 && (
               <Box sx={{ mt: 1 }}>
-                <Typography variant="subtitle2">Danh sách kho đã chọn:</Typography>
-                {productData.location.map(inv => {
-                  const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
+                <Typography variant="subtitle2">
+                  Danh sách kho đã chọn:
+                </Typography>
+                {productData.location.map((inv) => {
+                  const inventoryObj = inventories.find(
+                    (i) => i._id === inv.inventoryId
+                  );
                   return (
-                    <Stack direction="row" alignItems="center" spacing={2} key={inv.inventoryId} sx={{ mb: 1 }}>
-                      <Typography sx={{ minWidth: 100 }}>{inventoryObj ? inventoryObj.name : inv.inventoryId}</Typography>
-                      <Typography sx={{ minWidth: 80 }}>Tồn kho: {inv.stock}</Typography>
-                      <Button variant="outlined" color="error" size="small" onClick={() => handleRemoveInventory(inv.inventoryId)}>Xóa</Button>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={2}
+                      key={inv.inventoryId}
+                      sx={{ mb: 1 }}
+                    >
+                      <Typography sx={{ minWidth: 100 }}>
+                        {inventoryObj
+                          ? inventoryObj.name
+                          : inv.inventoryId
+                          ? inv.inventoryId.toString()
+                          : "未知库存"}
+                      </Typography>
+                      <Typography sx={{ minWidth: 80 }}>
+                        Tồn kho: {inv.stock}
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => handleRemoveInventory(inv.inventoryId)}
+                      >
+                        Xóa
+                      </Button>
                     </Stack>
                   );
                 })}
               </Box>
             )}
-            {errors.location && <FormHelperText error>{errors.location}</FormHelperText>}
+            {errors.location && (
+              <FormHelperText error>{errors.location}</FormHelperText>
+            )}
           </Box>
           <FormControl fullWidth>
             <InputLabel id="status-select-label">Trạng Thái</InputLabel>
-            <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>
+            <Select
+              labelId="status-select-label"
+              name="status"
+              value={productData.status}
+              label="Trạng Thái"
+              onChange={handleChange}
+            >
               <MenuItem value="active">Đang bán</MenuItem>
               <MenuItem value="inactive">Ngừng bán</MenuItem>
             </Select>
           </FormControl>
-          <Button variant="outlined" component="label" color={errors.productImage ? "error" : "primary"}>
+          <Button
+            variant="outlined"
+            component="label"
+            color={errors.productImage ? "error" : "primary"}
+          >
             Chọn Hình Ảnh
-            <input type="file" hidden accept="image/png, image/jpeg" onChange={handleFileChange} />
+            <input
+              type="file"
+              hidden
+              accept="image/png, image/jpeg"
+              onChange={handleFileChange}
+            />
           </Button>
-          {errors.productImage && <FormHelperText error>{errors.productImage}</FormHelperText>}
-          {imagePreview && <Box sx={{ mt: 2, textAlign: 'center' }}><img src={imagePreview} alt="Xem trước sản phẩm" style={{ maxWidth: "200px", height: "auto", borderRadius: '8px' }} /></Box>}
+          {errors.productImage && (
+            <FormHelperText error>{errors.productImage}</FormHelperText>
+          )}
+          {imagePreview && (
+            <Box sx={{ mt: 2, textAlign: "center" }}>
+              <img
+                src={imagePreview}
+                alt="Xem trước sản phẩm"
+                style={{
+                  maxWidth: "200px",
+                  height: "auto",
+                  borderRadius: "8px",
+                }}
+              />
+            </Box>
+          )}
           {/* Supplier checkbox and selection */}
           <Box sx={{ mt: 2 }}>
             <FormControlLabel
@@ -319,27 +521,39 @@ const UpdateProductModal = ({
             />
             {hasSupplier && (
               <FormControl fullWidth sx={{ mt: 2 }} error={!!errors.supplierId}>
-                <InputLabel id="supplier-select-label">Chọn nhà cung cấp</InputLabel>
+                <InputLabel id="supplier-select-label">
+                  Chọn nhà cung cấp
+                </InputLabel>
                 <Select
                   labelId="supplier-select-label"
                   value={productData.supplierId}
                   label="Chọn nhà cung cấp"
                   onChange={handleSupplierSelect}
                 >
-                  <MenuItem value=""><em>Chọn nhà cung cấp</em></MenuItem>
-                  {suppliers.map(sup => (
-                    <MenuItem key={sup._id} value={sup._id}>{sup.name}</MenuItem>
+                  <MenuItem value="">
+                    <em>Chọn nhà cung cấp</em>
+                  </MenuItem>
+                  {suppliers.map((sup) => (
+                    <MenuItem key={sup._id} value={sup._id}>
+                      {sup.name}
+                    </MenuItem>
                   ))}
                 </Select>
-                {errors.supplierId && <FormHelperText>{errors.supplierId}</FormHelperText>}
+                {errors.supplierId && (
+                  <FormHelperText>{errors.supplierId}</FormHelperText>
+                )}
               </FormControl>
             )}
           </Box>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ p: '16px 24px' }}>
-        <Button onClick={handleClose} disabled={loading} color="secondary">Đóng</Button>
-        <Button onClick={handleUpdate} variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : "Cập Nhật Sản Phẩm"}</Button>
+      <DialogActions sx={{ p: "16px 24px" }}>
+        <Button onClick={handleClose} disabled={loading} color="secondary">
+          Đóng
+        </Button>
+        <Button onClick={handleUpdate} variant="contained" disabled={loading}>
+          {loading ? <CircularProgress size={24} /> : "Cập Nhật Sản Phẩm"}
+        </Button>
       </DialogActions>
     </Dialog>
   );
