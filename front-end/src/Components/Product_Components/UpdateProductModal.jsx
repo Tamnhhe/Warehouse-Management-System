@@ -218,6 +218,7 @@ const UpdateProductModal = ({
     }
   };
 
+  console.log("Product Data:", product);
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Cập Nhật Sản Phẩm</DialogTitle>
@@ -278,12 +279,41 @@ const UpdateProductModal = ({
             {productData.location.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="subtitle2">Danh sách kho đã chọn:</Typography>
-                {productData.location.map(inv => {
+                {productData.location.map((inv, idx) => {
+                  // Find inventory object for display name
                   const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
                   return (
                     <Stack direction="row" alignItems="center" spacing={2} key={inv.inventoryId} sx={{ mb: 1 }}>
-                      <Typography sx={{ minWidth: 100 }}>{inventoryObj ? inventoryObj.name : inv.inventoryId}</Typography>
-                      <Typography sx={{ minWidth: 80 }}>Tồn kho: {inv.stock}</Typography>
+                      <FormControl sx={{ minWidth: 120 }}>
+                        <InputLabel id={`inventory-select-label-${idx}`}>Kho</InputLabel>
+                        <Select
+                          labelId={`inventory-select-label-${idx}`}
+                          value={inv.inventoryId._id}
+                          label="Kho"
+                          onChange={e => {
+                            const newLocation = [...productData.location];
+                            newLocation[idx].inventoryId = e.target.value;
+                            setProductData(prev => ({ ...prev, location: newLocation }));
+                          }}
+                        >
+                          {inventories.map(invOpt => (
+                            <MenuItem key={invOpt._id} value={invOpt._id}>{invOpt.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        type="number"
+                        label="Tồn kho"
+                        size="small"
+                        inputProps={{ min: 0 }}
+                        value={inv.stock}
+                        onChange={e => {
+                          const newLocation = [...productData.location];
+                          newLocation[idx].stock = Number(e.target.value);
+                          setProductData(prev => ({ ...prev, location: newLocation }));
+                        }}
+                        sx={{ width: 100 }}
+                      />
                       <Button variant="outlined" color="error" size="small" onClick={() => handleRemoveInventory(inv.inventoryId)}>Xóa</Button>
                     </Stack>
                   );
