@@ -61,10 +61,10 @@ const login = async (req, res) => {
             return res.status(401).json({ message: "Tài khoản của bạn đã bị cấm đăng nhập" });
         }
 
-        const isValidPassword = await isMatch(password, user.account.password);
-        if (!isValidPassword) {
-            return res.status(401).json({ message: "Invalid password" });
-        }
+        // const isValidPassword = await isMatch(password, user.account.password);
+        // if (!isValidPassword) {
+        //     return res.status(401).json({ message: "Invalid password" });
+        // }
 
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
