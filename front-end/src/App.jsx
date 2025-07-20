@@ -5,7 +5,7 @@ import {
   Routes,
   useLocation,
   matchPath,
-  Navigate
+  Navigate,
 } from "react-router-dom";
 import ProtectedRoute from "./Components/Utils/ProtectedRoute";
 import ForgotPassword from "./Components/Login_Components/ForgotPassword";
@@ -13,8 +13,8 @@ import Login from "./Components/Login_Components/Login";
 import ResetPassword from "./Components/Login_Components/ResetPassword";
 import ConfirmAccount from "./Components/Login_Components/ConfirmAccount";
 import CreateEmployee from "./Components/Manager_Components/CreateEmployee";
-// Bỏ import ProductWarehouse vì không thấy dùng trong Routes
-// import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse";
+// 恢复import ProductWarehouse
+import ProductWarehouse from "./Components/Warehouse_Components/ProductWarehouse";
 import ViewProfile from "./Components/User_Components/ViewProfile";
 import EditProfile from "./Components/User_Components/EditProfile";
 import ChangePassword from "./Components/User_Components/ChangePassword";
@@ -86,11 +86,17 @@ function App() {
       <Layout>
         <Routes>
           {/* Các Routes vẫn giữ nguyên không thay đổi */}
-          <Route path="/" element={
-            <ProtectedRoute allowedRoles={["employee", "manager"]} redirectTo="/login">
-              <Landing />
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute
+                allowedRoles={["employee", "manager"]}
+                redirectTo="/login"
+              >
+                <Landing />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -273,6 +279,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["manager"]}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 添加仓库货架管理路由 */}
+          <Route
+            path="/warehouse"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                <ProductWarehouse />
               </ProtectedRoute>
             }
           />
