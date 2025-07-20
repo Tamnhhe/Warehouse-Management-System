@@ -1,4 +1,4 @@
-// Nguyễn Huy Tâm - HE173108 5/2/2025
+
 const db = require("../models/index");
 const Product = require('../models/product.model');
 const Category = require('../models/category.model');
