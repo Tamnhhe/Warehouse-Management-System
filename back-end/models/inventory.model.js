@@ -16,6 +16,10 @@ const InventorySchema = new Schema(
     maxWeight: { type: Number, required: true },
     currentWeight: { type: Number, default: 0 },
     status: { type: String, default: "active" },
+    // Thứ tự ưu tiên của kệ, số nhỏ hơn có ưu tiên cao hơn
+    priority: { type: Number, default: 0 },
+    // Số lượng tối đa của mỗi sản phẩm trên kệ này
+    maxCapacityPerProduct: { type: Number, default: null },
     products: [
       {
         productId: {

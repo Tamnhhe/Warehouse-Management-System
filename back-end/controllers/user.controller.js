@@ -6,7 +6,7 @@ const { sendMail } = require("../utils/Mailer");
 const { verifyAccessToken } = require("../utils/Jwt");
 // - Hàm View Profile
 async function getProfile(req, res, next) {
-  try {    
+  try {
     const user = await db.User.findById(req.user.id);
 
     if (!user) {
@@ -22,7 +22,6 @@ async function getProfile(req, res, next) {
 // - Ham edit Profile
 async function editProfile(req, res, next) {
   try {
-    
     const userId = req.user.id;
 
     const user = await db.User.findById(userId);
@@ -45,31 +44,46 @@ async function editProfile(req, res, next) {
     }
     // Validation
     if (!fullName || !phoneNumber || !idCard || !address) {
-      return res.status(400).json({ message: "Tên đầy đủ , Số điện thoại, Số căn cước, và Địa chỉ không được để trống ." });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Tên đầy đủ , Số điện thoại, Số căn cước, và Địa chỉ không được để trống .",
+        });
     }
     // Validate phone 10-15 number
     if (!/^\d{10,15}$/.test(phoneNumber)) {
       return res.status(400).json({ message: "Số điện thoại không hợp lệ." });
     }
-    // Validate 12 number - positive 
+    // Validate 12 number - positive
     if (!/^\d{12}$/.test(idCard) || Number(idCard) < 0) {
-      return res.status(400).json({ message: "Số căn cước phải có 12 số và không được nhập số âm." });
+      return res
+        .status(400)
+        .json({
+          message: "Số căn cước phải có 12 số và không được nhập số âm.",
+        });
     }
     // Validate Full Name (chỉ cho phép chữ cái và khoảng trắng, không số, không ký tự đặc biệt)
     if (!/^[\p{L}\s]+$/u.test(fullName)) {
       return res.status(400).json({ message: "Tên đầy đủ không hợp lệ." });
     }
-    //ID card is unique 
-    const existingUser = await db.User.findOne({ "profile.idCard": idCard, _id: { $ne: userId } });
+    //ID card is unique
+    const existingUser = await db.User.findOne({
+      "profile.idCard": idCard,
+      _id: { $ne: userId },
+    });
     if (existingUser) {
       return res.status(409).json({ message: "Số căn cước đã tồn tại." });
     }
-    //Phone number is unique 
-    const existingPhoneNumber = await db.User.findOne({ "profile.phoneNumber": phoneNumber, _id: { $ne: userId } });
+    //Phone number is unique
+    const existingPhoneNumber = await db.User.findOne({
+      "profile.phoneNumber": phoneNumber,
+      _id: { $ne: userId },
+    });
     if (existingPhoneNumber) {
       return res.status(409).json({ message: "Số điện thoại đã tồn tại." });
     }
-    //update 
+    //update
     const updatedData = {
       fullName,
       "profile.phoneNumber": phoneNumber,
@@ -87,12 +101,10 @@ async function editProfile(req, res, next) {
       { new: true }
     );
 
-    res
-      .status(200)
-      .json({
-        message: "Cập nhật thông tin cá nhân thành công",
-        user: updatedUser,
-      });
+    res.status(200).json({
+      message: "Cập nhật thông tin cá nhân thành công",
+      user: updatedUser,
+    });
   } catch (error) {
     console.error("Lỗi cập nhật thông tin cá nhân:", error);
     res.status(500).json({ message: "Lỗi server" });
@@ -140,12 +152,16 @@ async function changePassword(req, res) {
     }
 
     if (confirmPassword !== newPassword) {
-      return res.status(400).json({ message: "Xác nhận mật khẩu không khớp với mật khẩu mới" });
+      return res
+        .status(400)
+        .json({ message: "Xác nhận mật khẩu không khớp với mật khẩu mới" });
     }
-    //check old pass, bcrypt so sanh pass word nhap vao voi mk da ma hoa trong db 
+    //check old pass, bcrypt so sanh pass word nhap vao voi mk da ma hoa trong db
     const isMatch = await bcrypt.compare(oldPassword, user.account.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Mật khẩu cũ không đúng, vui lòng thử lại" });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu cũ không đúng, vui lòng thử lại" });
     }
     //ma hoa va luu mk moi, so lan b se thuc hien qua trinh ma hoahoa
     user.account.password = await bcrypt.hash(newPassword, 10);
@@ -204,7 +220,9 @@ async function banUser(req, res, next) {
       return res.status(404).json({ message: "User not found" });
     }
     if (user.status === "inactive") {
-      return res.status(400).json({ message: "Người dùng này chưa được xác thực!" });
+      return res
+        .status(400)
+        .json({ message: "Người dùng này chưa được xác thực!" });
     }
     user.status = status;
     await user.save();
@@ -218,37 +236,82 @@ async function banUser(req, res, next) {
 async function addEmployee(req, res) {
   try {
     const {
-      fullName, email, phoneNumber, avatar, dob, address, gender, idCard, salary, role, type,
-      workDays, shifts, startTime, endTime
+      fullName,
+      email,
+      phoneNumber,
+      avatar,
+      dob,
+      address,
+      gender,
+      idCard,
+      salary,
+      role,
+      type,
+      workDays,
+      shifts,
+      startTime,
+      endTime,
     } = req.body;
 
-    if (!fullName || !email || !phoneNumber || !idCard || !salary || !role || !type) {
-      return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin" });
+    if (
+      !fullName ||
+      !email ||
+      !phoneNumber ||
+      !idCard ||
+      !salary ||
+      !role ||
+      !type
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng điền đầy đủ thông tin" });
     }
 
     // Kiểm tra dữ liệu lịch làm việc
     if (type === "fulltime" && (!workDays || !startTime || !endTime)) {
-      return res.status(400).json({ message: "Nhân viên fulltime cần có ngày làm việc, giờ bắt đầu và giờ kết thúc." });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Nhân viên fulltime cần có ngày làm việc, giờ bắt đầu và giờ kết thúc.",
+        });
     }
 
     if (type === "parttime" && (!workDays || !shifts)) {
-      return res.status(400).json({ message: "Nhân viên parttime cần có ngày làm việc và ca làm việc." });
+      return res
+        .status(400)
+        .json({
+          message: "Nhân viên parttime cần có ngày làm việc và ca làm việc.",
+        });
     }
 
     // Kiểm tra email, ID card, số điện thoại đã tồn tại hay chưa
     const existingUser = await db.User.findOne({ "account.email": email });
-    if (existingUser) return res.status(409).json({ message: "Email đã tồn tại." });
+    if (existingUser)
+      return res.status(409).json({ message: "Email đã tồn tại." });
 
     const existingIdCard = await db.User.findOne({ "profile.idCard": idCard });
-    if (existingIdCard) return res.status(409).json({ message: "Căn cước này đã có trong hệ thống" });
+    if (existingIdCard)
+      return res
+        .status(409)
+        .json({ message: "Căn cước này đã có trong hệ thống" });
 
-    const existingPhoneNumber = await db.User.findOne({ "profile.phoneNumber": phoneNumber });
-    if (existingPhoneNumber) return res.status(409).json({ message: "Số điện thoại này đã được sử dụng" });
+    const existingPhoneNumber = await db.User.findOne({
+      "profile.phoneNumber": phoneNumber,
+    });
+    if (existingPhoneNumber)
+      return res
+        .status(409)
+        .json({ message: "Số điện thoại này đã được sử dụng" });
 
     // Tạo mật khẩu ngẫu nhiên
     const generateRandomPassword = (length = 8) => {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      return Array.from(
+        { length },
+        () => chars[Math.floor(Math.random() * chars.length)]
+      ).join("");
     };
     const password = generateRandomPassword();
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -285,7 +348,7 @@ async function addEmployee(req, res) {
     // Tạo token xác minh
     const verificationToken = jwt.sign(
       { id: newUser._id, email: newUser.account.email },
-      process.env.JWT_SECRET,
+      process.env.ACCESS_TOKEN_SECRET_KEY,
       { expiresIn: "1h" }
     );
 
@@ -300,17 +363,21 @@ async function addEmployee(req, res) {
       }
       return res.status(200).json({ message: "Registration successful", info });
     });
-    res.status(201).json({ message: "Tạo tài khoản thành công, vui lòng xác minh tài khoản sớm!" });
-
+    res
+      .status(201)
+      .json({
+        message: "Tạo tài khoản thành công, vui lòng xác minh tài khoản sớm!",
+      });
   } catch (error) {
     console.error("Error adding employee:", error);
     if (error.name === "ValidationError") {
-      return res.status(400).json({ message: "Salary must be a positive number" });
+      return res
+        .status(400)
+        .json({ message: "Salary must be a positive number" });
     }
     res.status(500).json({ message: "Internal server error" });
   }
 }
-
 
 const userController = {
   getProfile,
@@ -319,7 +386,7 @@ const userController = {
   changePassword,
   updatedUser,
   banUser,
-  addEmployee
+  addEmployee,
 };
 
 module.exports = userController;
