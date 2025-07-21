@@ -61,13 +61,13 @@ const mainFunctions = [
     title: "Thống kê",
     icon: <AnalyticsIcon />,
     path: "/dashboard",
-    allowedRoles: ["manager", "employee"],
+    allowedRoles: ["manager"],
   },
   {
     title: "Nhập hàng",
     icon: <MoveToInboxIcon />,
-    path: "/receipt/create",
-    allowedRoles: ["manager"],
+    path: "/receipts",
+    allowedRoles: ["manager", "employee"],
   },
   {
     title: "Xuất hàng",
@@ -85,7 +85,7 @@ const mainFunctions = [
     title: "Nhà cung cấp",
     icon: <HandshakeIcon />,
     path: "/get-list-suppliers",
-    allowedRoles: ["manager", "employee"],
+    allowedRoles: ["manager"],
   },
   {
     title: "Kiểm kê",
@@ -103,7 +103,7 @@ const mainFunctions = [
     title: "Danh mục",
     icon: <CategoryIcon />,
     path: "/category",
-    allowedRoles: ["manager"],
+    allowedRoles: ["manager", "employee"],
   },
   {
     title: "Giao dịch",
@@ -111,18 +111,7 @@ const mainFunctions = [
     path: "/list-transaction",
     allowedRoles: ["manager"],
   },
-  {
-    title: "Khách hàng",
-    icon: <PeopleIcon />,
-    path: "/listcustomer",
-    allowedRoles: ["manager", "employee"],
-  },
-  {
-    title: "Sơ đồ kho",
-    icon: <WarehouseIcon />,
-    path: "/warehouse",
-    allowedRoles: ["manager", "employee"],
-  },
+
 ];
 
 // Helper function để lấy vai trò người dùng
@@ -216,9 +205,23 @@ function Landing() {
     setProfileMenuAnchor(null);
   };
 
+  // Hiệu ứng chuyển động mượt mà khi chuyển trang
   const handleNavigate = (path) => {
-    navigate(path);
-    handleProfileMenuClose();
+    const landingBox = document.getElementById('landing-root');
+    if (landingBox) {
+      landingBox.style.transition = 'opacity 0.4s cubic-bezier(0.4,0,0.2,1)';
+      landingBox.style.opacity = 0;
+      setTimeout(() => {
+        navigate(path);
+        handleProfileMenuClose();
+        setTimeout(() => {
+          if (landingBox) landingBox.style.opacity = 1;
+        }, 400);
+      }, 400);
+    } else {
+      navigate(path);
+      handleProfileMenuClose();
+    }
   };
 
   const handleLogout = () => {
@@ -236,16 +239,19 @@ function Landing() {
 
   const avatarUrl = profile?.profile?.avatar
     ? `http://localhost:9999${profile.profile.avatar}`
-    : "/images/avatar/default.png";
+    : "/images/avatar/imageDefault.jpg";
 
   return (
     <Box
+      id="landing-root"
       sx={{
         minHeight: "100vh",
         background: "linear-gradient(135deg, #155E64 0%, #2575fc 100%)",
         pt: 2,
         pb: 6,
         position: "relative",
+        transition: "opacity 0.4s cubic-bezier(0.4,0,0.2,1)",
+        opacity: 1,
         "&::before": {
           content: '""',
           position: "absolute",
@@ -261,13 +267,14 @@ function Landing() {
       }}
     >
       <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
-        {/* User Profile Card */}
+        {/* User Profile Card - chuyển sang phải */}
         {profile && (
           <Box
             sx={{
               mb: 3,
               display: "flex",
               alignItems: "center",
+              justifyContent: "flex-end",
               gap: 1,
             }}
           >
@@ -305,8 +312,8 @@ function Landing() {
             <Menu
               sx={{ mt: "45px" }}
               anchorEl={profileMenuAnchor}
-              anchorOrigin={{ vertical: "top", horizontal: "left" }}
-              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
               open={Boolean(profileMenuAnchor)}
               onClose={handleProfileMenuClose}
             >
@@ -389,7 +396,7 @@ function Landing() {
               <OdooAppButton
                 title={func.title}
                 icon={func.icon}
-                onClick={() => navigate(func.path)}
+                onClick={() => handleNavigate(func.path)}
               />
             </Grid>
           ))}

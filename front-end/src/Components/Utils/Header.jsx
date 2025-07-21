@@ -123,7 +123,7 @@ function Header() {
 
   const avatarUrl = profile?.profile?.avatar
     ? `http://localhost:9999${profile.profile.avatar}`
-    : "/images/avatar/default.png";
+    : "/images/avatar/imageDefault.jpg";
 
   // --- NAVIGATION ITEMS ---
   const navItems = [
@@ -133,7 +133,7 @@ function Header() {
       path: "/product",
       allowedRoles: ["manager", "employee"],
     },
-    { label: "Danh mục", path: "/category", allowedRoles: ["manager"] },
+    { label: "Danh mục", path: "/category", allowedRoles: ["manager", "employee"] },
     {
       label: "Nhân viên",
       path: "/manager/get-all-user",
@@ -150,32 +150,16 @@ function Header() {
       allowedRoles: ["manager", "employee"],
     },
     {
-      label: "Sơ đồ kho",
-      path: "/warehouse",
-      allowedRoles: ["manager", "employee"],
-    },
-  ];
-
-  const partnerMenuItems = [
-    {
       label: "Nhà cung cấp",
       path: "/get-list-suppliers",
-      allowedRoles: ["manager", "employee"],
-    },
-    {
-      label: "Quản lý Nhà cung cấp - Sản phẩm",
-      path: "/manager/manage-supplier-products",
       allowedRoles: ["manager"],
-    },
-    {
-      label: "Khách hàng",
-      path: "/listcustomer",
-      allowedRoles: ["manager", "employee"],
     },
   ];
 
+  const partnerMenuItems = [];
+
   const transactionMenuItems = [
-    { label: "Phiếu Nhập Kho", path: "/receipts", allowedRoles: ["manager"] },
+    { label: "Phiếu Nhập Kho", path: "/receipts", allowedRoles: ["manager", "employee"] },
     {
       label: "Xuất Kho",
       path: "/export",

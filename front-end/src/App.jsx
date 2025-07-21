@@ -172,7 +172,8 @@ function App() {
           <Route
             path="/receipts"
             element={
-              <ProtectedRoute allowedRoles={["manager"]}>
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                {/* 确保 ListReceipts 组件正确导入 */}
                 <ListReceipts />
               </ProtectedRoute>
             }
@@ -230,7 +231,7 @@ function App() {
           <Route
             path="/category"
             element={
-              <ProtectedRoute allowedRoles={["manager"]}>
+              <ProtectedRoute allowedRoles={["employee", "manager"]}>
                 <ListCategory />
               </ProtectedRoute>
             }
