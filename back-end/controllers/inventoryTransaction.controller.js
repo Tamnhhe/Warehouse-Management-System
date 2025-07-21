@@ -237,6 +237,29 @@ const updateTransactionStatus = async (req, res) => {
           product.receiveQuantity,
           product.weight || 0
         );
+
+        const newLocation = [];
+        //Cập nhật số lượng sản phẩm trong từng kệ ở trong product 
+        for (const loc of updatedProduct.location) {
+          const inventory = await db.Inventory.findById(loc.inventoryId);
+          if (!inventory) {
+            console.error(
+              `Không tìm thấy kệ với ID: ${loc.inventoryId} để cập nhật sản phẩm`
+            );
+            continue;
+          }
+          const productInInventory = inventory.products.find(
+            (p) => p.productId.toString() === updatedProduct._id.toString()
+          );
+          if (productInInventory) {
+            newLocation.push({
+              inventoryId: loc.inventoryId,
+              stock: productInInventory.quantity,
+            });
+          } 
+        }
+        updatedProduct.location = newLocation;
+        await updatedProduct.save();
       }
     }
 
@@ -452,44 +475,6 @@ const createReceipt = async (req, res) => {
           );
         }
 
-        // Find product in system
-        let productDoc = await db.Product.findOne({
-          productName: { $regex: new RegExp(`^${product.productName}$`, "i") },
-        });
-
-        // If product does not exist, create a temp product
-        if (!productDoc) {
-          productDoc = await db.Product.create({
-            productName: product.productName,
-            categoryId: category._id,
-            totalStock: product.quantity,
-            thresholdStock: 0,
-            productImage: product.productImage || "",
-            unit: product.unit,
-            quantitative: product.weight || 0,
-            location: [],
-            status: "active",
-          });
-
-          // Phân bổ sản phẩm mới vào các kệ
-          await distributeProductToInventories(
-            productDoc._id,
-            product.quantity,
-            product.weight || 0
-          );
-        } else {
-          // Sản phẩm đã tồn tại, cập nhật tổng tồn kho
-          productDoc.totalStock += Number(product.quantity);
-          await productDoc.save();
-
-          // Phân bổ số lượng sản phẩm vào các kệ
-          await distributeProductToInventories(
-            productDoc._id,
-            product.quantity,
-            product.weight || 0
-          );
-        }
-
         // Find SupplierProduct relationship (no update, just find or create)
         let supplierProduct = await db.SupplierProduct.findOne({
           productName: product.productName,
@@ -540,7 +525,7 @@ const createReceipt = async (req, res) => {
       supplier: supplierDoc._id,
       supplierName: supplierDoc.name,
       totalPrice,
-      status: "completed", // Đánh dấu là đã hoàn thành để sản phẩm đã được phân bổ vào kệ
+      status: "pending", 
       branch: "Main Branch",
     });
 
