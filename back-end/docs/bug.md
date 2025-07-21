@@ -4,9 +4,7 @@ Tạo sản phẩm:
 - Tạo kệ bên trong tạo sản phẩm
 - Tạo danh mục bên trong tạo sản phẩm
 - Có thể thêm supplier ngay bên trong tạo sản phẩm
-
 - Trong trường hợp update product thì khi sửa lại tồn kho của từng kệ thì tổng số lượng sản phẩm bắt buộc phải bằng với giá trị của total stock ban đầu khi mới tạo sản phẩm (v)
-
 - Sửa lại từ chọn kho thành chọn kệ và sau đó nhập tồn kho (v)
 - Kiểm tra kệ có đủ dung tích chứa hay không trước khi nhập (v)
 - Sửa lại tổng tất cả sản phẩm đặt ở các vị trí sẽ bằng total stock, và thường thì là chọn kệ là sẽ đẩy hết total stock hiện tại (v)
@@ -15,6 +13,7 @@ Tạo sản phẩm:
 - Tất cả các phần thêm bên trong tạo sản phẩm đều là modal hiển thị và có nút x
 
 Xem danh sách sản phẩm:
+
 - Thêm bộ lọc filter bên gocs bên phải để chỉnh những gì muốn xem trong danh sách: tất cả bao gồm, hình ảnh, tên sản phẩm,đơn vị, nhà cung cấp, kệ, danh mục, trạng thái,
 
 Update sản phẩm: danh mục cũng được tạo bên trong cập nhật sản phẩm,
@@ -45,11 +44,18 @@ xuất hàng, nếu xuất sản phẩm có trong nhiều kệ thì sẽ xuất 
 
 ví dụ có 100sp bột, mà để ở lần lượt 3 kệ là kệ 1 25, kệ 2 35, kệ 3 40 thì khi xuất 50 sản phẩm sẽ trừ 25 ở kệ 1 và trừ tiếp 25 ở kệ 2.
 
+Navbar:
 
-Navbar: 
 - Bỏ sơ đồ kho đi
 - Đổi xuất kho thành phiếu xuất kho
 - Bỏ danh sách giao dịch
 
 Receipt Transaction:
+
 - Sửa lỗi khi tạo phiếu nhập thì bị tự động nhập (Biểu hiện khi tạo thành công tự động chuyển sang trạng thái completed)
+
+Export Product:
+
+Thêm thông tin chi tiết cho branch khi xuất
+
+và ở view transaction detail sẽ hiển thị thêm các thông tin chi tiết về chi nhánh
