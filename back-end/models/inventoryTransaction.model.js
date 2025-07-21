@@ -85,7 +85,8 @@ const inventoryTransactionSchema = new mongoose.Schema(
     },
     branch: {
       //Chi nhanh
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
     },
     status: {
       //Trang thái

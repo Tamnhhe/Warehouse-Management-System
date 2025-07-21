@@ -2,15 +2,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "react-bootstrap";
+import { Button, Modal, Form } from "react-bootstrap";
 import html2pdf from "html2pdf.js";
 import "./InvoiceStyles.css";
+import useTransaction from "../../Hooks/useTransaction";
 
 const ExportDetail = () => {
   const { id } = useParams();
   const [transaction, setTransaction] = useState(null);
   const navigate = useNavigate();
   const invoiceRef = useRef();
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [returnConfirmModal, setReturnConfirmModal] = useState(false);
+  const { updateTransactionStatus } = useTransaction();
 
   useEffect(() => {
     axios
@@ -19,6 +24,7 @@ const ExportDetail = () => {
       )
       .then((response) => {
         setTransaction(response.data);
+        setNewStatus(response.data.status);
         console.log("Transaction data:", response.data);
         console.log("Products:", response.data.products);
       })
@@ -43,6 +49,57 @@ const ExportDetail = () => {
     html2pdf().set(opt).from(element).save();
   };
 
+  const openStatusModal = () => {
+    setShowStatusModal(true);
+  };
+
+  const handleStatusChange = async () => {
+    try {
+      const res = await updateTransactionStatus(id, { status: newStatus });
+      if (res && res.status) {
+        setTransaction({ ...transaction, status: res.status });
+        setShowStatusModal(false);
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái:", error);
+    }
+  };
+
+  const handleReturnProducts = () => {
+    setReturnConfirmModal(true);
+  };
+
+  const confirmReturn = async () => {
+    try {
+      // Create a new import transaction with the products from this export
+      const importData = {
+        products: transaction.products.map((product) => ({
+          productId: product.productId?._id || product.productId,
+          requestQuantity: product.requestQuantity,
+        })),
+        transactionType: "import",
+        status: "pending",
+        note: `Trả hàng từ phiếu xuất ${transaction._id}`,
+        branch: transaction.branch,
+        returnedFrom: transaction._id, // Reference to the original export
+      };
+
+      const response = await axios.post(
+        "http://localhost:9999/inventoryTransactions/createTransaction",
+        importData
+      );
+
+      if (response.data) {
+        // Navigate to the edit page for the new import transaction
+        navigate(`/edit-transaction/${response.data._id}`);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tạo phiếu nhập kho:", error);
+    } finally {
+      setReturnConfirmModal(false);
+    }
+  };
+
   if (!transaction) return <p>Đang tải dữ liệu...</p>;
 
   return (
@@ -59,7 +116,20 @@ const ExportDetail = () => {
               <strong>Mã hóa đơn:</strong> {transaction._id}
             </p>
             <p>
-              <strong>Trạng thái:</strong> {transaction.status}
+              <strong>Trạng thái:</strong>{" "}
+              <span
+                className={`badge ${
+                  transaction.status === "pending"
+                    ? "bg-warning"
+                    : transaction.status === "completed"
+                    ? "bg-success"
+                    : "bg-danger"
+                }`}
+              >
+                {transaction.status === "pending" && "Chờ xử lý"}
+                {transaction.status === "completed" && "Hoàn thành"}
+                {transaction.status === "cancelled" && "Từ chối"}
+              </span>
             </p>
           </div>
           <div className="text-end">
@@ -125,7 +195,7 @@ const ExportDetail = () => {
         </div>
       </div>
 
-      <div className="d-flex gap-3 mt-4">
+      <div className="d-flex flex-wrap gap-3 mt-4">
         <Button variant="secondary" onClick={() => navigate(-1)}>
           Quay lại
         </Button>
@@ -135,7 +205,99 @@ const ExportDetail = () => {
         <Button variant="success" onClick={handleDownload}>
           Tải xuống PDF
         </Button>
+        <Button variant="warning" onClick={openStatusModal}>
+          Cập nhật trạng thái
+        </Button>
+        <Button
+          variant="danger"
+          onClick={handleReturnProducts}
+          disabled={transaction.status !== "completed"}
+        >
+          Trả hàng
+        </Button>
       </div>
+
+      {/* Status Update Modal */}
+      <Modal
+        show={showStatusModal}
+        onHide={() => setShowStatusModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Cập nhật trạng thái phiếu xuất</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Mã phiếu: <strong>{transaction._id}</strong>
+          </p>
+          <Form>
+            <Form.Check
+              type="radio"
+              id="status-pending"
+              label="🟡 Chờ xử lý"
+              value="pending"
+              checked={newStatus === "pending"}
+              onChange={(e) => setNewStatus(e.target.value)}
+            />
+            <Form.Check
+              type="radio"
+              id="status-completed"
+              label="✅ Hoàn thành"
+              value="completed"
+              checked={newStatus === "completed"}
+              onChange={(e) => setNewStatus(e.target.value)}
+            />
+            <Form.Check
+              type="radio"
+              id="status-cancelled"
+              label="❌ Từ chối"
+              value="cancelled"
+              checked={newStatus === "cancelled"}
+              onChange={(e) => setNewStatus(e.target.value)}
+            />
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
+            Hủy
+          </Button>
+          <Button variant="primary" onClick={handleStatusChange}>
+            Xác nhận
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Return Products Confirmation Modal */}
+      <Modal
+        show={returnConfirmModal}
+        onHide={() => setReturnConfirmModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Xác nhận trả hàng</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Bạn có chắc chắn muốn tạo phiếu nhập kho để trả hàng từ phiếu xuất
+            này?
+          </p>
+          <p>
+            Hệ thống sẽ tạo một phiếu nhập kho mới với cùng danh sách sản phẩm
+            và số lượng.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setReturnConfirmModal(false)}
+          >
+            Hủy
+          </Button>
+          <Button variant="danger" onClick={confirmReturn}>
+            Xác nhận trả hàng
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

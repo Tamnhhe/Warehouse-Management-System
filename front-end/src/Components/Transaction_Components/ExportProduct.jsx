@@ -189,6 +189,22 @@ const ExportProduct = () => {
       return;
     }
 
+    // Check if any product quantity exceeds available stock
+    const invalidProducts = selectedProducts.filter(
+      (product) => parseInt(product.quantity, 10) > product.totalStock
+    );
+
+    if (invalidProducts.length > 0) {
+      const productNames = invalidProducts
+        .map(
+          (p) =>
+            `${p.productName} (yêu cầu: ${p.quantity}, tồn kho: ${p.totalStock})`
+        )
+        .join(", ");
+      setError(`Số lượng xuất vượt quá tồn kho: ${productNames}`);
+      return;
+    }
+
     try {
       // Chuẩn bị dữ liệu gửi đi
       const requestData = {
