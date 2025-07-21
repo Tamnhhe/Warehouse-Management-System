@@ -14,9 +14,17 @@ const ExportDetail = () => {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
-      .then((response) => setTransaction(response.data))
-      .catch((error) => console.error("Lỗi khi lấy chi tiết giao dịch:", error));
+      .get(
+        `http://localhost:9999/inventoryTransactions/getTransactionById/${id}`
+      )
+      .then((response) => {
+        setTransaction(response.data);
+        console.log("Transaction data:", response.data);
+        console.log("Products:", response.data.products);
+      })
+      .catch((error) =>
+        console.error("Lỗi khi lấy chi tiết giao dịch:", error)
+      );
   }, [id]);
 
   const handlePrint = () => {
@@ -43,9 +51,16 @@ const ExportDetail = () => {
         <div className="header d-flex justify-content-between align-items-center">
           <div>
             <h1 className="text-danger">HÓA ĐƠN XUẤT HÀNG</h1>
-            <p><strong>Ngày lập:</strong> {new Date(transaction.transactionDate).toLocaleDateString()}</p>
-            <p><strong>Mã hóa đơn:</strong> {transaction._id}</p>
-            <p><strong>Trạng thái:</strong> {transaction.status}</p>
+            <p>
+              <strong>Ngày lập:</strong>{" "}
+              {new Date(transaction.transactionDate).toLocaleDateString()}
+            </p>
+            <p>
+              <strong>Mã hóa đơn:</strong> {transaction._id}
+            </p>
+            <p>
+              <strong>Trạng thái:</strong> {transaction.status}
+            </p>
           </div>
           <div className="text-end">
             <h5>CÔNG TY TNHH ABC</h5>
@@ -56,12 +71,17 @@ const ExportDetail = () => {
 
         <div className="section my-4">
           <h5>Thông tin chi nhánh xuất hàng:</h5>
-          <p><strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}</p>
+          <p>
+            <strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}
+          </p>
         </div>
 
         <div className="section my-4">
           <h5>Người thực hiện:</h5>
-          <p><strong>Họ tên:</strong> {transaction.operator?.fullName || "Chưa rõ"}</p>
+          <p>
+            <strong>Họ tên:</strong>{" "}
+            {transaction.operator?.fullName || "Chưa rõ"}
+          </p>
         </div>
 
         <table className="table table-bordered text-center">
@@ -78,10 +98,17 @@ const ExportDetail = () => {
           <tbody>
             {transaction.products.map((product, index) => {
               const total = product.price * product.achievedProduct;
+              console.log("Product item:", product);
               return (
                 <tr key={index}>
                   <td>{index + 1}</td>
-                  <td>{product.supplierProductId?.product?.productName || "--"}</td>
+                  <td>
+                    {product.productId?.productName ||
+                      product.supplierProductId?.productName ||
+                      product.productName ||
+                      product.supplierProductId?.product?.productName ||
+                      "--"}
+                  </td>
                   <td>{product.requestQuantity}</td>
                   <td>{product.achievedProduct}</td>
                   <td>{product.price.toLocaleString()} đ</td>
@@ -93,21 +120,33 @@ const ExportDetail = () => {
         </table>
 
         <div className="text-end mt-4">
-          <h4><strong>TỔNG TIỀN:</strong> {transaction.totalPrice.toLocaleString()} đ</h4>
+          <h4>
+            <strong>TỔNG TIỀN:</strong>{" "}
+            {transaction.totalPrice.toLocaleString()} đ
+          </h4>
         </div>
 
         <div className="mt-5">
-          <p><strong>Ghi chú:</strong></p>
+          <p>
+            <strong>Ghi chú:</strong>
+          </p>
           <p className="text-muted">
-            Hóa đơn này được tạo cho giao dịch xuất kho. Vui lòng xác nhận lại số lượng và giá trước khi ký nhận.
+            Hóa đơn này được tạo cho giao dịch xuất kho. Vui lòng xác nhận lại
+            số lượng và giá trước khi ký nhận.
           </p>
         </div>
       </div>
 
       <div className="d-flex gap-3 mt-4">
-        <Button variant="secondary" onClick={() => navigate(-1)}>Quay lại</Button>
-        <Button variant="primary" onClick={handlePrint}>In hóa đơn</Button>
-        <Button variant="success" onClick={handleDownload}>Tải xuống PDF</Button>
+        <Button variant="secondary" onClick={() => navigate(-1)}>
+          Quay lại
+        </Button>
+        <Button variant="primary" onClick={handlePrint}>
+          In hóa đơn
+        </Button>
+        <Button variant="success" onClick={handleDownload}>
+          Tải xuống PDF
+        </Button>
       </div>
     </div>
   );

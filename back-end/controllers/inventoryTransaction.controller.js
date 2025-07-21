@@ -79,6 +79,7 @@ const createTransaction = async (req, res, next) => {
 
           processedProducts.push({
             supplierProductId: supplierProduct._id,
+            productId: product._id, // Lưu cả productId để dễ truy xuất thông tin sản phẩm
             requestQuantity: parseInt(item.requestQuantity) || 1,
             receiveQuantity: parseInt(item.requestQuantity) || 1,
             defectiveProduct: 0,
@@ -115,12 +116,10 @@ const createTransaction = async (req, res, next) => {
     const savedTransaction = await newTransaction.save();
     console.log("Transaction created successfully:", savedTransaction._id);
 
-    return res
-      .status(201)
-      .json({
-        message: "Giao dịch được tạo thành công",
-        newTransaction: savedTransaction,
-      });
+    return res.status(201).json({
+      message: "Giao dịch được tạo thành công",
+      newTransaction: savedTransaction,
+    });
   } catch (err) {
     console.error("Error creating transaction:", err);
     return res
@@ -146,10 +145,16 @@ const getAllTransactions = async (req, res) => {
 // Lấy một giao dịch theo ID
 const getTransactionById = async (req, res) => {
   try {
+    // Lấy giao dịch và populate supplierProductId, productId và operator
     const transaction = await db.InventoryTransaction.findById(req.params.id)
       .populate({
         path: "products.supplierProductId",
         model: "SupplierProduct",
+      })
+      .populate({
+        path: "products.productId",
+        model: "Product",
+        strictPopulate: false, // Cho phép populate trường không có trong schema
       })
       .populate("operator");
 
@@ -239,7 +244,7 @@ const updateTransactionStatus = async (req, res) => {
         );
 
         const newLocation = [];
-        //Cập nhật số lượng sản phẩm trong từng kệ ở trong product 
+        //Cập nhật số lượng sản phẩm trong từng kệ ở trong product
         for (const loc of updatedProduct.location) {
           const inventory = await db.Inventory.findById(loc.inventoryId);
           if (!inventory) {
@@ -256,7 +261,7 @@ const updateTransactionStatus = async (req, res) => {
               inventoryId: loc.inventoryId,
               stock: productInInventory.quantity,
             });
-          } 
+          }
         }
         updatedProduct.location = newLocation;
         await updatedProduct.save();
@@ -525,7 +530,7 @@ const createReceipt = async (req, res) => {
       supplier: supplierDoc._id,
       supplierName: supplierDoc.name,
       totalPrice,
-      status: "pending", 
+      status: "pending",
       branch: "Main Branch",
     });
 

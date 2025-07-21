@@ -1,17 +1,67 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import {
-  Container,
-  Row,
-  Col,
-  Form,
-  Button,
-  Alert,
-  Card,
-} from "react-bootstrap";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Alert,
+  Avatar,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
+  Chip,
+  Paper,
+  IconButton,
+  InputAdornment,
+} from "@mui/material";
+import {
+  ArrowBack,
+  Save,
+  AccessTime,
+  CalendarMonth,
+  Person,
+  Email,
+  Phone,
+  LocationOn,
+  CreditCard,
+  Work,
+  AttachMoney,
+} from "@mui/icons-material";
+
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5 },
+  },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
 
 function CreateEmployee() {
+  const navigate = useNavigate();
   const [data, setFormData] = useState({
     fullName: "",
     email: "",
@@ -32,10 +82,16 @@ function CreateEmployee() {
 
   const [statusMessage, setStatusMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...data, [name]: value });
+
+    // Clear validation error when field is being edited
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   useEffect(() => {
@@ -48,7 +104,7 @@ function CreateEmployee() {
     }
   }, [data.type]);
 
-  // Chọn ngày làm viêjc
+  // Toggle work day selection
   const toggleWorkDay = (day) => {
     setFormData((prevData) => {
       const updatedDays = prevData.workDays.includes(day)
@@ -56,9 +112,13 @@ function CreateEmployee() {
         : [...prevData.workDays, day];
       return { ...prevData, workDays: updatedDays };
     });
+
+    // Clear workDays validation error when selection changes
+    if (errors.workDays) {
+      setErrors((prev) => ({ ...prev, workDays: "" }));
+    }
   };
 
-  console.log(data);
   // Ham tinh tuoi
   const calculateAge = (dob) => {
     const birthDate = new Date(dob);
@@ -71,27 +131,100 @@ function CreateEmployee() {
     return age;
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Validate fullName
+    if (!data.fullName.trim()) {
+      newErrors.fullName = "Vui lòng nhập tên nhân viên";
+      isValid = false;
+    }
+
+    // Validate email
+    if (!data.email.trim()) {
+      newErrors.email = "Vui lòng nhập email";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      newErrors.email = "Email không hợp lệ";
+      isValid = false;
+    }
+
+    // Validate phone
+    if (!data.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Vui lòng nhập số điện thoại";
+      isValid = false;
+    } else if (!/^[0-9]{10}$/.test(data.phoneNumber)) {
+      newErrors.phoneNumber = "Số điện thoại phải có 10 chữ số";
+      isValid = false;
+    }
+
+    // Validate DOB
+    if (!data.dob) {
+      newErrors.dob = "Vui lòng chọn ngày sinh";
+      isValid = false;
+    } else if (calculateAge(data.dob) < 18) {
+      newErrors.dob = "Nhân viên phải từ 18 tuổi trở lên";
+      isValid = false;
+    }
+
+    // Validate address
+    if (!data.address.trim()) {
+      newErrors.address = "Vui lòng nhập địa chỉ";
+      isValid = false;
+    }
+
+    // Validate ID card
+    if (!data.idCard.trim()) {
+      newErrors.idCard = "Vui lòng nhập số căn cước";
+      isValid = false;
+    } else if (data.idCard.length !== 12) {
+      newErrors.idCard = "Số căn cước phải có đủ 12 số";
+      isValid = false;
+    }
+
+    // Validate salary
+    if (!data.salary) {
+      newErrors.salary = "Vui lòng nhập mức lương";
+      isValid = false;
+    } else if (parseFloat(data.salary) <= 0) {
+      newErrors.salary = "Lương phải lớn hơn 0";
+      isValid = false;
+    }
+
+    // Validate type
+    if (!data.type) {
+      newErrors.type = "Vui lòng chọn loại hợp đồng";
+      isValid = false;
+    }
+
+    // Validate workdays
+    if (data.workDays.length === 0) {
+      newErrors.workDays = "Vui lòng chọn ít nhất một ngày làm việc";
+      isValid = false;
+    }
+
+    // Validate shifts for part-time
+    if (data.type === "parttime" && data.shifts.length === 0) {
+      newErrors.shifts = "Vui lòng chọn ca làm việc";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Reset messages
     setIsError(false);
     setStatusMessage("");
 
-    // Kiem tra xem nguoi dung co du 18 tuoi khong
-    if (data.dob && calculateAge(data.dob) < 18) {
-      setStatusMessage('Nhân viên chưa đủ 18 tuổi');
+    // Validate form
+    if (!validateForm()) {
       setIsError(true);
-      return;
-    }
-    //kiểm tra căn cước đủ 12 số không
-    if (data.idCard.length !== 12) {
-      setStatusMessage('CMND chưa đủ 12 số');
-      setIsError(true);
-      return;
-    }
-    //kiểm tra tên nhân viên
-    if (data.fullName.trim().length === 0) {
-      setStatusMessage('Vui lòng nhập tên nhân viên');
-      setIsError(true);
+      setStatusMessage("Vui lòng điền đầy đủ thông tin.");
       return;
     }
 
@@ -100,11 +233,16 @@ function CreateEmployee() {
         "http://localhost:9999/users/add-employee",
         data
       );
-      setStatusMessage(response.data.message);
+      setStatusMessage(response.data.message || "Tạo nhân viên thành công!");
+      setIsError(false);
+
+      // Reset form after successful submission
+      setTimeout(() => {
+        navigate("/manager/get-all-user");
+      }, 2000);
     } catch (error) {
       setIsError(true);
-      const errorMessage =
-        error.response?.data?.message || "An error occurred!";
+      const errorMessage = error.response?.data?.message || "Đã có lỗi xảy ra!";
       setStatusMessage(errorMessage);
     }
   };
@@ -112,377 +250,592 @@ function CreateEmployee() {
   const handleSalaryChange = (e) => {
     const value = Math.max(0, e.target.value);
     setFormData({ ...data, salary: value });
+
+    // Clear salary validation error
+    if (errors.salary) {
+      setErrors((prev) => ({ ...prev, salary: "" }));
+    }
+  };
+
+  const dayMapping = {
+    Monday: "T2",
+    Tuesday: "T3",
+    Wednesday: "T4",
+    Thursday: "T5",
+    Friday: "T6",
+    Saturday: "T7",
+    Sunday: "CN",
   };
 
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         background:
           "url('/images/backgroundLogin.jpg') no-repeat center center / cover",
         minHeight: "100vh",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        py: 4,
       }}
     >
       <Container>
         <Button
-          variant="link"
-          style={{
-            alignSelf: "flex-start",
+          component={Link}
+          to="/manager/get-all-user"
+          startIcon={<ArrowBack />}
+          sx={{
             color: "#48C1A6",
-            fontSize: "20px",
+            fontSize: "16px",
+            mb: 2,
           }}
         >
-          <Link to="/manager/get-all-user">Trở về danh sách nhân viên</Link>
+          Trở về danh sách nhân viên
         </Button>
-      </Container>
-      <Container className="mt-3 d-flex justify-content-center">
-        <Card
-          className="p-4 shadow-lg"
-          style={{
-            maxWidth: "1000px",
-            width: "100%",
-            borderRadius: "12px",
-            backgroundColor: "white",
-          }}
+
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
         >
-          <Row className="mb-4">
-            <Col
-              md={3}
-              className="d-flex flex-column align-items-center"
-              style={{
-                backgroundColor: "#7BD1C2",
-                borderRadius: "12px",
-                height: "100%",
-              }}
-            >
-              <img
-                src="https://res.cloudinary.com/ds9p5t0mx/image/upload/v1740308752/avatar-default-icon-1975x2048-2mpk4u9k_fjciku.png"
-                alt="Avatar"
-                style={{
-                  width: "180px",
-                  height: "180px",
-                  borderRadius: "50%",
-                  margin: "40px 0",
+          <Card
+            component={motion.div}
+            variants={fadeIn}
+            sx={{
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            }}
+          >
+            <Grid container>
+              {/* Left sidebar */}
+              <Grid
+                item
+                xs={12}
+                md={3}
+                sx={{
+                  backgroundColor: "#7BD1C2",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  p: 4,
                 }}
-              />
-            </Col>
-            <Col md={9}>
-              <h2 className="mb-4">Tạo mới nhân viên</h2>
-              {statusMessage && (
-                <Alert variant={isError ? "danger" : "success"}>
-                  {statusMessage}
-                </Alert>
-              )}
-              <Form onSubmit={handleSubmit}>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group controlId="formFullName">
-                      <Form.Label>
-                        Họ Tên <span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="fullName"
-                        value={data.fullName}
-                        onChange={handleChange}
-                        required
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formEmail">
-                      <Form.Label>
-                        Email<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        onChange={handleChange}
-                        required
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group controlId="formPhoneNumber">
-                      <Form.Label>
-                        Số điện thoại<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="phoneNumber"
-                        value={data.phoneNumber}
-                        onChange={handleChange}
-                        pattern="[0-9]{10}" // Chỉ cho phép số điện thoại có 11 chữ số
-                        required
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formDob">
-                      <Form.Label>
-                        Ngày sinh<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="date"
-                        name="dob"
-                        value={data.dob}
-                        onChange={handleChange}
-                        style={{ borderColor: "#48C1A6" }}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group controlId="formAddress">
-                      <Form.Label>
-                        Địa chỉ<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="address"
-                        value={data.address}
-                        onChange={handleChange}
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formIdCard">
-                      <Form.Label>
-                        Số căn cước<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="idCard"
-                        value={data.idCard}
-                        onChange={handleChange}
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group controlId="formGender">
-                      <Form.Label>
-                        Giới tính<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Select
-                        name="gender"
-                        value={data.gender}
-                        onChange={handleChange}
-                        style={{ borderColor: "#48C1A6" }}
-                      >
-                        <option value="male">Nam</option>
-                        <option value="female">Nữ</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formSalary">
-                      <Form.Label>
-                        Lương (VND)<span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="number"
-                        name="salary"
-                        value={data.salary}
-                        onChange={handleSalaryChange}
-                        min="0" // Prevent negative values
-                        required
-                        style={{ borderColor: "#48C1A6" }}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>
-                        Hợp đồng <span style={{ color: "red" }}>*</span>
-                      </Form.Label>
-                      <Form.Select
-                        name="type"
-                        value={data.type}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="">Chọn hợp đồng</option>
-                        <option value="fulltime">Toàn thời gian</option>
-                        <option value="parttime">Bán thời gian</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row className="mb-3">
-                  {data.type && (
-                    <Row className="mb-3">
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label>
-                            Ngày làm việc{" "}
-                            <span style={{ color: "red" }}>*</span>
-                          </Form.Label>
-                          <div className="d-flex flex-wrap gap-2">
-                            {[
-                              "Monday",
-                              "Tuesday",
-                              "Wednesday",
-                              "Thursday",
-                              "Friday",
-                              "Saturday",
-                              "Sunday",
-                            ].map((day, index) => (
-                              <div
-                                key={day}
-                                className={`px-3 py-2 border rounded cursor-pointer ${data.workDays.includes(day)
-                                  ? "bg-success text-white"
-                                  : ""
-                                  }`}
-                                onClick={() => toggleWorkDay(day)}
+              >
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Avatar
+                    src="https://res.cloudinary.com/ds9p5t0mx/image/upload/v1740308752/avatar-default-icon-1975x2048-2mpk4u9k_fjciku.png"
+                    alt="Avatar"
+                    sx={{ width: 180, height: 180, mb: 2 }}
+                  />
+                </motion.div>
+
+                <Typography
+                  variant="h6"
+                  color="white"
+                  fontWeight="bold"
+                  textAlign="center"
+                >
+                  Thêm nhân viên mới
+                </Typography>
+              </Grid>
+
+              {/* Form content */}
+              <Grid item xs={12} md={9}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{ fontWeight: 600, mb: 3 }}
+                  >
+                    Tạo mới nhân viên
+                  </Typography>
+
+                  {statusMessage && (
+                    <Alert
+                      severity={isError ? "error" : "success"}
+                      sx={{ mb: 3 }}
+                    >
+                      {statusMessage}
+                    </Alert>
+                  )}
+
+                  <form onSubmit={handleSubmit}>
+                    <motion.div
+                      variants={staggerContainer}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <Grid container spacing={3}>
+                        {/* Full Name */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Họ Tên"
+                            name="fullName"
+                            value={data.fullName}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.fullName}
+                            helperText={errors.fullName}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Person />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Email */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Email"
+                            name="email"
+                            type="email"
+                            value={data.email}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.email}
+                            helperText={errors.email}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Email />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Phone */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Số điện thoại"
+                            name="phoneNumber"
+                            value={data.phoneNumber}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.phoneNumber}
+                            helperText={errors.phoneNumber}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Phone />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* DOB */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Ngày sinh"
+                            name="dob"
+                            type="date"
+                            value={data.dob}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.dob}
+                            helperText={errors.dob}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <CalendarMonth />
+                                </InputAdornment>
+                              ),
+                            }}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        </Grid>
+
+                        {/* Address */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Địa chỉ"
+                            name="address"
+                            value={data.address}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.address}
+                            helperText={errors.address}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <LocationOn />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* ID Card */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Số căn cước"
+                            name="idCard"
+                            value={data.idCard}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.idCard}
+                            helperText={errors.idCard}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <CreditCard />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Gender */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <FormControl component="fieldset">
+                            <FormLabel component="legend">Giới tính</FormLabel>
+                            <RadioGroup
+                              row
+                              name="gender"
+                              value={data.gender}
+                              onChange={handleChange}
+                            >
+                              <FormControlLabel
+                                value="male"
+                                control={<Radio />}
+                                label="Nam"
+                              />
+                              <FormControlLabel
+                                value="female"
+                                control={<Radio />}
+                                label="Nữ"
+                              />
+                            </RadioGroup>
+                          </FormControl>
+                        </Grid>
+
+                        {/* Salary */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Lương (VND)"
+                            name="salary"
+                            type="number"
+                            value={data.salary}
+                            onChange={handleSalaryChange}
+                            required
+                            error={!!errors.salary}
+                            helperText={errors.salary}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <AttachMoney />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Contract Type */}
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <FormControl fullWidth error={!!errors.type}>
+                            <InputLabel>Loại hợp đồng</InputLabel>
+                            <Select
+                              name="type"
+                              value={data.type}
+                              onChange={handleChange}
+                              required
+                              startAdornment={
+                                <InputAdornment position="start">
+                                  <Work />
+                                </InputAdornment>
+                              }
+                            >
+                              <MenuItem value="">Chọn loại hợp đồng</MenuItem>
+                              <MenuItem value="fulltime">
+                                Toàn thời gian
+                              </MenuItem>
+                              <MenuItem value="parttime">
+                                Bán thời gian
+                              </MenuItem>
+                            </Select>
+                            {errors.type && (
+                              <FormHelperText>{errors.type}</FormHelperText>
+                            )}
+                          </FormControl>
+                        </Grid>
+
+                        {/* Work days selection */}
+                        {data.type && (
+                          <Grid
+                            item
+                            xs={12}
+                            component={motion.div}
+                            variants={fadeIn}
+                          >
+                            <FormControl
+                              component="fieldset"
+                              error={!!errors.workDays}
+                              fullWidth
+                            >
+                              <FormLabel component="legend">
+                                Ngày làm việc
+                              </FormLabel>
+                              <Paper
+                                variant="outlined"
+                                sx={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  p: 1.5,
+                                  gap: 1,
+                                }}
                               >
-                                {
-                                  ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][
-                                  index
-                                  ]
-                                }
-                              </div>
-                            ))}
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      {data.type === "fulltime" ? (
-                        <>
-                          <Col md={3}>
-                            <Form.Group>
-                              <Form.Label>
-                                Giờ bắt đầu{" "}
-                                <span style={{ color: "red" }}>*</span>
-                              </Form.Label>
-                              <Form.Control
+                                {Object.entries(dayMapping).map(
+                                  ([day, shortDay]) => (
+                                    <Chip
+                                      key={day}
+                                      label={shortDay}
+                                      onClick={() => toggleWorkDay(day)}
+                                      color={
+                                        data.workDays.includes(day)
+                                          ? "primary"
+                                          : "default"
+                                      }
+                                      sx={{
+                                        transition: "all 0.2s",
+                                        fontWeight: data.workDays.includes(day)
+                                          ? "bold"
+                                          : "normal",
+                                      }}
+                                    />
+                                  )
+                                )}
+                              </Paper>
+                              {errors.workDays && (
+                                <FormHelperText>
+                                  {errors.workDays}
+                                </FormHelperText>
+                              )}
+                            </FormControl>
+                          </Grid>
+                        )}
+
+                        {/* Work hours */}
+                        {data.type === "fulltime" && (
+                          <Grid
+                            item
+                            xs={12}
+                            container
+                            spacing={2}
+                            component={motion.div}
+                            variants={fadeIn}
+                          >
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                label="Giờ bắt đầu"
                                 type="time"
                                 name="startTime"
                                 value={data.startTime}
-                                readOnly
-                                required
+                                InputProps={{
+                                  readOnly: true,
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <AccessTime />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                                InputLabelProps={{ shrink: true }}
                               />
-                            </Form.Group>
-                          </Col>
-                          <Col md={3}>
-                            <Form.Group>
-                              <Form.Label>
-                                Giờ kết thúc{" "}
-                                <span style={{ color: "red" }}>*</span>
-                              </Form.Label>
-                              <Form.Control
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                label="Giờ kết thúc"
                                 type="time"
                                 name="endTime"
                                 value={data.endTime}
-                                readOnly
-                                required
+                                InputProps={{
+                                  readOnly: true,
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <AccessTime />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                                InputLabelProps={{ shrink: true }}
                               />
-                            </Form.Group>
-                          </Col>
-                        </>
-                      ) : (
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label>
-                              Ca làm việc{" "}
-                              <span style={{ color: "red" }}>*</span>
-                            </Form.Label>
-                            <div className="d-flex gap-3">
-                              {["Morning", "Afternoon", "Evening"].map(
-                                (shift) => (
-                                  <Form.Check
-                                    key={shift}
-                                    type="radio"
-                                    label={
-                                      shift === "Morning"
-                                        ? "Sáng"
-                                        : shift === "Afternoon"
-                                          ? "Chiều"
-                                          : "Tối"
-                                    }
-                                    name="shifts"
-                                    value={shift}
-                                    checked={data.shifts.includes(shift)}
-                                    onChange={() => {
-                                      const newShifts = [shift];
-                                      let startTime, endTime;
+                            </Grid>
+                          </Grid>
+                        )}
 
-                                      // Set time based on the selected shift
-                                      if (shift === "Morning") {
-                                        startTime = "08:00";
-                                        endTime = "11:00";
-                                      } else if (shift === "Afternoon") {
-                                        startTime = "13:00";
-                                        endTime = "17:00";
-                                      } else if (shift === "Evening") {
-                                        startTime = "17:00";
-                                        endTime = "21:00";
-                                      }
+                        {/* Shifts for part-time */}
+                        {data.type === "parttime" && (
+                          <Grid
+                            item
+                            xs={12}
+                            component={motion.div}
+                            variants={fadeIn}
+                          >
+                            <FormControl
+                              component="fieldset"
+                              error={!!errors.shifts}
+                            >
+                              <FormLabel component="legend">
+                                Ca làm việc
+                              </FormLabel>
+                              <RadioGroup
+                                row
+                                value={data.shifts[0] || ""}
+                                onChange={(e) => {
+                                  const shift = e.target.value;
+                                  let startTime, endTime;
 
-                                      setFormData({
-                                        ...data,
-                                        shifts: newShifts,
-                                        startTime, // Set startTime based on the shift
-                                        endTime, // Set endTime based on the shift
-                                      });
-                                    }}
-                                  />
-                                )
+                                  // Set time based on selected shift
+                                  if (shift === "Morning") {
+                                    startTime = "08:00";
+                                    endTime = "11:00";
+                                  } else if (shift === "Afternoon") {
+                                    startTime = "13:00";
+                                    endTime = "17:00";
+                                  } else if (shift === "Evening") {
+                                    startTime = "17:00";
+                                    endTime = "21:00";
+                                  }
+
+                                  setFormData({
+                                    ...data,
+                                    shifts: [shift],
+                                    startTime,
+                                    endTime,
+                                  });
+
+                                  // Clear shifts validation error
+                                  if (errors.shifts) {
+                                    setErrors((prev) => ({
+                                      ...prev,
+                                      shifts: "",
+                                    }));
+                                  }
+                                }}
+                              >
+                                <FormControlLabel
+                                  value="Morning"
+                                  control={<Radio />}
+                                  label="Sáng (08:00 - 11:00)"
+                                />
+                                <FormControlLabel
+                                  value="Afternoon"
+                                  control={<Radio />}
+                                  label="Chiều (13:00 - 17:00)"
+                                />
+                                <FormControlLabel
+                                  value="Evening"
+                                  control={<Radio />}
+                                  label="Tối (17:00 - 21:00)"
+                                />
+                              </RadioGroup>
+                              {errors.shifts && (
+                                <FormHelperText>{errors.shifts}</FormHelperText>
                               )}
-                            </div>
-                          </Form.Group>
-                          {data.shifts.length > 0 && (
-                            <div>
-                              <p>
-                                <strong>Thời gian làm việc:</strong>
-                              </p>
-                              {data.shifts.includes("Morning") && (
-                                <p>Sáng: 08:00 - 11:00</p>
-                              )}
-                              {data.shifts.includes("Afternoon") && (
-                                <p>Chiều: 13:00 - 17:00</p>
-                              )}
-                              {data.shifts.includes("Evening") && (
-                                <p>Tối: 17:00 - 21:00</p>
-                              )}
-                            </div>
-                          )}
-                        </Col>
-                      )}
-                    </Row>
-                  )}
-                </Row>
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className="w-100 mt-3"
-                  style={{
-                    backgroundColor: "#48C1A6",
-                    borderColor: "#48C1A6",
-                    padding: "10px 0",
-                  }}
-                >
-                  Tạo nhân viên
-                </Button>
-              </Form>
-            </Col>
-          </Row>
-        </Card>
+                            </FormControl>
+                          </Grid>
+                        )}
+
+                        {/* Submit Button */}
+                        <Grid
+                          item
+                          xs={12}
+                          component={motion.div}
+                          variants={fadeIn}
+                        >
+                          <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            startIcon={<Save />}
+                            sx={{
+                              backgroundColor: "#48C1A6",
+                              "&:hover": { backgroundColor: "#3aa18a" },
+                              py: 1.5,
+                              mt: 2,
+                            }}
+                          >
+                            Tạo nhân viên
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </motion.div>
+                  </form>
+                </CardContent>
+              </Grid>
+            </Grid>
+          </Card>
+        </motion.div>
       </Container>
-    </div>
+    </Box>
   );
 }
 

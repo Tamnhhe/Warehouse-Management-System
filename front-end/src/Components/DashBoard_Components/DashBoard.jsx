@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Bar, Pie, Doughnut, Line } from "react-chartjs-2";
 import "chart.js/auto";
+import transactionAPI from "../../API/transactionAPI";
+import productAPI from "../../API/productAPI";
+import inventoryAPI from "../../API/inventoryAPI";
 
 // Define common style constants
 const colors = {
@@ -156,17 +159,18 @@ function ChartDisplay({ activeTab, chartData, timeRange, salesData }) {
           activeTab === "stock"
             ? "Số lượng sản phẩm"
             : activeTab === "price"
-              ? "So sánh giá sản phẩm"
-              : activeTab === "category"
-                ? "Lượng sản phẩm của danh mục"
-                : activeTab === "status"
-                  ? "Tình trạng kho"
-                  : `Xu hướng tiêu thụ (${timeRange === "Tuần"
-                    ? "7 ngày trước"
-                    : timeRange === "tháng"
-                      ? "30 ngày trước "
-                      : "90 ngày trước "
-                  })`,
+            ? "So sánh giá sản phẩm"
+            : activeTab === "category"
+            ? "Lượng sản phẩm của danh mục"
+            : activeTab === "status"
+            ? "Tình trạng kho"
+            : `Xu hướng tiêu thụ (${
+                timeRange === "Tuần"
+                  ? "7 ngày trước"
+                  : timeRange === "tháng"
+                  ? "30 ngày trước "
+                  : "90 ngày trước "
+              })`,
       },
       legend: {
         display: activeTab === "stock",
@@ -236,7 +240,7 @@ function DataTable({
                 { field: "price", label: "Giá (VND)" },
                 { field: "totalStock", label: "Tổng kho" },
                 { field: "stockStatus", label: "Trạng thái" },
-                { field: "location", label: "Vị trí" },
+                { field: "formattedLocation", label: "Vị trí" },
                 { field: "daysUntilExpiry", label: "Ngày trước khi hết hạn" },
               ].map((column) => (
                 <th
@@ -262,7 +266,7 @@ function DataTable({
           <tbody>
             {sortedProducts.slice(0, displayCount).map((product, index) => (
               <tr
-                key={product.id}
+                key={product.id || index}
                 style={{
                   backgroundColor: index % 2 === 0 ? colors.white : "#f9f9f9",
                 }}
@@ -323,14 +327,14 @@ function DataTable({
                         product.stockStatus === "Normal"
                           ? "#d4edda"
                           : product.stockStatus === "Critical"
-                            ? "#f8d7da"
-                            : "#fff3cd",
+                          ? "#f8d7da"
+                          : "#fff3cd",
                       color:
                         product.stockStatus === "Normal"
                           ? "#155724"
                           : product.stockStatus === "Critical"
-                            ? "#721c24"
-                            : "#856404",
+                          ? "#721c24"
+                          : "#856404",
                       fontSize: "0.85em",
                     }}
                   >
@@ -343,7 +347,7 @@ function DataTable({
                     borderBottom: "1px solid #ddd",
                   }}
                 >
-                  {product.location}
+                  {product.formattedLocation}
                 </td>
                 <td
                   style={{
@@ -359,8 +363,8 @@ function DataTable({
                           product.daysUntilExpiry <= 30
                             ? colors.danger
                             : product.daysUntilExpiry <= 90
-                              ? colors.warning
-                              : colors.success,
+                            ? colors.warning
+                            : colors.success,
                         fontWeight:
                           product.daysUntilExpiry <= 30 ? "bold" : "normal",
                       }}
@@ -471,7 +475,7 @@ function Recommendations({
   const healthyPercentage = Math.round(
     (productData.filter((p) => p.stockStatus === "Normal").length /
       productData.length) *
-    100
+      100
   );
   return (
     <div style={{ ...cardStyle, marginTop: "20px" }}>
@@ -508,6 +512,13 @@ function Recommendations({
 
 function Dashboard() {
   const [productData, setProductData] = useState([]);
+  const [transactionData, setTransactionData] = useState([]);
+  const [transactionStats, setTransactionStats] = useState({
+    total: 0,
+    completed: 0,
+    pending: 0,
+    totalValue: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("stock");
@@ -520,83 +531,178 @@ function Dashboard() {
   const [displayOption, setDisplayOption] = useState("10");
   const [timeRange, setTimeRange] = useState("week");
   const [salesData, setSalesData] = useState(null);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [refreshInterval, setRefreshInterval] = useState(null);
 
+  // Fetch product and transaction data
   useEffect(() => {
-    setLoading(true);
-    fetch("http://localhost:9999/products/getAllProducts")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch products
+        const productResponse = await productAPI.getAll();
+        if (productResponse && productResponse.data) {
+          processProductData(productResponse.data);
         }
-        return response.json();
-      })
-      .then((data) => {
-        const processedData = data.map((product) => {
-          let categoryName = "Uncategorized";
-          if (product.categoryId && product.categoryId.categoryName) {
-            categoryName = product.categoryId.categoryName;
-          }
-          let price = 0,
-            supplierStock = 0,
-            supplierName = "",
-            expiryDate = null;
-          if (product.suppliers && product.suppliers.length > 0) {
-            price = product.suppliers[0].price;
-            supplierStock = product.suppliers[0].stock;
-            supplierName = product.suppliers[0].name;
-            expiryDate = new Date(product.suppliers[0].expiry);
-          }
-          let stockStatus = "Normal";
-          if (product.totalStock <= product.thresholdStock) {
-            stockStatus = "Critical";
-          } else if (product.totalStock <= product.thresholdStock * 2) {
-            stockStatus = "Low";
-          }
-          const today = new Date();
-          const daysUntilExpiry = expiryDate
-            ? Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24))
-            : null;
-          return {
-            id: product._id.$oid || product._id,
-            productName: product.productName,
-            categoryName: categoryName,
-            price: price,
-            supplierName: supplierName,
-            supplierStock: supplierStock,
-            totalStock: product.totalStock,
-            thresholdStock: product.thresholdStock,
-            stockStatus: stockStatus,
-            daysUntilExpiry: daysUntilExpiry,
-            unit: product.unit,
-            location: product.location,
-            status: product.status,
-            image: product.productImage,
-          };
-        });
 
-        setProductData(processedData);
-        const uniqueCategories = [
-          ...new Set(
-            processedData
-              .map((product) => product.categoryName)
-              .filter((name) => name && name !== "Uncategorized")
-          ),
-        ];
-        setCategories(["all", ...uniqueCategories]);
-        generateMockSalesData(processedData, timeRange);
+        // Fetch transactions
+        const transactionResponse = await transactionAPI.getAll();
+        if (transactionResponse && transactionResponse.data) {
+          processTransactionData(transactionResponse.data);
+        }
+
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching product data:", error);
-        setError(error.message);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError(err.message || "Failed to fetch data");
         setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
+
+    // Set up auto-refresh every 5 minutes
+    const interval = setInterval(() => {
+      fetchData();
+    }, 300000);
+
+    setRefreshInterval(interval);
+
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
   }, []);
 
-  const generateMockSalesData = (products, range) => {
+  const processProductData = (data) => {
+    const processedData = data.map((product) => {
+      let categoryName = "Uncategorized";
+      if (product.categoryId && product.categoryId.categoryName) {
+        categoryName = product.categoryId.categoryName;
+      }
+      let price = 0,
+        supplierStock = 0,
+        supplierName = "",
+        expiryDate = null;
+      if (product.suppliers && product.suppliers.length > 0) {
+        price = product.suppliers[0].price;
+        supplierStock = product.suppliers[0].stock;
+        supplierName =
+          product.suppliers[0].name || product.suppliers[0].supplierName;
+        expiryDate = new Date(product.suppliers[0].expiry);
+      }
+      let stockStatus = "Normal";
+      if (product.totalStock <= product.thresholdStock) {
+        stockStatus = "Critical";
+      } else if (product.totalStock <= product.thresholdStock * 2) {
+        stockStatus = "Low";
+      }
+      const today = new Date();
+      const daysUntilExpiry = expiryDate
+        ? Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24))
+        : null;
+
+      // Process location data
+      let formattedLocation = "N/A";
+      if (product.location) {
+        if (Array.isArray(product.location) && product.location.length > 0) {
+          formattedLocation = product.location
+            .map((loc) => {
+              if (loc && loc.inventoryId && loc.inventoryId.name) {
+                return `${loc.inventoryId.name} (${loc.stock || 0})`;
+              }
+              return "N/A";
+            })
+            .join(", ");
+        } else if (typeof product.location === "string") {
+          try {
+            const locationData = JSON.parse(product.location);
+            if (Array.isArray(locationData) && locationData.length > 0) {
+              formattedLocation = locationData
+                .map((loc) => {
+                  if (loc && loc.inventoryId && loc.inventoryId.name) {
+                    return `${loc.inventoryId.name} (${loc.stock || 0})`;
+                  }
+                  return "N/A";
+                })
+                .join(", ");
+            } else {
+              formattedLocation = product.location;
+            }
+          } catch (e) {
+            formattedLocation = product.location;
+          }
+        } else {
+          formattedLocation = product.location;
+        }
+      }
+
+      return {
+        id: product._id.$oid || product._id,
+        productName: product.productName,
+        categoryName: categoryName,
+        price: price,
+        supplierName: supplierName,
+        supplierStock: supplierStock,
+        totalStock: product.totalStock,
+        thresholdStock: product.thresholdStock,
+        stockStatus: stockStatus,
+        daysUntilExpiry: daysUntilExpiry,
+        unit: product.unit,
+        location: product.location, // Keep original for data
+        formattedLocation: formattedLocation, // Add formatted version
+        status: product.status,
+        image: product.productImage,
+        lastUpdated: product.updatedAt || product.createdAt,
+      };
+    });
+
+    setProductData(processedData);
+    const uniqueCategories = [
+      ...new Set(
+        processedData
+          .map((product) => product.categoryName)
+          .filter((name) => name && name !== "Uncategorized")
+      ),
+    ];
+    setCategories(["all", ...uniqueCategories]);
+    generateSalesData(processedData, timeRange);
+  };
+
+  const processTransactionData = (data) => {
+    setTransactionData(data);
+
+    // Calculate transaction statistics
+    const completed = data.filter((t) => t.status === "completed").length;
+    const pending = data.filter((t) => t.status === "pending").length;
+    const totalValue = data.reduce((sum, t) => {
+      const transactionValue = t.items
+        ? t.items.reduce(
+            (itemSum, item) => itemSum + item.price * item.quantity,
+            0
+          )
+        : 0;
+      return sum + transactionValue;
+    }, 0);
+
+    setTransactionStats({
+      total: data.length,
+      completed,
+      pending,
+      totalValue,
+    });
+
+    // Get recent transactions
+    const recent = [...data]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+    setRecentTransactions(recent);
+  };
+
+  const generateSalesData = (products, range) => {
     const today = new Date();
     const labels = [];
-    const datasets = [];
     const daysToShow = range === "week" ? 7 : range === "month" ? 30 : 90;
 
     for (let i = daysToShow - 1; i >= 0; i--) {
@@ -607,49 +713,128 @@ function Dashboard() {
       );
     }
 
-    const topProducts = [...products]
-      .sort((a, b) => b.totalStock - a.totalStock)
-      .slice(0, 5);
+    // Generate real transaction data if available, otherwise use product data
+    if (transactionData.length > 0) {
+      const datasets = [];
+      const topProducts = [...products]
+        .sort((a, b) => b.totalStock - a.totalStock)
+        .slice(0, 5);
 
-    const colorsArr = [
-      "rgba(75, 192, 192, 1)",
-      "rgba(54, 162, 235, 1)",
-      "rgba(153, 102, 255, 1)",
-      "rgba(255, 159, 64, 1)",
-      "rgba(255, 99, 132, 1)",
-    ];
+      // Generate colors for datasets
+      const colorsArr = [
+        "rgba(75, 192, 192, 1)",
+        "rgba(54, 162, 235, 1)",
+        "rgba(153, 102, 255, 1)",
+        "rgba(255, 159, 64, 1)",
+        "rgba(255, 99, 132, 1)",
+      ];
 
-    topProducts.forEach((product, index) => {
-      const data = [];
-      let currentValue = product.totalStock;
+      topProducts.forEach((product, index) => {
+        // Create daily data points based on transactions if available
+        const productTransactions = transactionData.filter(
+          (t) =>
+            t.items &&
+            t.items.some(
+              (item) =>
+                item.productId === product.id ||
+                (typeof item.productId === "object" &&
+                  item.productId._id === product.id)
+            )
+        );
 
-      for (let i = 0; i < daysToShow; i++) {
-        const change = currentValue * (Math.random() * 0.1 - 0.05);
-        if (i < daysToShow - 1) {
-          currentValue = Math.max(
-            currentValue - change,
-            product.thresholdStock * 0.8
-          );
-          data.unshift(Math.round(currentValue));
-        } else {
-          data.unshift(product.totalStock);
-        }
-      }
+        const data = labels.map((dateLabel) => {
+          // Convert label back to date object for comparison
+          const [day, month] = dateLabel.split("/").map(Number);
+          const dateForLabel = new Date(today.getFullYear(), month - 1, day);
 
-      datasets.push({
-        label: product.productName,
-        data: data,
-        borderColor: colorsArr[index % colorsArr.length],
-        backgroundColor: colorsArr[index % colorsArr.length].replace(
-          "1)",
-          "0.1)"
-        ),
-        tension: 0.3,
-        fill: true,
+          // Find transactions for this product on this date
+          const dayTransactions = productTransactions.filter((t) => {
+            const tDate = new Date(t.createdAt);
+            return (
+              tDate.getDate() === dateForLabel.getDate() &&
+              tDate.getMonth() === dateForLabel.getMonth() &&
+              tDate.getFullYear() === dateForLabel.getFullYear()
+            );
+          });
+
+          // Sum quantities from transactions
+          const quantity = dayTransactions.reduce((sum, t) => {
+            const productItems = t.items.filter(
+              (item) =>
+                item.productId === product.id ||
+                (typeof item.productId === "object" &&
+                  item.productId._id === product.id)
+            );
+            return (
+              sum +
+              productItems.reduce((itemSum, item) => itemSum + item.quantity, 0)
+            );
+          }, 0);
+
+          return quantity || Math.round(Math.random() * 10); // If no data, use random placeholder
+        });
+
+        datasets.push({
+          label: product.productName,
+          data: data,
+          borderColor: colorsArr[index % colorsArr.length],
+          backgroundColor: colorsArr[index % colorsArr.length].replace(
+            "1)",
+            "0.1)"
+          ),
+          tension: 0.3,
+          fill: true,
+        });
       });
-    });
 
-    setSalesData({ labels, datasets });
+      setSalesData({ labels, datasets });
+    } else {
+      // Fallback to mock data
+      const datasets = [];
+      const topProducts = [...products]
+        .sort((a, b) => b.totalStock - a.totalStock)
+        .slice(0, 5);
+
+      const colorsArr = [
+        "rgba(75, 192, 192, 1)",
+        "rgba(54, 162, 235, 1)",
+        "rgba(153, 102, 255, 1)",
+        "rgba(255, 159, 64, 1)",
+        "rgba(255, 99, 132, 1)",
+      ];
+
+      topProducts.forEach((product, index) => {
+        const data = [];
+        let currentValue = product.totalStock;
+
+        for (let i = 0; i < daysToShow; i++) {
+          const change = currentValue * (Math.random() * 0.1 - 0.05);
+          if (i < daysToShow - 1) {
+            currentValue = Math.max(
+              currentValue - change,
+              product.thresholdStock * 0.8
+            );
+            data.unshift(Math.round(currentValue));
+          } else {
+            data.unshift(product.totalStock);
+          }
+        }
+
+        datasets.push({
+          label: product.productName,
+          data: data,
+          borderColor: colorsArr[index % colorsArr.length],
+          backgroundColor: colorsArr[index % colorsArr.length].replace(
+            "1)",
+            "0.1)"
+          ),
+          tension: 0.3,
+          fill: true,
+        });
+      });
+
+      setSalesData({ labels, datasets });
+    }
   };
 
   const filteredProducts = useMemo(() => {
@@ -686,7 +871,7 @@ function Dashboard() {
         labels: sortedProducts.slice(0, 8).map((p) => p.productName),
         datasets: [
           {
-            label: "Current Stock",
+            label: "Tồn kho hiện tại",
             data: sortedProducts.slice(0, 8).map((p) => p.totalStock),
             backgroundColor: sortedProducts
               .slice(0, 8)
@@ -694,13 +879,13 @@ function Dashboard() {
                 p.stockStatus === "Critical"
                   ? colors.danger
                   : p.stockStatus === "Low"
-                    ? colors.warning
-                    : colors.success
+                  ? colors.warning
+                  : colors.success
               ),
             borderWidth: 1,
           },
           {
-            label: "Threshold",
+            label: "Ngưỡng tồn kho tối thiểu",
             data: sortedProducts.slice(0, 8).map((p) => p.thresholdStock),
             backgroundColor: "rgba(54, 162, 235, 0.5)",
             borderWidth: 1,
@@ -714,7 +899,7 @@ function Dashboard() {
         labels: sortedProducts.slice(0, 8).map((p) => p.productName),
         datasets: [
           {
-            label: "Price (VND)",
+            label: "Giá (VND)",
             data: sortedProducts.slice(0, 8).map((p) => p.price),
             backgroundColor: "rgba(75, 192, 192, 0.6)",
             borderColor: "rgba(75, 192, 192, 1)",
@@ -725,7 +910,7 @@ function Dashboard() {
     } else if (activeTab === "category") {
       const categoryCount = {};
       sortedProducts.forEach((product) => {
-        const category = product.categoryName || "Uncategorized";
+        const category = product.categoryName || "Chưa phân loại";
         categoryCount[category] = (categoryCount[category] || 0) + 1;
       });
       return {
@@ -750,10 +935,13 @@ function Dashboard() {
       };
     } else if (activeTab === "status") {
       const statusCount = {
-        Critical: sortedProducts.filter((p) => p.stockStatus === "Critical")
+        "Tồn kho thấp": sortedProducts.filter(
+          (p) => p.stockStatus === "Critical"
+        ).length,
+        "Tồn kho vừa": sortedProducts.filter((p) => p.stockStatus === "Low")
           .length,
-        Low: sortedProducts.filter((p) => p.stockStatus === "Low").length,
-        Normal: sortedProducts.filter((p) => p.stockStatus === "Normal").length,
+        "Tồn kho tốt": sortedProducts.filter((p) => p.stockStatus === "Normal")
+          .length,
       };
       return {
         labels: Object.keys(statusCount),
@@ -767,8 +955,27 @@ function Dashboard() {
       };
     } else if (activeTab === "trend") {
       return salesData;
+    } else if (activeTab === "transactions") {
+      // Add transaction chart data
+      const statusData = {
+        labels: ["Hoàn thành", "Đang xử lý", "Đã hủy"],
+        datasets: [
+          {
+            data: [
+              transactionStats.completed,
+              transactionStats.pending,
+              transactionData.length -
+                transactionStats.completed -
+                transactionStats.pending,
+            ],
+            backgroundColor: [colors.success, colors.warning, colors.danger],
+            borderWidth: 1,
+          },
+        ],
+      };
+      return statusData;
     }
-  }, [activeTab, sortedProducts, salesData]);
+  }, [activeTab, sortedProducts, salesData, transactionStats, transactionData]);
 
   const getTotalProducts = useCallback(() => productData.length, [productData]);
   const getLowStockProducts = useCallback(
@@ -814,7 +1021,7 @@ function Dashboard() {
   const exportCSV = () => {
     const csvProducts = sortedProducts;
     if (csvProducts.length === 0) {
-      alert("No data to export");
+      alert("Không có dữ liệu để xuất");
       return;
     }
 
@@ -828,14 +1035,13 @@ function Dashboard() {
             return typeof value === "string" && value.includes(",")
               ? `"${value}"`
               : value !== undefined && value !== null
-                ? value
-                : "";
+              ? value
+              : "";
           })
           .join(",")
       ),
     ];
 
-    // ✅ Chỉ khai báo csvContent 1 lần và thêm BOM ở đầu
     const csvContent = "\uFEFF" + csvRows.join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -858,8 +1064,55 @@ function Dashboard() {
     );
   };
 
-  if (loading) return <div>Loading dashboard data...</div>;
-  if (error) return <div>Error loading data: {error}</div>;
+  if (loading)
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              border: "4px solid #f3f3f3",
+              borderTop: "4px solid #3498db",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              animation: "spin 2s linear infinite",
+              margin: "0 auto",
+            }}
+          ></div>
+          <p style={{ marginTop: "10px" }}>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div
+        style={{ padding: "20px", textAlign: "center", color: colors.danger }}
+      >
+        <h3>Lỗi tải dữ liệu</h3>
+        <p>{error}</p>
+        <button
+          style={{
+            padding: "8px 16px",
+            backgroundColor: colors.primary,
+            color: colors.white,
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+          onClick={() => window.location.reload()}
+        >
+          Tải lại trang
+        </button>
+      </div>
+    );
 
   const chartData = getChartData();
 
@@ -869,7 +1122,11 @@ function Dashboard() {
       value: getTotalProducts(),
       color: colors.primary,
     },
-    { title: "Còn ít ", value: getLowStockProducts(), color: colors.warning },
+    {
+      title: "Còn ít",
+      value: getLowStockProducts(),
+      color: colors.warning,
+    },
     {
       title: "Gần hết",
       value: getCriticalStockProducts(),
@@ -886,6 +1143,123 @@ function Dashboard() {
       color: "#4CAF50",
     },
   ];
+
+  // New function to render Recent Transactions
+  function RecentTransactions() {
+    if (recentTransactions.length === 0) {
+      return (
+        <div style={{ ...cardStyle, marginTop: "20px" }}>
+          <h3>Giao dịch gần đây</h3>
+          <p style={{ textAlign: "center", padding: "20px" }}>
+            Chưa có giao dịch nào
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ ...cardStyle, marginTop: "20px" }}>
+        <h3>Giao dịch gần đây</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ backgroundColor: colors.light }}>
+              <th style={{ padding: "10px", textAlign: "left" }}>
+                Mã giao dịch
+              </th>
+              <th style={{ padding: "10px", textAlign: "left" }}>Loại</th>
+              <th style={{ padding: "10px", textAlign: "left" }}>Ngày</th>
+              <th style={{ padding: "10px", textAlign: "right" }}>Tổng cộng</th>
+              <th style={{ padding: "10px", textAlign: "center" }}>
+                Trạng thái
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentTransactions.map((transaction, index) => {
+              // Calculate transaction total
+              const total = transaction.items
+                ? transaction.items.reduce(
+                    (sum, item) => sum + item.price * item.quantity,
+                    0
+                  )
+                : 0;
+
+              // Format date
+              const transactionDate = new Date(transaction.createdAt);
+              const formattedDate = transactionDate.toLocaleDateString("vi-VN");
+
+              return (
+                <tr
+                  key={transaction._id}
+                  style={{
+                    backgroundColor: index % 2 === 0 ? colors.white : "#f9f9f9",
+                  }}
+                >
+                  <td
+                    style={{ padding: "10px", borderBottom: "1px solid #ddd" }}
+                  >
+                    {transaction._id.substring(0, 8)}...
+                  </td>
+                  <td
+                    style={{ padding: "10px", borderBottom: "1px solid #ddd" }}
+                  >
+                    {transaction.type === "import" ? "Nhập kho" : "Xuất kho"}
+                  </td>
+                  <td
+                    style={{ padding: "10px", borderBottom: "1px solid #ddd" }}
+                  >
+                    {formattedDate}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px",
+                      borderBottom: "1px solid #ddd",
+                      textAlign: "right",
+                    }}
+                  >
+                    {total.toLocaleString()} VND
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px",
+                      borderBottom: "1px solid #ddd",
+                      textAlign: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        backgroundColor:
+                          transaction.status === "completed"
+                            ? "#d4edda"
+                            : transaction.status === "pending"
+                            ? "#fff3cd"
+                            : "#f8d7da",
+                        color:
+                          transaction.status === "completed"
+                            ? "#155724"
+                            : transaction.status === "pending"
+                            ? "#856404"
+                            : "#721c24",
+                        fontSize: "0.85em",
+                      }}
+                    >
+                      {transaction.status === "completed"
+                        ? "Hoàn thành"
+                        : transaction.status === "pending"
+                        ? "Đang xử lý"
+                        : "Đã hủy"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -904,7 +1278,7 @@ function Dashboard() {
           color: colors.dark,
         }}
       >
-        Thống kê và phân tích
+        Thống kê và phân tích kho hàng
       </h2>
       <div
         style={{
@@ -954,6 +1328,7 @@ function Dashboard() {
           gap: "10px",
           marginBottom: "20px",
           justifyContent: "center",
+          flexWrap: "wrap",
         }}
       >
         {[
@@ -962,6 +1337,7 @@ function Dashboard() {
           { id: "category", label: "Phân phối danh mục" },
           { id: "status", label: "Tình trạng kho" },
           { id: "trend", label: "Xu hướng tiêu thụ" },
+          { id: "transactions", label: "Giao dịch" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -985,7 +1361,7 @@ function Dashboard() {
             value={timeRange}
             onChange={(e) => {
               setTimeRange(e.target.value);
-              generateMockSalesData(productData, e.target.value);
+              generateSalesData(productData, e.target.value);
             }}
             style={{ ...commonInputStyle, width: "160px" }}
           >
@@ -1005,23 +1381,63 @@ function Dashboard() {
         />
       </div>
 
-      <ExpiringAlert productData={productData} />
+      {/* Layout using CSS Grid for better organization */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        <ExpiringAlert productData={productData} />
+
+        <div style={{ ...cardStyle }}>
+          <h3 style={{ marginTop: 0 }}>Thống kê giao dịch</h3>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "15px",
+            }}
+          >
+            <div>
+              <strong>Tổng số giao dịch:</strong> {transactionStats.total}
+            </div>
+            <div>
+              <strong>Hoàn thành:</strong> {transactionStats.completed}
+            </div>
+            <div>
+              <strong>Đang xử lý:</strong> {transactionStats.pending}
+            </div>
+          </div>
+          <div>
+            <strong>Tổng giá trị giao dịch:</strong>{" "}
+            {transactionStats.totalValue.toLocaleString()} VND
+          </div>
+        </div>
+      </div>
+
+      <RecentTransactions />
 
       <DataTable
-        sortedProducts={sortedProducts.map(product => {
+        sortedProducts={sortedProducts.map((product) => {
           // Create a new object with all properties safely converted to renderable values
           return {
             ...product,
             // Ensure any object properties are properly converted to strings
-            // This handles the case where some properties might be objects
             ...Object.fromEntries(
               Object.entries(product).map(([key, value]) => {
-                if (typeof value === 'object' && value !== null && !React.isValidElement(value)) {
+                if (
+                  typeof value === "object" &&
+                  value !== null &&
+                  !React.isValidElement(value)
+                ) {
                   return [key, JSON.stringify(value)];
                 }
                 return [key, value];
               })
-            )
+            ),
           };
         })}
         handleSortChange={handleSortChange}

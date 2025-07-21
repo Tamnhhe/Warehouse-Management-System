@@ -1,143 +1,469 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Form, Alert } from "react-bootstrap";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Radio,
+  Button,
+  Alert,
+  Typography,
+  Avatar,
+  Tag,
+  Space,
+  Row,
+  Col,
+  Divider,
+  Card,
+} from "antd";
+import {
+  CloseOutlined,
+  SaveOutlined,
+  UserOutlined,
+  DollarOutlined,
+  TeamOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+const modalVariants = {
+  hidden: { opacity: 0, y: 50, scale: 0.9 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      damping: 25,
+      stiffness: 500,
+    },
+  },
+  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
+};
+
+const contentVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      when: "beforeChildren",
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 const EditUserModal = ({ user, closeModal, users, setUsers }) => {
-    const [salary, setSalary] = useState(0);
-    const [type, setType] = useState("parttime");
-    const [workDays, setWorkDays] = useState([]);
-    const [shifts, setShifts] = useState([]);
-    const [successMessage, setSuccessMessage] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
+  const [form] = Form.useForm();
+  const [salary, setSalary] = useState(0);
+  const [type, setType] = useState("parttime");
+  const [workDays, setWorkDays] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [validateErrors, setValidateErrors] = useState({});
 
-    useEffect(() => {
-        if (user) {
-            setSalary(user.salary || 0);
-            setType(user.type || "parttime");
-            setWorkDays(user.schedule?.workDays || []);
-            if (user.type === "fulltime") {
-                setShifts(["8:00AM - 17:00PM"]);
-            } else {
-                setShifts(user.schedule?.shifts || []);
-            }
-        }
-    }, [user]);
+  useEffect(() => {
+    if (user) {
+      setSalary(user.salary || 0);
+      setType(user.type || "parttime");
+      setWorkDays(user.schedule?.workDays || []);
+      if (user.type === "fulltime") {
+        setShifts(["8:00AM - 17:00PM"]);
+      } else {
+        setShifts(user.schedule?.shifts || []);
+      }
 
-    const toggleWorkDay = (day) => {
-        setWorkDays((prevDays) =>
-            prevDays.includes(day)
-                ? prevDays.filter((d) => d !== day)
-                : [...prevDays, day]
-        );
-    };
+      // Set form values
+      form.setFieldsValue({
+        salary: user.salary || 0,
+        type: user.type || "parttime",
+        workDays: user.schedule?.workDays || [],
+        shifts: user.schedule?.shifts?.[0] || "",
+      });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (workDays.length === 0) {
-            setErrorMessage("Vui lòng chọn ít nhất một ngày làm việc.");
-            return;
-        }
-        if (shifts.length === 0) {
-            setErrorMessage("Vui lòng chọn ít nhất một ca làm việc.");
-            return;
-        }
+      // Clear errors and messages
+      setValidateErrors({});
+      setSuccessMessage("");
+      setErrorMessage("");
+    }
+  }, [user, form]);
 
-        try {
-            await axios.put(`http://localhost:9999/users/update-user/${user._id}`, {
-                salary,
-                type,
-                workDays,
-                shifts,
-            });
+  const toggleWorkDay = (day) => {
+    const updatedDays = workDays.includes(day)
+      ? workDays.filter((d) => d !== day)
+      : [...workDays, day];
 
-            setUsers((prevUsers) =>
-                prevUsers.map((u) =>
-                    u._id === user._id
-                        ? { ...u, salary, type, schedule: { ...u.schedule, workDays, shifts } }
-                        : u
-                )
-            );
-            setSuccessMessage("Cập nhật thông tin thành công!");
-            setErrorMessage("");
-            setTimeout(() => {
-                setSuccessMessage("");
-                closeModal();
-            }, 2000);
-        } catch (error) {
-            console.error("Lỗi cập nhật thông tin người dùng:", error);
-        }
-    };
+    setWorkDays(updatedDays);
+    form.setFieldsValue({ workDays: updatedDays });
+  };
 
-    return (
-        <Modal show={!!user} onHide={closeModal} centered>
-            <Modal.Header closeButton>
-                <Modal.Title>Chỉnh sửa thông tin</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                {successMessage && <Alert variant="success">{successMessage}</Alert>}
-                {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
-                <Form onSubmit={handleSubmit}>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Mức lương</Form.Label>
-                        <Form.Control
-                            type="number"
-                            value={salary}
-                            onChange={(e) => setSalary(e.target.value)}
-                        />
-                    </Form.Group>
+  const handleSubmit = async () => {
+    try {
+      // Validate form with Ant Design form validation
+      await form.validateFields();
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Loại nhân viên</Form.Label>
-                        <Form.Select value={type} onChange={(e) => setType(e.target.value)}>
-                            <option value="fulltime">Toàn thời gian</option>
-                            <option value="parttime">Bán thời gian</option>
-                        </Form.Select>
-                    </Form.Group>
+      // Get values from form
+      const values = form.getFieldsValue();
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Ngày làm việc <span style={{ color: 'red' }}>*</span></Form.Label>
-                        <div className="d-flex flex-wrap gap-2">
-                            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => (
-                                <div
+      // Reset messages
+      setSuccessMessage("");
+      setErrorMessage("");
+
+      // Submit data
+      await axios.put(`http://localhost:9999/users/update-user/${user._id}`, {
+        salary: values.salary,
+        type: values.type,
+        workDays: values.workDays,
+        shifts: [values.shifts], // API expects array
+      });
+
+      // Update local state
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u._id === user._id
+            ? {
+                ...u,
+                salary: values.salary,
+                type: values.type,
+                schedule: {
+                  ...u.schedule,
+                  workDays: values.workDays,
+                  shifts: [values.shifts],
+                },
+              }
+            : u
+        )
+      );
+
+      setSuccessMessage("Cập nhật thông tin thành công!");
+
+      // Close modal after success
+      setTimeout(() => {
+        setSuccessMessage("");
+        closeModal();
+      }, 1500);
+    } catch (error) {
+      if (error.errorFields) {
+        // Form validation errors
+        setErrorMessage("Vui lòng điền đầy đủ thông tin.");
+      } else {
+        // API errors
+        console.error("Lỗi cập nhật thông tin người dùng:", error);
+        setErrorMessage(error.response?.data?.message || "Đã có lỗi xảy ra!");
+      }
+    }
+  };
+
+  const dayMapping = {
+    Monday: "T2",
+    Tuesday: "T3",
+    Wednesday: "T4",
+    Thursday: "T5",
+    Friday: "T6",
+    Saturday: "T7",
+    Sunday: "CN",
+  };
+
+  return (
+    <Modal
+      open={!!user}
+      onCancel={closeModal}
+      footer={null}
+      width={750}
+      bodyStyle={{ padding: 0 }}
+      centered={true}
+      closeIcon={null}
+      maskStyle={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
+      className="ant-modal-employee"
+    >
+      {/* Header */}
+      <div
+        style={{
+          backgroundColor: "#48C1A6",
+          padding: "16px 24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderBottom: "1px solid #f0f0f0",
+          borderRadius: "2px 2px 0 0",
+        }}
+      >
+        <Title level={4} style={{ margin: 0, color: "#fff" }}>
+          Chỉnh sửa thông tin nhân viên
+        </Title>
+        <Button
+          type="text"
+          icon={<CloseOutlined />}
+          onClick={closeModal}
+          style={{ color: "#fff" }}
+        />
+      </div>
+
+      {/* Content */}
+      <AnimatePresence>
+        {user && (
+          <motion.div
+            variants={contentVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <div style={{ padding: "24px", backgroundColor: "#fff" }}>
+              {successMessage && (
+                <motion.div variants={itemVariants}>
+                  <Alert
+                    message={successMessage}
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                </motion.div>
+              )}
+
+              {errorMessage && (
+                <motion.div variants={itemVariants}>
+                  <Alert
+                    message={errorMessage}
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                </motion.div>
+              )}
+
+              <Row gutter={24}>
+                {/* User info sidebar */}
+                <Col xs={24} sm={7}>
+                  <motion.div
+                    variants={itemVariants}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "20px",
+                      backgroundColor: "#f9f9f9",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <Avatar
+                      size={100}
+                      icon={<UserOutlined />}
+                      style={{
+                        backgroundColor:
+                          user?.profile?.gender === "male"
+                            ? "#1890ff"
+                            : "#ff6b81",
+                        marginBottom: 16,
+                      }}
+                    />
+                    <Text strong style={{ fontSize: 16, marginBottom: 8 }}>
+                      {user?.fullName}
+                    </Text>
+                    <Text type="secondary" style={{ marginBottom: 16 }}>
+                      {user?.account?.email}
+                    </Text>
+                    <Tag
+                      color={user?.status === "active" ? "success" : "error"}
+                    >
+                      {user?.status === "active" ? "Hoạt động" : "Bị khóa"}
+                    </Tag>
+                  </motion.div>
+                </Col>
+
+                {/* Form content */}
+                <Col xs={24} sm={17}>
+                  <Form
+                    form={form}
+                    layout="vertical"
+                    initialValues={{
+                      salary: salary,
+                      type: type,
+                      workDays: workDays,
+                      shifts: shifts[0] || "",
+                    }}
+                  >
+                    <Row gutter={16}>
+                      {/* Salary */}
+                      <Col xs={24} sm={12}>
+                        <motion.div variants={itemVariants}>
+                          <Form.Item
+                            label="Mức lương (VND)"
+                            name="salary"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Vui lòng nhập mức lương",
+                              },
+                              {
+                                type: "number",
+                                min: 1,
+                                message: "Lương phải lớn hơn 0",
+                              },
+                            ]}
+                          >
+                            <InputNumber
+                              style={{ width: "100%" }}
+                              prefix={<DollarOutlined />}
+                              formatter={(value) =>
+                                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                              }
+                              parser={(value) =>
+                                value.replace(/\$\s?|(,*)/g, "")
+                              }
+                              onChange={(value) => setSalary(value)}
+                            />
+                          </Form.Item>
+                        </motion.div>
+                      </Col>
+
+                      {/* Employee Type */}
+                      <Col xs={24} sm={12}>
+                        <motion.div variants={itemVariants}>
+                          <Form.Item label="Loại nhân viên" name="type">
+                            <Select
+                              onChange={(value) => setType(value)}
+                              suffixIcon={<TeamOutlined />}
+                            >
+                              <Option value="fulltime">Toàn thời gian</Option>
+                              <Option value="parttime">Bán thời gian</Option>
+                            </Select>
+                          </Form.Item>
+                        </motion.div>
+                      </Col>
+
+                      {/* Work Days */}
+                      <Col xs={24}>
+                        <motion.div variants={itemVariants}>
+                          <Form.Item
+                            label="Ngày làm việc"
+                            name="workDays"
+                            rules={[
+                              {
+                                required: true,
+                                message:
+                                  "Vui lòng chọn ít nhất một ngày làm việc",
+                              },
+                            ]}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "8px",
+                              }}
+                            >
+                              {Object.entries(dayMapping).map(
+                                ([day, shortDay]) => (
+                                  <Tag
                                     key={day}
-                                    className={`px-3 py-2 border rounded cursor-pointer ${workDays.includes(day) ? 'bg-success text-white' : ''}`}
+                                    color={
+                                      workDays.includes(day)
+                                        ? "#48C1A6"
+                                        : "default"
+                                    }
+                                    style={{
+                                      padding: "5px 10px",
+                                      cursor: "pointer",
+                                      borderRadius: "4px",
+                                    }}
                                     onClick={() => toggleWorkDay(day)}
-                                >
-                                    {["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index]}
-                                </div>
-                            ))}
-                        </div>
-                    </Form.Group>
-
-                    <Form.Group className="mb-3">
-                        <Form.Label>Ca làm việc <span style={{ color: 'red' }}>*</span></Form.Label>
-                        {type === "fulltime" ? (
-                            <div className="fw-bold">8:00AM - 17:00PM</div>
-                        ) : (
-                            <div className="d-flex gap-3">
-                                {["Morning", "Afternoon", "Evening"].map((shift) => (
-                                    <Form.Check
-                                        key={shift}
-                                        type="radio"
-                                        label={shift === "Morning" ? "Sáng" : shift === "Afternoon" ? "Chiều" : "Tối"}
-                                        name="shifts"
-                                        value={shift}
-                                        checked={shifts.includes(shift)}
-                                        onChange={() => setShifts([shift])}
-                                    />
-                                ))}
+                                  >
+                                    {shortDay}
+                                  </Tag>
+                                )
+                              )}
                             </div>
-                        )}
-                    </Form.Group>
-                </Form>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={closeModal}>Hủy</Button>
-                <Button variant="primary" type="submit" onClick={handleSubmit}>Lưu thay đổi</Button>
-            </Modal.Footer>
-        </Modal>
-    );
+                          </Form.Item>
+                        </motion.div>
+                      </Col>
+
+                      {/* Work Hours/Shifts */}
+                      <Col xs={24}>
+                        <motion.div variants={itemVariants}>
+                          <Form.Item
+                            label="Ca làm việc"
+                            name="shifts"
+                            rules={[
+                              {
+                                required: type === "parttime",
+                                message: "Vui lòng chọn ca làm việc",
+                              },
+                            ]}
+                          >
+                            {type === "fulltime" ? (
+                              <Card
+                                size="small"
+                                style={{ backgroundColor: "#f9f9f9" }}
+                                title={
+                                  <span>
+                                    <ClockCircleOutlined /> Giờ làm việc
+                                  </span>
+                                }
+                              >
+                                <Text>8:00AM - 17:00PM (Toàn thời gian)</Text>
+                              </Card>
+                            ) : (
+                              <Radio.Group
+                                onChange={(e) => setShifts([e.target.value])}
+                              >
+                                <Space direction="vertical">
+                                  <Radio value="Morning">
+                                    Sáng (08:00 - 11:00)
+                                  </Radio>
+                                  <Radio value="Afternoon">
+                                    Chiều (13:00 - 17:00)
+                                  </Radio>
+                                  <Radio value="Evening">
+                                    Tối (17:00 - 21:00)
+                                  </Radio>
+                                </Space>
+                              </Radio.Group>
+                            )}
+                          </Form.Item>
+                        </motion.div>
+                      </Col>
+                    </Row>
+                  </Form>
+                </Col>
+              </Row>
+            </div>
+
+            <Divider style={{ margin: 0 }} />
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                textAlign: "right",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Space>
+                <Button onClick={closeModal}>Hủy</Button>
+                <Button
+                  type="primary"
+                  onClick={handleSubmit}
+                  icon={<SaveOutlined />}
+                  style={{ backgroundColor: "#48C1A6", borderColor: "#48C1A6" }}
+                >
+                  Lưu thay đổi
+                </Button>
+              </Space>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Modal>
+  );
 };
 
 export default EditUserModal;

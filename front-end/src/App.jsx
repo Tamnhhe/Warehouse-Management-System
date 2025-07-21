@@ -19,6 +19,7 @@ import ViewProfile from "./Components/User_Components/ViewProfile";
 import EditProfile from "./Components/User_Components/EditProfile";
 import ChangePassword from "./Components/User_Components/ChangePassword";
 import ExportProduct from "./Components/Transaction_Components/ExportProduct";
+import ExportProductList from "./Components/Transaction_Components/ExportProductList";
 import CreateReceipt from "./Components/Transaction_Components/CreateReceipt";
 import ListTransaction from "./Components/Transaction_Components/ListTransaction";
 import DetailTransaction from "./Components/Transaction_Components/TransactionDetail";
@@ -145,10 +146,26 @@ function App() {
             }
           />
           <Route
-            path="/export"
+            path="/export-product"
             element={
               <ProtectedRoute allowedRoles={["employee", "manager"]}>
                 <ExportProduct />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/export"
+            element={
+              <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                <ExportProductList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/export-list"
+            element={
+              <ProtectedRoute allowedRoles={["manager"]}>
+                <ExportProductList />
               </ProtectedRoute>
             }
           />

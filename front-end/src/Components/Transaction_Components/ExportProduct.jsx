@@ -1,19 +1,69 @@
 //Nguyễn Bảo Phi-HE173187-7/2/2025
 import React, { useState, useEffect } from "react";
 import {
-  Form,
-  Button,
-  Row,
-  Col,
   Container,
-  Alert,
-  Table,
-  Modal,
+  Typography,
+  Paper,
+  Box,
+  TextField,
+  Button,
+  Grid,
   Card,
-} from "react-bootstrap";
-import { BsEye, BsTrash } from "react-icons/bs";
+  CardContent,
+  CardMedia,
+  CardActions,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import {
+  Search as SearchIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+  Add as AddIcon,
+  ArrowBack as ArrowBackIcon,
+} from "@mui/icons-material";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import palette from "../../Constants/palette";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+    },
+  },
+};
 
 const ExportProduct = () => {
   const [search, setSearch] = useState("");
@@ -188,252 +238,367 @@ const ExportProduct = () => {
   };
 
   return (
-    <Container className="mt-4">
-      <Row>
-        <Col>
-          <Card className="shadow-sm border-0 mb-4">
-            <Card.Header className="bg-primary text-white">
-              <h4 className="my-2 text-center">Tạo phiếu xuất kho</h4>
-            </Card.Header>
-            <Card.Body>
-              {message && <Alert variant="success">{message}</Alert>}
-              {error && <Alert variant="danger">{error}</Alert>}
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <Paper
+          elevation={2}
+          sx={{
+            p: 3,
+            borderRadius: 2,
+            backgroundColor: palette.white,
+            position: "relative",
+          }}
+        >
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{ color: palette.dark, fontWeight: "500", mb: 3 }}
+          >
+            Tạo phiếu xuất kho
+          </Typography>
 
-              {loading ? (
-                <div className="text-center p-5">
-                  <p>Đang tải sản phẩm...</p>
-                </div>
-              ) : (
-                <Row>
-                  <Col md={6} className="mb-3">
-                    <h5>Tìm kiếm sản phẩm</h5>
-                    <Form.Control
-                      type="text"
-                      placeholder="Nhập tên sản phẩm..."
-                      value={search}
-                      onChange={handleSearch}
-                      className="mb-3"
-                    />
+          {message && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              {message}
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 5 }}>
+              <CircularProgress sx={{ color: palette.medium }} />
+            </Box>
+          ) : (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <motion.div variants={itemVariants}>
+                  <Typography variant="h6" gutterBottom>
+                    Tìm kiếm sản phẩm
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="Nhập tên sản phẩm để tìm kiếm..."
+                    variant="outlined"
+                    value={search}
+                    onChange={handleSearch}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+
+                  <AnimatePresence>
                     {filteredProducts.length > 0 && (
-                      <div
-                        style={{ maxHeight: "400px", overflowY: "auto" }}
-                        className="border rounded"
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
                       >
-                        <Table hover borderless className="mb-0">
-                          <thead className="bg-light">
-                            <tr>
-                              <th style={{ width: "60px" }}></th>
-                              <th>Tên sản phẩm</th>
-                              <th>Tồn kho</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredProducts.map((product, index) => (
-                              <tr
-                                key={index}
-                                onClick={() => handleSelectProduct(product)}
-                                style={{ cursor: "pointer" }}
-                              >
-                                <td>
-                                  <img
+                        <Paper
+                          elevation={3}
+                          sx={{
+                            maxHeight: 300,
+                            overflowY: "auto",
+                            mb: 2,
+                          }}
+                        >
+                          <TableContainer>
+                            <Table>
+                              <TableHead>
+                                <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                                  <TableCell>Hình ảnh</TableCell>
+                                  <TableCell>Tên sản phẩm</TableCell>
+                                  <TableCell align="right">Tồn kho</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {filteredProducts.map((product, index) => (
+                                  <TableRow
+                                    key={index}
+                                    hover
+                                    onClick={() => handleSelectProduct(product)}
+                                    sx={{ cursor: "pointer" }}
+                                  >
+                                    <TableCell>
+                                      <Box
+                                        component="img"
+                                        sx={{
+                                          width: 50,
+                                          height: 50,
+                                          borderRadius: 1,
+                                          objectFit: "cover",
+                                        }}
+                                        src={
+                                          product?.productImage
+                                            ? `http://localhost:9999${product?.productImage}`
+                                            : "http://localhost:9999/uploads/default-product.png"
+                                        }
+                                        alt={product?.productName}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2">
+                                        {product?.productName}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      {product?.stock} {product?.unit}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Paper>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <Box sx={{ mt: 2 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Chi nhánh</InputLabel>
+                      <Select
+                        value={branch}
+                        onChange={(e) => setBranch(e.target.value)}
+                        label="Chi nhánh"
+                      >
+                        <MenuItem value="Chi nhánh A">Chi nhánh A</MenuItem>
+                        <MenuItem value="Chi nhánh B">Chi nhánh B</MenuItem>
+                        <MenuItem value="Chi nhánh C">Chi nhánh C</MenuItem>
+                        <MenuItem value="Chi nhánh D">Chi nhánh D</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </motion.div>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <motion.div variants={itemVariants}>
+                  <Typography variant="h6" gutterBottom>
+                    Danh sách sản phẩm xuất kho
+                  </Typography>
+
+                  {selectedProducts.length === 0 ? (
+                    <Paper
+                      elevation={0}
+                      variant="outlined"
+                      sx={{
+                        p: 4,
+                        borderRadius: 2,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "#f8f9fa",
+                        minHeight: 200,
+                      }}
+                    >
+                      <Typography
+                        variant="body1"
+                        color="text.secondary"
+                        sx={{ textAlign: "center" }}
+                      >
+                        Chưa có sản phẩm nào được chọn
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 1, textAlign: "center" }}
+                      >
+                        Tìm kiếm và chọn sản phẩm để thêm vào phiếu xuất
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <TableContainer
+                      component={Paper}
+                      variant="outlined"
+                      sx={{ maxHeight: 350, overflowY: "auto" }}
+                    >
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                            <TableCell>Sản phẩm</TableCell>
+                            <TableCell align="center">Số lượng</TableCell>
+                            <TableCell align="right">Thao tác</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedProducts.map((product, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                <Box
+                                  sx={{ display: "flex", alignItems: "center" }}
+                                >
+                                  <Box
+                                    component="img"
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 2,
+                                      borderRadius: 1,
+                                      objectFit: "cover",
+                                    }}
                                     src={
                                       product?.productImage
                                         ? `http://localhost:9999${product?.productImage}`
                                         : "http://localhost:9999/uploads/default-product.png"
                                     }
-                                    width="50"
-                                    height="50"
-                                    className="rounded object-fit-cover"
                                     alt={product?.productName}
                                   />
-                                </td>
-                                <td>{product?.productName}</td>
-                                <td>{product?.stock} sản phẩm</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </div>
-                    )}
-                  </Col>
-
-                  <Col md={6}>
-                    <h5>Sản phẩm xuất kho</h5>
-
-                    {selectedProducts.length === 0 ? (
-                      <div className="text-center p-5 border rounded">
-                        <p className="text-muted">
-                          Chưa có sản phẩm nào được chọn
-                        </p>
-                      </div>
-                    ) : (
-                      <div
-                        style={{ maxHeight: "400px", overflowY: "auto" }}
-                        className="border rounded"
-                      >
-                        <Table hover>
-                          <thead className="bg-light">
-                            <tr>
-                              <th>Sản phẩm</th>
-                              <th>Số lượng</th>
-                              <th style={{ width: "80px" }}>Thao tác</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedProducts.map((product, index) => (
-                              <tr key={index}>
-                                <td>
-                                  <div className="d-flex align-items-center">
-                                    <img
-                                      src={
-                                        product?.productImage
-                                          ? `http://localhost:9999${product?.productImage}`
-                                          : "http://localhost:9999/uploads/default-product.png"
-                                      }
-                                      width="40"
-                                      height="40"
-                                      className="rounded me-2 object-fit-cover"
-                                      alt={product?.productName}
-                                    />
-                                    <span>{product?.productName}</span>
-                                  </div>
-                                </td>
-                                <td>
-                                  <Form.Control
-                                    type="number"
-                                    min="1"
-                                    className="form-control-sm"
-                                    value={product.quantity}
-                                    onChange={(e) =>
-                                      handleQuantityChange(
-                                        index,
-                                        e.target.value
-                                      )
-                                    }
-                                    style={{ maxWidth: "100px" }}
-                                    onBlur={(e) => {
-                                      const val = parseInt(e.target.value, 10);
-                                      if (!isNaN(val) && val > 0) {
-                                        const updated = [...selectedProducts];
-                                        updated[index].quantity = val;
-                                        setSelectedProducts(updated);
-                                      }
-                                    }}
-                                  />
-                                </td>
-                                <td className="text-center">
-                                  <Button
-                                    variant="link"
-                                    className="p-0 me-2 text-info"
-                                    onClick={() => {
-                                      setModalProduct(product);
-                                      setShowModal(true);
-                                    }}
+                                  <Typography
+                                    variant="body2"
+                                    noWrap
+                                    sx={{ maxWidth: 150 }}
                                   >
-                                    <BsEye size={18} />
-                                  </Button>
-                                  <Button
-                                    variant="link"
-                                    className="p-0 text-danger"
-                                    onClick={() => handleRemoveProduct(index)}
-                                  >
-                                    <BsTrash size={18} />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </div>
-                    )}
-                  </Col>
-                </Row>
-              )}
+                                    {product?.productName}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  inputProps={{
+                                    min: 1,
+                                    style: { textAlign: "center" },
+                                  }}
+                                  value={product.quantity}
+                                  onChange={(e) =>
+                                    handleQuantityChange(index, e.target.value)
+                                  }
+                                  sx={{ width: 70 }}
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  onClick={() => {
+                                    setModalProduct(product);
+                                    setShowModal(true);
+                                  }}
+                                >
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleRemoveProduct(index)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </motion.div>
+              </Grid>
+            </Grid>
+          )}
 
-              <Row className="mt-4">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Chi nhánh</Form.Label>
-                    <Form.Select
-                      value={branch}
-                      onChange={(e) => setBranch(e.target.value)}
-                    >
-                      <option value="Chi nhánh A">Chi nhánh A</option>
-                      <option value="Chi nhánh B">Chi nhánh B</option>
-                      <option value="Chi nhánh C">Chi nhánh C</option>
-                      <option value="Chi nhánh D">Chi nhánh D</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
+          <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={() => navigate("/export")}
+              startIcon={<ArrowBackIcon />}
+            >
+              Danh sách phiếu xuất
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={selectedProducts.length === 0 || loading}
+              sx={{
+                bgcolor: palette.medium,
+                "&:hover": { bgcolor: palette.dark },
+              }}
+              startIcon={<AddIcon />}
+            >
+              Tạo phiếu xuất
+            </Button>
+          </Box>
+        </Paper>
+      </motion.div>
 
-              <div className="d-flex justify-content-between mt-3">
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => navigate(-1)}
-                >
-                  Quay lại
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleSubmit}
-                  disabled={selectedProducts?.length === 0}
-                >
-                  Tạo phiếu xuất
-                </Button>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Chi tiết sản phẩm</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
+      <Dialog
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="sm"
+      >
+        <DialogTitle>Chi tiết sản phẩm</DialogTitle>
+        <DialogContent dividers>
           {modalProduct && (
-            <div className="d-flex">
-              <div className="product-image text-center me-3">
-                <img
-                  src={
-                    modalProduct.productImage
-                      ? `http://localhost:9999${modalProduct.productImage}`
-                      : "http://localhost:9999/uploads/default-product.png"
-                  }
-                  alt="Hình sản phẩm"
-                  className="img-fluid rounded"
-                  style={{ maxWidth: "150px", maxHeight: "150px" }}
-                />
-              </div>
-              <div className="product-info">
-                <h5>{modalProduct.productName || "Không có"}</h5>
-                <p>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <Card elevation={0}>
+                  <CardMedia
+                    component="img"
+                    image={
+                      modalProduct.productImage
+                        ? `http://localhost:9999${modalProduct.productImage}`
+                        : "http://localhost:9999/uploads/default-product.png"
+                    }
+                    alt={modalProduct.productName}
+                    sx={{ height: 150, objectFit: "contain" }}
+                  />
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={8}>
+                <Typography variant="h6" gutterBottom>
+                  {modalProduct.productName}
+                </Typography>
+                <Typography variant="body2">
                   <strong>Danh mục:</strong>{" "}
                   {getCategoryName(modalProduct.categoryId)}
-                </p>
-                <p>
-                  <strong>Tồn kho:</strong> {modalProduct.stock || 0} sản phẩm
-                </p>
-                <p>
-                  <strong>Vị trí:</strong> {modalProduct.location || "Không có"}
-                </p>
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Tồn kho:</strong> {modalProduct.stock || 0}{" "}
+                  {modalProduct.unit}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Vị trí:</strong>{" "}
+                  {modalProduct.location
+                    ? Array.isArray(modalProduct.location)
+                      ? modalProduct.location
+                          .map(
+                            (loc) =>
+                              `${loc.inventoryId?.name || "Không rõ"}: ${
+                                loc.stock
+                              } ${modalProduct.unit}`
+                          )
+                          .join(", ")
+                      : "Không rõ"
+                    : "Chưa có"}
+                </Typography>
                 {modalProduct.description && (
-                  <p>
+                  <Typography variant="body2">
                     <strong>Mô tả:</strong> {modalProduct.description}
-                  </p>
+                  </Typography>
                 )}
-              </div>
-            </div>
+              </Grid>
+            </Grid>
           )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Đóng
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowModal(false)}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
