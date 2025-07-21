@@ -59,3 +59,5 @@ Export Product:
 Thêm thông tin chi tiết cho branch khi xuất
 
 và ở view transaction detail sẽ hiển thị thêm các thông tin chi tiết về chi nhánh
+
+Product List: Trả về giá nhập trung bình giữa các lần nhập
