@@ -35,7 +35,7 @@ const ExportDetail = () => {
     const element = invoiceRef.current;
     const opt = {
       margin: 0.5,
-      filename: `export-invoice-${transaction?._id}.pdf`,
+      filename: `phieu-xuat-kho-${transaction?._id}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
@@ -50,7 +50,7 @@ const ExportDetail = () => {
       <div ref={invoiceRef} className="invoice-box">
         <div className="header d-flex justify-content-between align-items-center">
           <div>
-            <h1 className="text-danger">HÓA ĐƠN XUẤT HÀNG</h1>
+            <h1 className="text-primary">PHIẾU XUẤT KHO</h1>
             <p>
               <strong>Ngày lập:</strong>{" "}
               {new Date(transaction.transactionDate).toLocaleDateString()}
@@ -91,13 +91,10 @@ const ExportDetail = () => {
               <th>Tên sản phẩm</th>
               <th>SL yêu cầu</th>
               <th>SL xuất</th>
-              <th>Giá</th>
-              <th>Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             {transaction.products.map((product, index) => {
-              const total = product.price * product.achievedProduct;
               console.log("Product item:", product);
               return (
                 <tr key={index}>
@@ -111,28 +108,19 @@ const ExportDetail = () => {
                   </td>
                   <td>{product.requestQuantity}</td>
                   <td>{product.achievedProduct}</td>
-                  <td>{product.price.toLocaleString()} đ</td>
-                  <td>{total.toLocaleString()} đ</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        <div className="text-end mt-4">
-          <h4>
-            <strong>TỔNG TIỀN:</strong>{" "}
-            {transaction.totalPrice.toLocaleString()} đ
-          </h4>
-        </div>
-
         <div className="mt-5">
           <p>
             <strong>Ghi chú:</strong>
           </p>
           <p className="text-muted">
-            Hóa đơn này được tạo cho giao dịch xuất kho. Vui lòng xác nhận lại
-            số lượng và giá trước khi ký nhận.
+            Phiếu này được tạo cho giao dịch xuất kho. Vui lòng xác nhận lại số
+            lượng trước khi ký nhận.
           </p>
         </div>
       </div>
@@ -142,7 +130,7 @@ const ExportDetail = () => {
           Quay lại
         </Button>
         <Button variant="primary" onClick={handlePrint}>
-          In hóa đơn
+          In phiếu xuất
         </Button>
         <Button variant="success" onClick={handleDownload}>
           Tải xuống PDF
