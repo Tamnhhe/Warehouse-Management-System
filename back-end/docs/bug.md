@@ -5,11 +5,11 @@ Tạo sản phẩm:
 - Tạo danh mục bên trong tạo sản phẩm
 - Có thể thêm supplier ngay bên trong tạo sản phẩm
 
-- Trong trường hợp update product thì khi sửa lại tồn kho của từng kệ thì tổng số lượng sản phẩm bắt buộc phải bằng với giá trị của total stock ban đầu khi mới tạo sản phẩm
+- Trong trường hợp update product thì khi sửa lại tồn kho của từng kệ thì tổng số lượng sản phẩm bắt buộc phải bằng với giá trị của total stock ban đầu khi mới tạo sản phẩm (v)
 
 - Sửa lại từ chọn kho thành chọn kệ và sau đó nhập tồn kho (v)
-- Kiểm tra kệ có đủ dung tích chứa hay không trước khi nhập
-- Sửa lại tổng tất cả sản phẩm đặt ở các vị trí sẽ bằng total stock, và thường thì là chọn kệ là sẽ đẩy hết total stock hiện tại
+- Kiểm tra kệ có đủ dung tích chứa hay không trước khi nhập (v)
+- Sửa lại tổng tất cả sản phẩm đặt ở các vị trí sẽ bằng total stock, và thường thì là chọn kệ là sẽ đẩy hết total stock hiện tại (v)
 - Thêm 1 trường ngưỡng tồn kho(để nếu sản phẩm thấp dưới mức này sẽ cần nhập),
 - Hình ảnh khi tạo sản phẩm là không bắt buộc
 - Tất cả các phần thêm bên trong tạo sản phẩm đều là modal hiển thị và có nút x
@@ -19,7 +19,7 @@ Xem danh sách sản phẩm:
 
 Update sản phẩm: danh mục cũng được tạo bên trong cập nhật sản phẩm,
 
-Chọn kho và nhập tồn kho cho từng kho: => chọn kệ và nhập tồn kho, khi sửa đổi kệ khi cập nhật, phải chắc chắn số lượng cập nhật bằng với total stock chứ không được hơn hoặc thiếu
+Chọn kho và nhập tồn kho cho từng kho: => chọn kệ và nhập tồn kho, khi sửa đổi kệ khi cập nhật, phải chắc chắn số lượng cập nhật bằng với total stock chứ không được hơn hoặc thiếu (v)
 
 Quản lý kệ hàng:
 
@@ -44,3 +44,12 @@ ví dụ trường hợp 1 : Sản phẩm a có 100 sản phẩm và lưu ở 2 
 xuất hàng, nếu xuất sản phẩm có trong nhiều kệ thì sẽ xuất từ kệ đầu tiên đến kệ cuối cùng theo số lượng sản phẩm
 
 ví dụ có 100sp bột, mà để ở lần lượt 3 kệ là kệ 1 25, kệ 2 35, kệ 3 40 thì khi xuất 50 sản phẩm sẽ trừ 25 ở kệ 1 và trừ tiếp 25 ở kệ 2.
+
+
+Navbar: 
+- Bỏ sơ đồ kho đi
+- Đổi xuất kho thành phiếu xuất kho
+- Bỏ danh sách giao dịch
+
+Receipt Transaction:
+- Sửa lỗi khi tạo phiếu nhập thì bị tự động nhập (Biểu hiện khi tạo thành công tự động chuyển sang trạng thái completed)

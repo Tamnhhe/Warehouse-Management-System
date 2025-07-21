@@ -186,6 +186,13 @@ const UpdateProductModal = ({
     } else {
       tempErrors.location = "";
     }
+
+    // Kiểm tra tổng số lượng tồn kho phải bằng tổng số lượng sản phẩm
+    const totalLocationStock = productData.location.reduce((sum, inv) => sum + Number(inv.stock || 0), 0);
+    if (totalLocationStock !== Number(productData.totalStock)) {
+      tempErrors.location = "Số lượng sản phẩm trong các kệ phải bằng với tổng số lượng sản phẩm";
+    }
+
     if (hasSupplier && !productData.supplierId) {
       tempErrors.supplierId = "Vui lòng chọn nhà cung cấp.";
     } else {

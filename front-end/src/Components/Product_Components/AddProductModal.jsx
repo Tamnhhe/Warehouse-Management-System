@@ -10,11 +10,16 @@ import {
 
 const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, checkProductName }) => {
     const [productData, setProductData] = useState({
-        productName: "", categoryId: "", totalStock: 0,
-        productImage: null, unit: "", location: "", status: "active",
-        location: [], // [{ inventoryId, stock }]
+        productName: "",
+        categoryId: "",
+        totalStock: 0,
+        thresholdStock: 0, // Thêm trường ngưỡng tồn kho
+        productImage: null,
+        unit: "",
+        location: [],
+        status: "active",
         supplierId: "",
-        quantitative: "", // Add quantitative field
+        quantitative: "",
     });
     const [selectedInventory, setSelectedInventory] = useState("");
     const [inventoryStock, setInventoryStock] = useState("");
@@ -103,6 +108,23 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
             }));
             return;
         }
+
+        // Kiểm tra sức chứa định lượng của kệ
+        const inventoryObj = inventories.find(i => i._id === selectedInventory);
+        if (inventoryObj) {
+            const productQuantitative = Number(productData.quantitative) || 0;
+            const addQuantitative = Number(inventoryStock) * productQuantitative;
+            const availableQuantitative = (Number(inventoryObj.maxQuantitative) || 0) - (Number(inventoryObj.currentQuantitative) || 0);
+
+            if (addQuantitative > availableQuantitative) {
+                setErrors((prev) => ({
+                    ...prev,
+                    location: `Kệ này chỉ còn sức chứa định lượng tối đa là ${availableQuantitative}. Sản phẩm bạn thêm vượt quá sức chứa.`
+                }));
+                return;
+            }
+        }
+
         setProductData((prev) => ({
             ...prev,
             location: [
@@ -197,7 +219,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Thêm Sản Phẩm Mới</DialogTitle>
+            <DialogTitle>Thêm Sản Phẩm</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     {errors.general && <Alert severity="error">{errors.general}</Alert>}
@@ -220,6 +242,15 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                         error={!!errors.quantitative}
                         helperText={errors.quantitative}
                         fullWidth
+                    />
+                    <TextField
+                        name="thresholdStock"
+                        label="Ngưỡng tồn kho"
+                        type="number"
+                        value={productData.thresholdStock}
+                        onChange={handleChange}
+                        fullWidth
+                        inputProps={{ min: 0 }}
                     />
                     {/* Inventory selection */}
                     <Box>
