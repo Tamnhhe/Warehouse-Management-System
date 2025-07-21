@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -10,8 +10,16 @@ import {
   Button,
   TextField,
   InputAdornment,
+  Avatar,
+  useTheme,
+  useMediaQuery,
+  Menu,
+  MenuItem,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 
 // Icons cho các chức năng
 import Inventory2Icon from "@mui/icons-material/Inventory2";
@@ -21,9 +29,26 @@ import OutputIcon from "@mui/icons-material/Output";
 import BadgeIcon from "@mui/icons-material/Badge";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
-import Header from "./Header"; // Đảm bảo đường dẫn chính xác
-import Footer from "./Footer"; // Đảm bảo đường dẫn chính xác
-import Palette from "@mui/icons-material/Palette"; // <-- ĐÚNG
+import CategoryIcon from "@mui/icons-material/Category";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
+import GridViewIcon from "@mui/icons-material/GridView";
+import PeopleIcon from "@mui/icons-material/People";
+import Header from "./Header";
+import Footer from "./Footer";
+import useUser from "../../Hooks/useUser";
+
+// Màu sắc chính
+const palette = {
+  dark: "#155E64",
+  medium: "#75B39C",
+  light: "#A0E4D0",
+  white: "#FFFFFF",
+  black: "#000000",
+  purple: "#6a11cb",
+  blue: "#2575fc",
+};
+
 // --- DỮ LIỆU CHỨC NĂNG ---
 const mainFunctions = [
   {
@@ -62,6 +87,42 @@ const mainFunctions = [
     path: "/get-list-suppliers",
     allowedRoles: ["manager", "employee"],
   },
+  {
+    title: "Kiểm kê",
+    icon: <FactCheckIcon />,
+    path: "/stocktaking",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Kệ hàng",
+    icon: <GridViewIcon />,
+    path: "/inventory-check",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Danh mục",
+    icon: <CategoryIcon />,
+    path: "/category",
+    allowedRoles: ["manager"],
+  },
+  {
+    title: "Giao dịch",
+    icon: <ViewListIcon />,
+    path: "/list-transaction",
+    allowedRoles: ["manager"],
+  },
+  {
+    title: "Khách hàng",
+    icon: <PeopleIcon />,
+    path: "/listcustomer",
+    allowedRoles: ["manager", "employee"],
+  },
+  {
+    title: "Sơ đồ kho",
+    icon: <WarehouseIcon />,
+    path: "/warehouse",
+    allowedRoles: ["manager", "employee"],
+  },
 ];
 
 // Helper function để lấy vai trò người dùng
@@ -88,9 +149,10 @@ const OdooAppButton = ({ title, icon, onClick }) => {
         cursor: "pointer",
         p: { xs: 1, md: 2 },
         borderRadius: "8px",
-        transition: "background-color 0.2s ease-in-out",
+        transition: "all 0.2s ease-in-out",
         "&:hover": {
-          backgroundColor: "rgba(0, 0, 0, 0.04)",
+          backgroundColor: "rgba(255, 255, 255, 0.15)",
+          transform: "translateY(-3px)",
         },
       }}
     >
@@ -104,7 +166,7 @@ const OdooAppButton = ({ title, icon, onClick }) => {
           alignItems: "center",
           justifyContent: "center",
           mb: 1,
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
           color: "#155E64", // Màu icon từ palette
         }}
       >
@@ -114,7 +176,7 @@ const OdooAppButton = ({ title, icon, onClick }) => {
         variant="body2"
         sx={{
           fontWeight: "500",
-          color: "text.secondary",
+          color: "#fff",
           width: { xs: "70px", md: "90px" }, // Giới hạn chiều rộng của text
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -130,7 +192,41 @@ const OdooAppButton = ({ title, icon, onClick }) => {
 function Landing() {
   const navigate = useNavigate();
   const userRole = getUserRole();
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
+  const { getProfile } = useUser();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      getProfile().then((data) => {
+        setProfile(data);
+      });
+    }
+  }, []);
+
+  const handleProfileMenuOpen = (event) => {
+    setProfileMenuAnchor(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null);
+  };
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    handleProfileMenuClose();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    setProfile(null);
+    handleProfileMenuClose();
+    navigate("/login");
+  };
 
   const accessibleFunctions = mainFunctions
     .filter((func) => userRole && func.allowedRoles.includes(userRole))
@@ -138,48 +234,158 @@ function Landing() {
       func.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  // --- RENDER GIAO DIỆN KIỂU ODOO ---
-  const renderOdooStyleDashboard = () => (
+  const avatarUrl = profile?.profile?.avatar
+    ? `http://localhost:9999${profile.profile.avatar}`
+    : "/images/avatar/default.png";
+
+  return (
     <Box
       sx={{
-        flexGrow: 1,
-        backgroundColor: "#f7f9fc", // Màu nền sáng giống Odoo
-        overflowY: "auto",
-        p: { xs: 2, md: 4 },
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #155E64 0%, #2575fc 100%)",
+        pt: 2,
+        pb: 6,
+        position: "relative",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            "radial-gradient(circle at center, transparent 10%, rgba(255,255,255,0.1) 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        },
       }}
     >
-      <Container maxWidth="lg">
-        {/* Thanh tìm kiếm */}
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Tìm kiếm ứng dụng..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            mb: 4,
-            maxWidth: "500px",
-            display: "block",
-            mx: "auto",
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "20px",
-              backgroundColor: "#fff",
-            },
-          }}
-        />
+      <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
+        {/* User Profile Card */}
+        {profile && (
+          <Box
+            sx={{
+              mb: 3,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Tooltip title={profile?.fullName || "Tài khoản"}>
+              <IconButton
+                onClick={handleProfileMenuOpen}
+                sx={{
+                  p: 0.5,
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                  },
+                }}
+              >
+                <Avatar
+                  src={avatarUrl}
+                  alt={profile.fullName}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                  }}
+                />
+                <Box sx={{ ml: 1, textAlign: "left" }}>
+                  <Typography variant="body2" fontWeight="bold" color="white">
+                    {profile.fullName}
+                  </Typography>
+                  <Typography variant="caption" color="rgba(255,255,255,0.8)">
+                    {userRole === "manager" ? "Quản lý" : "Nhân viên"}
+                  </Typography>
+                </Box>
+                <ArrowDropDownIcon sx={{ color: "white", ml: 1 }} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              sx={{ mt: "45px" }}
+              anchorEl={profileMenuAnchor}
+              anchorOrigin={{ vertical: "top", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              open={Boolean(profileMenuAnchor)}
+              onClose={handleProfileMenuClose}
+            >
+              <MenuItem onClick={() => handleNavigate("/view-profile")}>
+                Tài khoản
+              </MenuItem>
+              <MenuItem onClick={() => handleNavigate("/change-password")}>
+                Đổi mật khẩu
+              </MenuItem>
+              <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
+            </Menu>
+          </Box>
+        )}
 
-        {/* Lưới các ứng dụng */}
-        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+        {/* Title and Search */}
+        <Box sx={{ mb: 5, textAlign: "center" }}>
+          <Typography
+            variant={isMobile ? "h4" : "h3"}
+            component="h1"
+            color="white"
+            fontWeight="bold"
+            sx={{
+              textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+              mb: 3,
+            }}
+          >
+            Hệ thống quản lý kho
+          </Typography>
+
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Tìm kiếm chức năng..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: "rgba(255,255,255,0.8)" }} />
+                </InputAdornment>
+              ),
+              sx: {
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: "16px",
+                color: "white",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.3)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.5)",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "white",
+                },
+                "& input::placeholder": {
+                  color: "rgba(255,255,255,0.7)",
+                  opacity: 1,
+                },
+                "& input": {
+                  color: "white",
+                },
+              },
+            }}
+            sx={{
+              maxWidth: "500px",
+              mx: "auto",
+              mb: 4,
+            }}
+          />
+        </Box>
+
+        {/* Functions Grid */}
+        <Grid
+          container
+          spacing={{ xs: 1, sm: 2, md: 3 }}
+          justifyContent="center"
+        >
           {accessibleFunctions.map((func) => (
-            // Bố cục responsive: 4 cột trên mobile (xs), 6 cột trên desktop (md)
-            <Grid item key={func.title} xs={3} md={2}>
+            <Grid item key={func.title} xs={3} sm={3} md={2}>
               <OdooAppButton
                 title={func.title}
                 icon={func.icon}
@@ -188,76 +394,18 @@ function Landing() {
             </Grid>
           ))}
         </Grid>
-      </Container>
-    </Box>
-  );
 
-  // --- RENDER GIAO DIỆN MARKETING KHI CHƯA ĐĂNG NHẬP ---
-  const renderMarketingPage = () => (
-    <Paper elevation={0} sx={{ py: 8 }}>
-      <Container>
-        <Grid container alignItems="center" spacing={4}>
-          <Grid item md={7} xs={12}>
-            <Typography
-              variant="h2"
-              component="h1"
-              color="#155E64"
-              sx={{ fontWeight: "bold", mb: 2 }}
-            >
-              Movico Group
+        {/* No functions found message */}
+        {accessibleFunctions.length === 0 && (
+          <Box sx={{ textAlign: "center", mt: 5 }}>
+            <Typography variant="h5" color="white">
+              Không tìm thấy chức năng phù hợp
             </Typography>
-            <Typography
-              variant="h5"
-              component="p"
-              sx={{ mb: 4, color: "#155E64" }}
-            >
-              Nơi công nghệ gặp gỡ phong cách.
-            </Typography>
-            <Typography variant="body1" sx={{ maxWidth: "550px", mb: 4 }}>
-              Hệ thống quản lý kho vận thông minh, hiệu quả cho mọi ngành hàng.
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => navigate("/login")}
-              sx={{
-                backgroundColor: "#155E64",
-                "&:hover": { backgroundColor: "#104c50" },
-                px: 4,
-                py: 1.5,
-              }}
-            >
-              Đăng Nhập Hệ Thống
-            </Button>
-          </Grid>
-          <Grid
-            item
-            md={5}
-            xs={12}
-            sx={{ textAlign: "center", display: { xs: "none", md: "block" } }}
-          >
-            <Box
-              component="img"
-              src="/images/287930.png"
-              alt="Movico Group"
-              sx={{ maxWidth: "100%", height: "auto" }}
-            />
-          </Grid>
-        </Grid>
+          </Box>
+        )}
       </Container>
-    </Paper>
-  );
-
-  return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Header already handled by Layout component in App.jsx */}
-      <Box
-        component="main"
-        sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
-      >
-        {renderOdooStyleDashboard()}
-      </Box>
     </Box>
   );
 }
+
 export default Landing;
