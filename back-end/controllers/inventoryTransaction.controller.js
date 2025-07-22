@@ -1,6 +1,48 @@
 const db = require("../models/index");
 const mongoose = require("mongoose");
 
+// Lấy tất cả giao dịch xuất/nhập kho
+const getAllTransactions = async (req, res) => {
+  try {
+    const transactions = await db.InventoryTransaction.find()
+      .populate("supplier", "name") // Lấy TÊN thay vì chỉ ID
+      .populate("branch", "name receiver address phone email") // Populate thông tin branch
+      .sort({ transactionDate: -1 });
+
+    res.status(200).json(transactions);
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách giao dịch:", error);
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};
+
+// Lấy một giao dịch theo ID
+const getTransactionById = async (req, res) => {
+  try {
+    // Lấy giao dịch và populate supplierProductId, productId, operator và branch
+    const transaction = await db.InventoryTransaction.findById(req.params.id)
+      .populate({
+        path: "products.supplierProductId",
+        model: "SupplierProduct",
+      })
+      .populate({
+        path: "products.productId",
+        model: "Product",
+        strictPopulate: false, // Cho phép populate trường không có trong schema
+      })
+      .populate("operator")
+      .populate("branch", "name receiver address phone email"); // Populate thông tin branch
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Giao dịch không tồn tại" });
+    }
+    res.status(200).json(transaction);
+  } catch (error) {
+    console.error(" Lỗi khi lấy giao dịch:", error);
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};
+
 // Tạo mới một giao dịch xuất/nhập kho
 const createTransaction = async (req, res, next) => {
   try {
@@ -10,7 +52,6 @@ const createTransaction = async (req, res, next) => {
       transactionDate,
       products,
       totalPrice,
-      status,
       branch,
     } = req.body;
 
@@ -140,12 +181,11 @@ const createTransaction = async (req, res, next) => {
       products: processedProducts,
       operator: manager._id,
       totalPrice: calculatedTotalPrice,
-      status: status || "pending",
+      status: "pending",
       ...branchInfo,
     });
 
     const savedTransaction = await newTransaction.save();
-    console.log("Transaction created successfully:", savedTransaction._id);
 
     return res.status(201).json({
       message: "Giao dịch được tạo thành công",
@@ -159,52 +199,112 @@ const createTransaction = async (req, res, next) => {
   }
 };
 
-// Lấy tất cả giao dịch xuất/nhập kho
-const getAllTransactions = async (req, res) => {
+
+const createReceipt = async (req, res) => {
   try {
-    const transactions = await db.InventoryTransaction.find()
-      .populate("supplier", "name") // Lấy TÊN thay vì chỉ ID
-      .populate("branch", "name receiver address phone email") // Populate thông tin branch
-      .sort({ transactionDate: -1 });
+    const { supplierName, products } = req.body;
 
-    res.status(200).json(transactions);
-  } catch (error) {
-    console.error("Lỗi khi lấy danh sách giao dịch:", error);
-    res.status(500).json({ message: "Lỗi server", error });
-  }
-};
-
-// Lấy một giao dịch theo ID
-const getTransactionById = async (req, res) => {
-  try {
-    // Lấy giao dịch và populate supplierProductId, productId, operator và branch
-    const transaction = await db.InventoryTransaction.findById(req.params.id)
-      .populate({
-        path: "products.supplierProductId",
-        model: "SupplierProduct",
-      })
-      .populate({
-        path: "products.productId",
-        model: "Product",
-        strictPopulate: false, // Cho phép populate trường không có trong schema
-      })
-      .populate("operator")
-      .populate("branch", "name receiver address phone email"); // Populate thông tin branch
-
-    console.log(" API DATA:", JSON.stringify(transaction, null, 2));
-
-    if (!transaction) {
-      return res.status(404).json({ message: "Giao dịch không tồn tại" });
+    // Validate required fields
+    if (!supplierName || !products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields or invalid data format",
+      });
     }
 
-    console.log(" API sau khi populate:", JSON.stringify(transaction, null, 2));
+    // Find supplier by name
+    const supplierDoc = await db.Supplier.findOne({
+      name: { $regex: new RegExp(`^${supplierName}$`, "i") },
+    });
 
-    res.status(200).json(transaction);
+    if (!supplierDoc) {
+      return res.status(400).json({
+        success: false,
+        message: "Supplier not found in system",
+      });
+    }
+
+    // Process each product
+    const processedProducts = [];
+    for (const product of products) {
+      try {
+        // Validate required product fields
+        if (!product.productName || !product.categoryName || !product.quantity || !product.price) {
+          throw new Error(
+            `Missing required fields for product ${
+              product.productName || "unknown"
+            }`
+          );
+        }
+
+        // Find category in system
+        const category = await db.Category.findOne({
+          categoryName: {
+            $regex: new RegExp(`^${product.categoryName}$`, "i"),
+          },
+        });
+
+        if (!category) {
+          res.status(400).json({ message: `Category ${product.categoryName} not found` });
+        }
+
+        // Find SupplierProduct relationship (no update, just find or create)
+        let supplierProduct = await db.SupplierProduct.findOne({
+          productName: product.productName,
+          supplier: supplierDoc._id,
+        });
+
+        if (!supplierProduct) {
+          res.status(400).json({ message: `Supplier product not found for ${product.productName}` });
+        }
+
+        // Add to processed products array for inventory transaction
+        processedProducts.push({
+          supplierProductId: supplierProduct._id,
+          requestQuantity: Number(product.quantity),
+          receiveQuantity: Number(product.quantity),
+          defectiveProduct: 0,
+          achievedProduct: Number(product.quantity),
+          price: Number(product.price),
+          quantitative: Number(supplierProduct.quantitative) || 0,
+          expiry: supplierProduct.expiry || null,
+        });
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Calculate total price
+    const totalPrice = processedProducts.reduce((sum, product) => {
+      return sum + product.price * product.requestQuantity;
+    }, 0);
+
+    // Create inventory transaction
+    const receipt = await db.InventoryTransaction.create({
+      transactionType: "import",
+      transactionDate: new Date(),
+      products: processedProducts,
+      supplier: supplierDoc._id,
+      supplierName: supplierDoc.name,
+      totalPrice,
+      status: "pending",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Receipt created successfully",
+      data: receipt,
+    });
   } catch (error) {
-    console.error(" Lỗi khi lấy giao dịch:", error);
-    res.status(500).json({ message: "Lỗi server", error });
+    console.error("Error creating receipt:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
+
+
 
 const updateTransactionStatus = async (req, res) => {
   try {
@@ -230,11 +330,9 @@ const updateTransactionStatus = async (req, res) => {
       defectiveProduct: p.defectiveProduct,
       achievedProduct: p.achievedProduct,
       price: p.price,
-      expiry: p.expiry,
-      weight: p.weight,
+      expiry: p.supplierProductId.expiry || p.expiry || null,
+      quantity: p.supplierProductId.quantitative || p.weight || 0,
     }));
-
-    console.log("Products to update:", products);
 
     // Update product and choose inventory is best match to update product into inventory when status is 'completed' and transaction type is 'import'
     if (status === "completed" && transaction.transactionType === "import") {
@@ -256,10 +354,7 @@ const updateTransactionStatus = async (req, res) => {
         });
 
         if (!dbProduct) {
-          console.error(
-            `Không tìm thấy sản phẩm ${supplierProduct.productName} trong hệ thống`
-          );
-          continue;
+          res.status(404).json({ message: `Product: ${supplierProduct.productName} not found` });
         }
 
         // Cập nhật tổng tồn kho của sản phẩm
@@ -271,33 +366,9 @@ const updateTransactionStatus = async (req, res) => {
 
         // Phân bổ sản phẩm vào các kệ theo thứ tự ưu tiên và giới hạn dung lượng
         await distributeProductToInventories(
-          updatedProduct._id,
-          product.achievedProduct,
-          product.weight || 0
+          updatedProduct,
+          product
         );
-
-        const newLocation = [];
-        //Cập nhật số lượng sản phẩm trong từng kệ ở trong product
-        for (const loc of updatedProduct.location) {
-          const inventory = await db.Inventory.findById(loc.inventoryId);
-          if (!inventory) {
-            console.error(
-              `Không tìm thấy kệ với ID: ${loc.inventoryId} để cập nhật sản phẩm`
-            );
-            continue;
-          }
-          const productInInventory = inventory.products.find(
-            (p) => p.productId.toString() === updatedProduct._id.toString()
-          );
-          if (productInInventory) {
-            newLocation.push({
-              inventoryId: loc.inventoryId,
-              stock: productInInventory.quantity,
-            });
-          }
-        }
-        updatedProduct.location = newLocation;
-        await updatedProduct.save();
       }
     }
 
@@ -321,11 +392,10 @@ const updateTransactionStatus = async (req, res) => {
         });
 
         if (!dbProduct) {
-          console.error(
-            `Không tìm thấy sản phẩm ${supplierProduct.productName} trong hệ thống`
-          );
-          continue;
+          res.status(404).json({ message: `Product: ${supplierProduct.productName} not found` });
         }
+
+        dbProduct.totalStock -= product.receiveQuantity;
 
         // Cập nhật tổng tồn kho của sản phẩm
         const updatedProduct = await db.Product.findByIdAndUpdate(
@@ -452,236 +522,83 @@ const updateTransaction = async (req, res) => {
   }
 };
 
-const createReceipt = async (req, res) => {
-  try {
-    const { supplierName, products } = req.body;
-    console.log("Received data:", req.body);
 
-    // Validate required fields
-    if (
-      !supplierName ||
-      !products ||
-      !Array.isArray(products) ||
-      products.length === 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields or invalid data format",
-      });
-    }
-
-    // Find supplier by name
-    const supplierDoc = await db.Supplier.findOne({
-      name: { $regex: new RegExp(`^${supplierName}$`, "i") },
-    });
-
-    if (!supplierDoc) {
-      return res.status(400).json({
-        success: false,
-        message: "Supplier not found in system",
-      });
-    }
-
-    // Process each product
-    const processedProducts = [];
-    for (const product of products) {
-      try {
-        // Validate required product fields
-        if (
-          !product.productName ||
-          !product.categoryName ||
-          !product.quantity ||
-          !product.price
-        ) {
-          throw new Error(
-            `Missing required fields for product ${
-              product.productName || "unknown"
-            }`
-          );
-        }
-
-        // Find category in system
-        const category = await db.Category.findOne({
-          categoryName: {
-            $regex: new RegExp(`^${product.categoryName}$`, "i"),
-          },
-        });
-
-        if (!category) {
-          throw new Error(
-            `Category ${product.categoryName} not found in system`
-          );
-        }
-
-        // Find SupplierProduct relationship (no update, just find or create)
-        let supplierProduct = await db.SupplierProduct.findOne({
-          productName: product.productName,
-          supplier: supplierDoc._id,
-        });
-
-        if (!supplierProduct) {
-          // Create new supplier product relationship
-          supplierProduct = await db.SupplierProduct.create({
-            supplier: supplierDoc._id,
-            stock: product.quantity,
-            expiry: product.expiry,
-            categoryId: category._id,
-            productImage: product.productImage || "",
-            productName: product.productName,
-            quantitative: product.weight || 0,
-            unit: product.unit,
-          });
-        }
-
-        // Add to processed products array for inventory transaction
-        processedProducts.push({
-          supplierProductId: supplierProduct._id,
-          requestQuantity: Number(product.quantity),
-          receiveQuantity: Number(product.quantity),
-          defectiveProduct: 0,
-          achievedProduct: Number(product.quantity),
-          price: Number(product.price),
-          weight: Number(product.weight) || 0,
-          expiry: product.expiry || null,
-        });
-      } catch (error) {
-        console.error(`Error processing product:`, error);
-        throw new Error(error.message);
-      }
-    }
-
-    // Calculate total price
-    const totalPrice = processedProducts.reduce((sum, product) => {
-      return sum + product.price * product.requestQuantity;
-    }, 0);
-
-    // Create inventory transaction
-    const receipt = await db.InventoryTransaction.create({
-      transactionType: "import",
-      transactionDate: new Date(),
-      products: processedProducts,
-      supplier: supplierDoc._id,
-      supplierName: supplierDoc.name,
-      totalPrice,
-      status: "pending",
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Receipt created successfully",
-      data: receipt,
-    });
-  } catch (error) {
-    console.error("Error creating receipt:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error",
-    });
-  }
-};
 
 // Hàm phân bổ sản phẩm vào các kệ
-async function distributeProductToInventories(productId, quantity, weight) {
+async function distributeProductToInventories(product, productData) {
   try {
-    // Lấy danh sách các kệ phù hợp với sản phẩm (theo category)
-    const product = await db.Product.findById(productId);
-    if (!product) return;
-
-    // Tìm tất cả kệ phù hợp với loại sản phẩm và sắp xếp theo ưu tiên
+    // Lấy tất cả kệ có dung lượng còn trống bằng cách trừ maxQuantitative - currentQuantitative
     const inventories = await db.Inventory.find({
-      categoryId: product.categoryId,
-      status: "active",
-    }).sort({ priority: 1 });
+      categoryId: product.categoryId
+    }).sort({ createdAt: 1 }); // Sắp xếp theo FIFO (có thể dùng createdAt hoặc priority)
 
-    if (inventories.length === 0) {
-      console.log(`Không tìm thấy kệ phù hợp cho sản phẩm ${productId}`);
-      return;
+    let remainingQuantitativeToDistribute = productData.achievedProduct * product.quantitative || 0;
+
+    const totalInventoryRemainingSpace = inventories.reduce((total, inventory) => {
+      return total + (inventory.maxQuantitative - inventory.currentQuantitative);
+    }, 0);
+    if (totalInventoryRemainingSpace < remainingQuantitativeToDistribute) {
+      throw new Error(`Không đủ dung lượng trong các kệ để phân bổ ${remainingQuantitativeToDistribute} đơn vị.`);
     }
 
-    let remainingQuantity = quantity;
-    let remainingWeight = weight;
-
-    // Phân bổ sản phẩm vào từng kệ theo thứ tự ưu tiên và dung lượng
+    // Phân bổ sản phẩm vào các kệ theo thứ tự
     for (const inventory of inventories) {
-      if (remainingQuantity <= 0) break;
+      if (remainingQuantitativeToDistribute <= 0) break;
 
-      // Kiểm tra xem kệ còn không gian không (số lượng và trọng lượng)
-      const remainingCapacity =
-        inventory.maxQuantitative - inventory.currentQuantitative;
-      const remainingWeightCapacity =
-        inventory.maxWeight - inventory.currentWeight;
+      // Tính số lượng có thể phân bổ vào kệ này
+      const availableSpace = inventory.maxQuantitative - inventory.currentQuantitative;
+      const quantityToAllocate = Math.min(availableSpace, remainingQuantitativeToDistribute);
 
-      // Tính toán số lượng tối đa có thể đặt vào kệ này
-      let maxCapacityPerProduct = Infinity;
-      if (inventory.maxCapacityPerProduct !== null) {
-        maxCapacityPerProduct = inventory.maxCapacityPerProduct;
-      }
-
-      // Tìm sản phẩm trong kệ
-      const productIndex = inventory.products.findIndex(
-        (p) => p.productId.toString() === productId.toString()
-      );
-
-      let quantityToAdd;
-
-      if (productIndex !== -1) {
-        // Sản phẩm đã tồn tại trong kệ, tính toán số lượng có thể thêm
-        const currentProductQuantity =
-          inventory.products[productIndex].quantity;
-        const availableSpace = Math.min(
-          maxCapacityPerProduct - currentProductQuantity,
-          remainingCapacity
-        );
-        quantityToAdd = Math.min(availableSpace, remainingQuantity);
-
-        // Cập nhật số lượng sản phẩm trong kệ
-        if (quantityToAdd > 0) {
-          inventory.products[productIndex].quantity += quantityToAdd;
-          remainingQuantity -= quantityToAdd;
-
-          // Cập nhật số lượng và trọng lượng hiện tại của kệ
-          inventory.currentQuantitative += quantityToAdd;
-          const weightToAdd = (weight / quantity) * quantityToAdd;
-          inventory.currentWeight += weightToAdd;
-          remainingWeight -= weightToAdd;
-
-          await inventory.save();
-        }
-      } else {
-        // Sản phẩm chưa tồn tại trong kệ
-        quantityToAdd = Math.min(
-          maxCapacityPerProduct,
-          remainingCapacity,
-          remainingQuantity
+      if (quantityToAllocate > 0) {
+        // Cập nhật sản phẩm trong kệ
+        const productIndex = inventory.products.findIndex(
+          (p) => p.productId.toString() === product._id.toString()
         );
 
-        if (quantityToAdd > 0) {
+        if (productIndex !== -1) {
+          inventory.products[productIndex].quantity += quantityToAllocate;
+        } else {
           // Thêm sản phẩm mới vào kệ
           inventory.products.push({
-            productId: productId,
-            quantity: quantityToAdd,
+            productId: product._id,
+            quantity: productData.achievedProduct,
+            expiry: productData.expiry || null,
+            quantitative: productData.quantitative || 0,
+            price: productData.price || 0,
           });
-
-          // Cập nhật số lượng và trọng lượng hiện tại của kệ
-          inventory.currentQuantitative += quantityToAdd;
-          const weightToAdd = (weight / quantity) * quantityToAdd;
-          inventory.currentWeight += weightToAdd;
-          remainingQuantity -= quantityToAdd;
-          remainingWeight -= weightToAdd;
-
-          await inventory.save();
         }
-      }
-    }
 
-    // Nếu vẫn còn sản phẩm chưa được phân bổ
-    if (remainingQuantity > 0) {
-      console.log(
-        `Không đủ không gian trong kệ cho ${remainingQuantity} sản phẩm ${productId}`
-      );
+        // Cập nhật trọng lượng và số lượng hiện tại của kệ
+        inventory.currentQuantitative += quantityToAllocate * (productData.quantitative || 1);
+        console.log("Updated inventory:", inventory);
+        await inventory.save();
+
+        //Update product location too
+        const updatedProduct = await db.Product.findById(product._id);
+        const newLocation = [{
+          inventoryId: inventory._id,
+          stock: productData.achievedProduct,
+          price: productData.price || 0,
+        }];
+
+        const existedlocation = updatedProduct.location.find(loc => loc.inventoryId.toString() === inventory._id.toString());
+        if (!existedlocation) {
+          updatedProduct.location.push(...newLocation);
+        } else {
+          updatedProduct.location.map(loc => {
+          if (loc.inventoryId.toString() === inventory._id.toString()) {
+            loc.price = (loc.price * loc.stock + productData.price * productData.achievedProduct) / (loc.stock + productData.achievedProduct) || 0;
+            loc.stock += productData.achievedProduct;
+          }
+        });
+        }
+        await updatedProduct.save();
+        remainingQuantitativeToDistribute -= quantityToAllocate;
+      }
     }
   } catch (err) {
     console.error("Lỗi khi phân bổ sản phẩm vào kệ:", err);
+    throw new Error("Lỗi khi phân bổ sản phẩm vào kệ: " + err.message);
   }
 }
 

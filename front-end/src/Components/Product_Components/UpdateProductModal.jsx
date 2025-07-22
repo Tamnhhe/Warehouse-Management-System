@@ -180,14 +180,7 @@ const UpdateProductModal = ({
     } else {
         tempErrors.productImage = "";
     }
-    // Validate inventories
-    if (!productData.location.length) {
-        tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
-    } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
-        tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
-    } else {
-        tempErrors.location = "";
-    }
+
 
     // Kiểm tra tổng số lượng tồn kho phải bằng tổng số lượng sản phẩm
     const totalLocationStock = productData.location.reduce((sum, inv) => sum + Number(inv.stock || 0), 0);
@@ -261,84 +254,7 @@ const UpdateProductModal = ({
             error={!!errors.quantitative}
             helperText={errors.quantitative}
             fullWidth
-          />
-          {/* Inventory selection */}
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kho và nhập tồn kho cho từng kho:</Typography>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-              <FormControl sx={{ minWidth: 160 }}>
-                <InputLabel id="inventory-select-label">Kho</InputLabel>
-                <Select
-                  labelId="inventory-select-label"
-                  value={selectedInventory}
-                  label="Kho"
-                  onChange={handleInventorySelect}
-                >
-                  <MenuItem value=""><em>Chọn kho</em></MenuItem>
-                  {inventories
-                    .filter(inv => !productData.location.some(i => i.inventoryId === inv._id))
-                    .map(inv => (
-                      <MenuItem key={inv._id} value={inv._id}>{inv.name}</MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
-              <TextField
-                type="number"
-                label="Tồn kho"
-                size="small"
-                inputProps={{ min: 0 }}
-                value={inventoryStock}
-                onChange={handleInventoryStockInput}
-                sx={{ width: 120 }}
-              />
-              <Button variant="contained" onClick={handleAddInventory}>Thêm</Button>
-            </Stack>
-            {productData.location.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="subtitle2">Danh sách kho đã chọn:</Typography>
-                {productData.location.map((inv, idx) => {
-                  // Find inventory object for display name
-                  const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
-                  return (
-                    <Stack direction="row" alignItems="center" spacing={2} key={inv.inventoryId} sx={{ mb: 1 }}>
-                      <FormControl sx={{ minWidth: 120 }}>
-                        <InputLabel id={`inventory-select-label-${idx}`}>Kho</InputLabel>
-                        <Select
-                          labelId={`inventory-select-label-${idx}`}
-                          value={inv.inventoryId}
-                          label="Kho"
-                          onChange={e => {
-                            const newLocation = [...productData.location];
-                            newLocation[idx].inventoryId = e.target.value;
-                            setProductData(prev => ({ ...prev, location: newLocation }));
-                          }}
-                        >
-                          {inventories.map(invOpt => (
-                            <MenuItem key={invOpt._id} value={invOpt._id}>{invOpt.name}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        type="number"
-                        label="Tồn kho"
-                        size="small"
-                        inputProps={{ min: 0 }}
-                        value={inv.stock}
-                        onChange={e => {
-                          const newLocation = [...productData.location];
-                          newLocation[idx].stock = Number(e.target.value);
-                          setProductData(prev => ({ ...prev, location: newLocation }));
-                        }}
-                        sx={{ width: 100 }}
-                      />
-                      <Button variant="outlined" color="error" size="small" onClick={() => handleRemoveInventory(inv.inventoryId)}>Xóa</Button>
-                    </Stack>
-                  );
-                })}
-              </Box>
-            )}
-            {errors.location && <FormHelperText error>{errors.location}</FormHelperText>}
-          </Box>
+          />          
           <FormControl fullWidth>
             <InputLabel id="status-select-label">Trạng Thái</InputLabel>
             <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>

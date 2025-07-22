@@ -62,7 +62,7 @@ const inventoryTransactionSchema = new mongoose.Schema(
           //nngaf heetts hạn
           type: Date,
         },
-        weight: { type: Number, default: 0 },
+        quantitative: { type: Number, default: 0 },
       },
     ],
     operator: {
