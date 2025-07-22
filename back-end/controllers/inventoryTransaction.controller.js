@@ -453,10 +453,11 @@ const updateTransaction = async (req, res) => {
     let arrayFilters = [];
 
     products.forEach((product) => {
-      if (
-        !product.supplierProductId ||
-        product.supplierProductId.length !== 24
-      ) {
+      // Đảm bảo supplierProductId tồn tại và là chuỗi 24 ký tự
+      const supplierProductId = product.supplierProductId && typeof product.supplierProductId === "object"
+        ? product.supplierProductId._id
+        : product.supplierProductId;
+      if (!supplierProductId || typeof supplierProductId !== "string" || supplierProductId.length !== 24) {
         console.warn(
           `⚠️ Cảnh báo: sản phẩm ${product._id} thiếu supplierProductId`
         );
@@ -464,19 +465,13 @@ const updateTransaction = async (req, res) => {
       }
 
       // Chuyển đổi supplierProductId thành ObjectId
-      const supplierProductObjectId = new mongoose.Types.ObjectId(
-        product.supplierProductId
-      );
+      const supplierProductObjectId = new mongoose.Types.ObjectId(supplierProductId);
 
       // Cập nhật dữ liệu sản phẩm
-      updateFields[`products.$[elem].requestQuantity`] =
-        product.requestQuantity;
-      updateFields[`products.$[elem].receiveQuantity`] =
-        product.receiveQuantity;
-      updateFields[`products.$[elem].defectiveProduct`] =
-        product.defectiveProduct;
-      updateFields[`products.$[elem].achievedProduct`] =
-        product.achievedProduct;
+      updateFields[`products.$[elem].requestQuantity`] = product.requestQuantity;
+      updateFields[`products.$[elem].receiveQuantity`] = product.receiveQuantity;
+      updateFields[`products.$[elem].defectiveProduct`] = product.defectiveProduct;
+      updateFields[`products.$[elem].achievedProduct`] = product.achievedProduct;
       updateFields[`products.$[elem].price`] = product.price;
       updateFields[`products.$[elem].expiry`] = product.expiry;
 
