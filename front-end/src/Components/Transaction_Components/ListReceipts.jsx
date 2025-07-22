@@ -92,6 +92,8 @@ const ListReceipts = () => {
     setSortByDateOrder(sortByDateOrder === "asc" ? "desc" : "asc");
 
   const openStatusModal = (transaction) => {
+    // Nếu đã hoàn thành thì không mở modal đổi trạng thái
+    if (transaction.status === "completed") return;
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
@@ -182,7 +184,7 @@ const ListReceipts = () => {
                   label={transaction.status}
                   color={getStatusChipColor(transaction.status)}
                   size="small"
-                  sx={{ textTransform: "capitalize", cursor: "pointer" }}
+                  sx={{ textTransform: "capitalize", cursor: transaction.status === "completed" ? "not-allowed" : "pointer" }}
                   onClick={() => openStatusModal(transaction)}
                 />
               </TableCell>
@@ -205,6 +207,7 @@ const ListReceipts = () => {
                 <IconButton
                   title="Thay đổi trạng thái"
                   onClick={() => openStatusModal(transaction)}
+                  disabled={transaction.status === "completed"}
                 >
                   <SyncLockIcon />
                 </IconButton>
@@ -236,7 +239,8 @@ const ListReceipts = () => {
                   label={transaction.status}
                   color={getStatusChipColor(transaction.status)}
                   size="small"
-                  sx={{ textTransform: "capitalize" }}
+                  sx={{ textTransform: "capitalize", cursor: transaction.status === "completed" ? "not-allowed" : "pointer" }}
+                  onClick={() => openStatusModal(transaction)}
                 />
               }
             />
@@ -265,6 +269,13 @@ const ListReceipts = () => {
                 onClick={() => navigate(`/receipt/review/${transaction._id}`)}
               >
                 Rà soát
+              </Button>
+              <Button
+                startIcon={<SyncLockIcon />}
+                onClick={() => openStatusModal(transaction)}
+                disabled={transaction.status === "completed"}
+              >
+                Đổi trạng thái
               </Button>
             </Box>
           </Card>
