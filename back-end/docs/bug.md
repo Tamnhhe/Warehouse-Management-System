@@ -66,3 +66,13 @@ Add Product: Không cho phép nhập kệ hàng, mà chỉ tạo product không 
 còn chọn kệ hàng thì phải chọn ở màn rà soát hoặc ở phiếu nhập sẽ tự đẩy vào kệ, và product sẽ hiển thị chính sác sản phẩm đang lưu ở kệ nào,
 
 xuất hàng đổi về đầy đủ thông tin của chi nhánh Failed to create transaction: InventoryTransaction validation failed: branch: Cast to ObjectId failed for value "Chi nhánh A" (type string) at path "branch" because of "BSONError" để xuất hàng thành công
+
+22/7/2025
+
+Phiếu nhập chưa tự động nhập vào đúng vị trí kệ(bỏ cân nặng ở phiếu nhập)
+
+Sửa sản phẩm đang gặp lỗi khi chọn kệ(),
+
+Tạo sản phẩm cũng cho phép chọn kệ để lưu sản phẩm nhưng kh cần nhập số lượng
+
+và kệ hàng sẽ hiển thị tên sản phẩm và vẫn là 0% nếu sản phẩm đó chưa có số lượng
