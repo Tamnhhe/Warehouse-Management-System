@@ -61,3 +61,8 @@ Thêm thông tin chi tiết cho branch khi xuất
 và ở view transaction detail sẽ hiển thị thêm các thông tin chi tiết về chi nhánh
 
 Product List: Trả về giá nhập trung bình giữa các lần nhập
+Add Product: Không cho phép nhập kệ hàng, mà chỉ tạo product không thôi
+
+còn chọn kệ hàng thì phải chọn ở màn rà soát hoặc ở phiếu nhập sẽ tự đẩy vào kệ, và product sẽ hiển thị chính sác sản phẩm đang lưu ở kệ nào,
+
+xuất hàng đổi về đầy đủ thông tin của chi nhánh Failed to create transaction: InventoryTransaction validation failed: branch: Cast to ObjectId failed for value "Chi nhánh A" (type string) at path "branch" because of "BSONError" để xuất hàng thành công
