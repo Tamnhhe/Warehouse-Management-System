@@ -63,13 +63,13 @@ const Login = () => {
       transition: { type: 'spring', stiffness: 100 }
     },
   };
-  
+
   // Variants cho hình ảnh bên phải
   const imageVariants = {
-      hidden: { x: 100, opacity: 0},
-      visible: { x: 0, opacity: 1, transition: { duration: 0.5, ease: "easeOut"}}
+    hidden: { x: 100, opacity: 0 },
+    visible: { x: 0, opacity: 1, transition: { duration: 0.5, ease: "easeOut" } }
   }
-  
+
   // Variants cho thông báo lỗi/thành công
   const alertVariants = {
     initial: { opacity: 0, y: -20, scale: 0.9 },
@@ -77,8 +77,8 @@ const Login = () => {
     exit: { opacity: 0, x: -100 },
     // Hiệu ứng rung cho lỗi
     shake: {
-        x: [0, -10, 10, -10, 10, 0],
-        transition: { duration: 0.5 }
+      x: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.5 }
     }
   };
 
@@ -125,18 +125,18 @@ const Login = () => {
                       animate={["animate", "shake"]}
                       exit="exit"
                     >
-                        <Alert variant="danger">{error}</Alert>
+                      <Alert variant="danger">{error}</Alert>
                     </motion.div>
                   )}
                   {success && (
-                     <motion.div
+                    <motion.div
                       key="success"
                       variants={alertVariants}
                       initial="initial"
                       animate="animate"
                       exit="exit"
                     >
-                        <Alert variant="success">Đăng nhập thành công! Chuyển hướng...</Alert>
+                      <Alert variant="success">Đăng nhập thành công! Chuyển hướng...</Alert>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -173,25 +173,22 @@ const Login = () => {
                       </Button>
                     </motion.div>
                   </motion.div>
-                  
-                  <motion.div variants={itemVariants} className="text-center mt-4">
-                    <span className="text-muted">Chưa có tài khoản? </span>
-                    <a href="/register" className="text-decoration-none fw-bold" style={{ color: '#155E64' }}>Đăng ký ngay</a>
-                  </motion.div>
+
+
                 </Form>
               </motion.div>
             </Col>
 
             {/* Cột Hình ảnh */}
             <Col md={6} className="d-none d-md-block">
-                {/* Bọc Card.Img trong motion.div để tạo hiệu ứng */}
+              {/* Bọc Card.Img trong motion.div để tạo hiệu ứng */}
               <motion.div
-                 variants={imageVariants}
-                 initial="hidden"
-                 animate="visible"
-                 style={{height: '100%'}}
+                variants={imageVariants}
+                initial="hidden"
+                animate="visible"
+                style={{ height: '100%' }}
               >
-                <Card.Img src={"/images/login_image.png"} alt="Login" style={{ objectFit: "cover", height: '100%' }}/>
+                <Card.Img src={"/images/login_image.png"} alt="Login" style={{ objectFit: "cover", height: '100%' }} />
               </motion.div>
             </Col>
           </Row>

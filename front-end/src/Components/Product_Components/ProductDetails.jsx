@@ -1,27 +1,33 @@
-//product details
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Modal, Button, Badge } from "react-bootstrap";
-import "./ProductDetails.css"; // Import file CSS riêng cho Modal
-import LocationOnIcon from "@mui/icons-material/LocationOn";
+import { Modal, Descriptions, Spin, Image, Typography, Row, Col, Tag, Divider, Card } from "antd";
+import { motion, AnimatePresence } from "framer-motion";
+import { EnvironmentOutlined } from "@ant-design/icons";
+
+const { Title } = Typography;
+
+const fadeIn = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  exit: { opacity: 0, y: 40, transition: { duration: 0.2 } },
+};
 
 const ProductDetails = ({ show, handleClose, product }) => {
-  const [categoryName, setCategoryName] = useState(""); // State to store category name
-  const [categories, setCategories] = useState([]); // State to store all categories
+  const [categoryName, setCategoryName] = useState("");
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [supplierName, setSupplierName] = useState(""); // State to store supplier name
-  const [shelfInfo, setShelfInfo] = useState(null); // State to store shelf information
+  const [supplierProducts, setSupplierProducts] = useState([]);
+  const [shelfInfo, setShelfInfo] = useState(null);
 
   useEffect(() => {
     const fetchCate = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:9999/categories/getAllCategories"
-        );
+        const response = await axios.get("http://localhost:9999/categories/getAllCategories");
         setCategories(response.data);
       } catch (error) {
-        setError("Unable to load category list.");
+        setError("Không thể tải danh mục.");
       } finally {
         setLoading(false);
       }
@@ -29,178 +35,167 @@ const ProductDetails = ({ show, handleClose, product }) => {
     fetchCate();
   }, []);
 
+  // Fetch all supplierProduct and filter by productName
+  useEffect(() => {
+    const fetchSupplierProducts = async () => {
+      if (!product) return;
+      try {
+        const res = await axios.get("http://localhost:9999/supplierProduct/getAllSupplierProducts");
+        if (res.data && Array.isArray(res.data.data)) {
+          // So sánh theo productName hoặc productId nếu có
+          const filtered = res.data.data.filter(sp =>
+            sp.productName === product.productName || sp.productId === product._id
+          );
+          setSupplierProducts(filtered);
+        }
+      } catch (err) {
+        setSupplierProducts([]);
+      }
+    };
+    if (show) fetchSupplierProducts();
+  }, [show, product]);
+
   useEffect(() => {
     const findCategoryName = () => {
       if (product && product.categoryId) {
-        // Tìm tên danh mục từ danh sách các categories
         const category = categories.find(cat => String(cat._id) === String(product.categoryId));
-        if (category) {
-          setCategoryName(category.categoryName); // Cập nhật tên danh mục
-        }
+        if (category) setCategoryName(category.categoryName);
       }
     };
-
-    const fetchSupplier = async () => {
-      if (product && product.supplierId) {
-        try {
-          const response = await axios.get(
-            `http://localhost:9999/suppliers/${product.supplierId}`
-          );
-          setSupplierName(response.data.supplierName); // Cập nhật tên nhà cung cấp
-        } catch (error) {
-          setError("Unable to load supplier information.");
-        }
-      }
-    };
-
+    // Bỏ fetchSupplier, thay bằng supplierProducts
     const fetchShelfInfo = async () => {
       if (product && product.location) {
         try {
-          // Try to find the shelf by name
-          const response = await axios.get(
-            `http://localhost:9999/inventory`
-          );
+          const response = await axios.get(`http://localhost:9999/inventory`);
           const shelf = response.data.find(s => s.name === product.location);
-          if (shelf) {
-            setShelfInfo(shelf);
-          } else {
-            setShelfInfo(null);
-          }
+          setShelfInfo(shelf || null);
         } catch (error) {
-          console.error("Error fetching shelf information:", error);
           setShelfInfo(null);
         }
-      } else {
-        setShelfInfo(null);
-      }
+      } else setShelfInfo(null);
     };
-
     if (show) {
-      findCategoryName(); // Tìm và cập nhật tên danh mục khi modal mở và có sản phẩm
-      fetchSupplier(); // Lấy thông tin nhà cung cấp khi modal mở
-      fetchShelfInfo(); // Lấy thông tin kệ hàng khi modal mở
+      findCategoryName();
+      fetchShelfInfo();
     }
   }, [show, product, categories]);
 
   return (
-    <Modal show={show} onHide={handleClose}>
-      <Modal.Header closeButton className="product-details-header">
-        <Modal.Title>{product?.productName || "Thông Tin Sản Phẩm"}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {loading ? (
-          <p>Đang tải...</p>
-        ) : (
-          <>
-            {error && <p className="text-danger">{error}</p>}
-            {product && (
-              <div className="product-details">
-                <div className="product-image-container">
-                  <img
-                    src={
-                      product.productImage
-                        ? `http://localhost:9999${product.productImage}`
-                        : "http://localhost:9999/uploads/default-product.png"
-                    }
-                    alt="Product Image"
-                    className="product-image-detail"
+    <AnimatePresence>
+      {show && (
+        <Modal
+          open={show}
+          onCancel={handleClose}
+          footer={null}
+          centered
+          width={700}
+          bodyStyle={{ padding: 0, borderRadius: 16 }}
+          style={{ top: 40 }}
+          destroyOnClose
+        >
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            style={{ padding: 32, background: "#fff", borderRadius: 16 }}
+          >
+            {loading ? (
+              <Spin size="large" style={{ display: "block", margin: "60px auto" }} />
+            ) : error ? (
+              <div style={{ color: "red", textAlign: "center" }}>{error}</div>
+            ) : product ? (
+              <Row gutter={[32, 16]} align="middle" justify="center">
+                <Col xs={24} md={9} style={{ textAlign: "center" }}>
+                  <Image
+                    src={product.productImage ? `http://localhost:9999${product.productImage}` : "http://localhost:9999/uploads/default-product.png"}
+                    alt="Product"
+                    width={180}
+                    height={180}
+                    style={{ borderRadius: 12, objectFit: "cover", boxShadow: "0 4px 16px #0001" }}
+                    preview={false}
                   />
-                </div>
-
-                <div className="product-info">
-                  <h5 className="mb-3">Thông tin cơ bản</h5>
-
-                  <div className="info-row">
-                    <span className="info-label">Danh mục:</span>
-                    <Badge bg="info" className="info-value-badge">
+                  <div style={{ marginTop: 12 }}>
+                    <Tag color={product.status === "active" ? "green" : "red"}>
+                      {product.status === "active" ? "Đang bán" : "Ngừng bán"}
+                    </Tag>
+                  </div>
+                </Col>
+                <Col xs={24} md={15}>
+                  <Title level={4} style={{ marginBottom: 16 }}>{product.productName}</Title>
+                  <Descriptions column={1} size="middle" bordered>
+                    <Descriptions.Item label="Danh mục">
                       {product?.categoryId?.categoryName || categoryName || "Không có thông tin"}
-                    </Badge>
-                  </div>
-
-                  <div className="info-row">
-                    <span className="info-label">Tồn kho:</span>
-                    <span className="info-value">
-                      <strong>{product.totalStock}</strong> {product.unit}
-                    </span>
-                  </div>
-
-                  <div className="info-row">
-                    <span className="info-label">Ngưỡng tồn kho:</span>
-                    <span className="info-value">{product.thresholdStock} {product.unit}</span>
-                  </div>
-
-                  <div className="info-row">
-                    <span className="info-label">Trạng thái:</span>
-                    <Badge
-                      bg={product.status === 'active' ? 'success' : 'danger'}
-                      className="info-value-badge"
-                    >
-                      {product.status === 'active' ? 'Đang bán' : 'Ngừng bán'}
-                    </Badge>
-                  </div>
-
-                  <div className="info-row">
-                    <span className="info-label">Nhà cung cấp:</span>
-                    <span className="info-value">
-                      {supplierName || "Không có thông tin"}
-                    </span>
-                  </div>
-
-                  <h5 className="mt-4 mb-3 d-flex align-items-center">
-                    <LocationOnIcon color="primary" className="me-1" />
-                    Vị trí lưu trữ
-                  </h5>
-
-                  <div className="shelf-info">
-                    <div className="info-row">
-                      <span className="info-label">Kệ hàng:</span>
-                      <Badge
-                        bg="primary"
-                        className="info-value-badge"
-                      >
-                        {product.location}
-                      </Badge>
-                    </div>
-
-                    {shelfInfo && (
-                      <>
-                        <div className="info-row">
-                          <span className="info-label">Loại kệ:</span>
-                          <span className="info-value">
-                            {shelfInfo.category?.categoryName || "Không phân loại"}
-                          </span>
-                        </div>
-
-                        <div className="info-row">
-                          <span className="info-label">Sức chứa:</span>
-                          <div className="progress shelf-progress">
-                            <div
-                              className={`progress-bar ${shelfInfo.currentQuantitative / shelfInfo.maxQuantitative > 0.8 ? 'bg-danger' : 'bg-success'}`}
-                              role="progressbar"
-                              style={{ width: `${(shelfInfo.currentQuantitative / shelfInfo.maxQuantitative) * 100}%` }}
-                              aria-valuenow={shelfInfo.currentQuantitative}
-                              aria-valuemin="0"
-                              aria-valuemax={shelfInfo.maxQuantitative}
-                            >
-                              {Math.round((shelfInfo.currentQuantitative / shelfInfo.maxQuantitative) * 100)}%
-                            </div>
-                          </div>
-                        </div>
-                      </>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Tồn kho">
+                      <b>{product.totalStock}</b> {product.unit}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Giá nhập">
+                      {product.importPrice ? product.importPrice.toLocaleString("vi-VN") + " VND" : "Không có"}
+                    </Descriptions.Item>
+                    {product.exportPrice && (
+                      <Descriptions.Item label="Giá bán">
+                        {product.exportPrice.toLocaleString("vi-VN")} VND
+                      </Descriptions.Item>
                     )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
-          Đóng
-        </Button>
-      </Modal.Footer>
-    </Modal>
+                    {product.expiryDate && (
+                      <Descriptions.Item label="Hạn sử dụng">
+                        {new Date(product.expiryDate).toLocaleDateString("vi-VN")}
+                      </Descriptions.Item>
+                    )}
+                    <Descriptions.Item label="Ngưỡng tồn kho">
+                      {product.thresholdStock} {product.unit}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Nhà cung cấp">
+                      {supplierProducts.length === 0 ? (
+                        <span>Không có thông tin</span>
+                      ) : (
+                        supplierProducts.map((sp, idx) => (
+                          <Card
+                            key={sp._id || idx}
+                            size="small"
+                            style={{ marginBottom: 8, background: "#f6ffed", border: "1px solid #b7eb8f" }}
+                            bodyStyle={{ padding: 10 }}
+                          >
+                            <b>{sp.supplier?.name || "Không rõ tên"}</b>
+                            {sp.supplier?.status && (
+                              <Tag color={sp.supplier.status === "active" ? "green" : "red"} style={{ marginLeft: 8 }}>
+                                {sp.supplier.status === "active" ? "Đang hoạt động" : "Ngừng hoạt động"}
+                              </Tag>
+                            )}
+                            <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>
+                              {sp.supplier?.email && <div><b>Email:</b> {sp.supplier.email}</div>}
+                              {sp.supplier?.contact && <div><b>Liên hệ:</b> {sp.supplier.contact}</div>}
+                              {sp.supplier?.address && <div><b>Địa chỉ:</b> {sp.supplier.address}</div>}
+                              {sp.supplier?.description && <div><b>Mô tả:</b> {sp.supplier.description}</div>}
+                            </div>
+                          </Card>
+                        ))
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={<span><EnvironmentOutlined /> Vị trí lưu trữ</span>}>
+                      <div>
+                        <b>Kệ hàng:</b> {product.location || "-"}
+                        {shelfInfo && (
+                          <>
+                            <br />
+                            <b>Loại kệ:</b> {shelfInfo.category?.categoryName || "Không phân loại"}
+                            <br />
+                            <b>Sức chứa:</b> {shelfInfo.currentQuantitative}/{shelfInfo.maxQuantitative}
+                            <br />
+                            <b>Tỷ lệ đầy:</b> {shelfInfo.maxQuantitative > 0 ? Math.round((shelfInfo.currentQuantitative / shelfInfo.maxQuantitative) * 100) : 0}%
+                          </>
+                        )}
+                      </div>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Col>
+              </Row>
+            ) : null}
+          </motion.div>
+        </Modal>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -286,7 +286,7 @@ function InventoryCheck() {
                           fill="#90a4ae"
                         />
                         {/* Hộp hàng trên tầng */}
-                        {inv.products
+                        {(inv.products || [])
                           .slice(t * 7, t * 7 + 7)
                           .map((prod, i) => (
                             <rect

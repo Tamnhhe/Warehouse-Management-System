@@ -70,6 +70,7 @@ const ExportProduct = () => {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  // Add default exportPrice to each selected product
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -167,11 +168,13 @@ const ExportProduct = () => {
 
   const handleSelectProduct = (product) => {
     if (!selectedProducts.some((p) => p._id === product._id)) {
+      // Default exportPrice to import price (product.price)
       setSelectedProducts([
         ...selectedProducts,
         {
           ...product,
           quantity: 1,
+          exportPrice: product.price || 0, // Always default to import price
         },
       ]);
     }
@@ -183,6 +186,16 @@ const ExportProduct = () => {
     if (/^\d*$/.test(value)) {
       setSelectedProducts((prev) =>
         prev.map((p, i) => (i === index ? { ...p, quantity: value } : p))
+      );
+    }
+  };
+
+  // Handle export price change
+  const handleExportPriceChange = (index, value) => {
+    // Only allow numbers and decimals
+    if (/^\d*\.?\d*$/.test(value)) {
+      setSelectedProducts((prev) =>
+        prev.map((p, i) => (i === index ? { ...p, exportPrice: value } : p))
       );
     }
   };
@@ -211,6 +224,20 @@ const ExportProduct = () => {
       return;
     }
 
+    // Check for invalid quantity or export price
+    const invalids = selectedProducts.filter(
+      (product) => {
+        const qty = parseInt(product.quantity, 10);
+        const expPrice = parseFloat(product.exportPrice);
+        return qty <= 0 || expPrice <= 0;
+      }
+    );
+    if (invalids.length > 0) {
+      const msg = invalids.map(p => `${p.productName} (số lượng: ${p.quantity}, giá xuất: ${p.exportPrice})`).join(", ");
+      setError(`Số lượng hoặc giá xuất không hợp lệ cho: ${msg}`);
+      return;
+    }
+
     // Check if any product quantity exceeds available stock
     const invalidProducts = selectedProducts.filter(
       (product) => parseInt(product.quantity, 10) > product.totalStock
@@ -227,12 +254,30 @@ const ExportProduct = () => {
       return;
     }
 
+    // Check export price lower than import price and by how much percent
+    const priceWarnings = selectedProducts
+      .map((p) => {
+        const importPrice = parseFloat(p.price) || 0;
+        const exportPrice = parseFloat(p.exportPrice) || 0;
+        if (importPrice > 0 && exportPrice > 0 && exportPrice < importPrice) {
+          const percent = (((importPrice - exportPrice) / importPrice) * 100).toFixed(2);
+          return `${p.productName}: Giá xuất thấp hơn giá nhập ${percent}%`;
+        }
+        return null;
+      })
+      .filter(Boolean);
+    if (priceWarnings.length > 0) {
+      setError(priceWarnings.join("; "));
+      return;
+    }
+
     try {
       // Chuẩn bị dữ liệu gửi đi
       const requestData = {
         products: selectedProducts.map((p) => ({
           productId: p._id,
           requestQuantity: parseInt(p.quantity, 10) || 1,
+          exportPrice: parseFloat(p.exportPrice) || 0,
         })),
         transactionType: "export",
         status: "pending",
@@ -358,7 +403,7 @@ const ExportProduct = () => {
                                 <TableRow sx={{ bgcolor: "#f5f5f5" }}>
                                   <TableCell>Hình ảnh</TableCell>
                                   <TableCell>Tên sản phẩm</TableCell>
-                                  <TableCell align="right">Tồn kho</TableCell>
+                                  <TableCell align="right">Có sẵn</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
@@ -392,7 +437,7 @@ const ExportProduct = () => {
                                       </Typography>
                                     </TableCell>
                                     <TableCell align="right">
-                                      {product?.stock} {product?.unit}
+                                      {product?.totalStock} {product?.unit}
                                     </TableCell>
                                   </TableRow>
                                 ))}
@@ -482,6 +527,7 @@ const ExportProduct = () => {
                           <TableRow sx={{ bgcolor: "#f5f5f5" }}>
                             <TableCell>Sản phẩm</TableCell>
                             <TableCell align="center">Số lượng</TableCell>
+                            <TableCell align="center">Giá xuất</TableCell>
                             <TableCell align="right">Thao tác</TableCell>
                           </TableRow>
                         </TableHead>
@@ -530,6 +576,22 @@ const ExportProduct = () => {
                                     handleQuantityChange(index, e.target.value)
                                   }
                                   sx={{ width: 70 }}
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  inputProps={{
+                                    min: 0,
+                                    step: "0.01",
+                                    style: { textAlign: "center" },
+                                  }}
+                                  value={product.exportPrice}
+                                  onChange={(e) =>
+                                    handleExportPriceChange(index, e.target.value)
+                                  }
+                                  sx={{ width: 90 }}
                                 />
                               </TableCell>
                               <TableCell align="right">

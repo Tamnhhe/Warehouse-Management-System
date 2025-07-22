@@ -334,9 +334,24 @@ const ProductList = () => {
                               />
                             </Grid>
                             <Grid item xs={9}>
-                              <Typography variant="h6" component="div" noWrap>
+                              <Button
+                                variant="text"
+                                color="primary"
+                                sx={{
+                                  textTransform: "none",
+                                  fontWeight: "bold",
+                                  fontSize: "1.1rem",
+                                  p: 0,
+                                  minWidth: 0,
+                                  '&:hover': { textDecoration: 'underline' },
+                                }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleOpenProductDetailsModal(product);
+                                }}
+                              >
                                 {product.productName}
-                              </Typography>
+                              </Button>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
@@ -472,9 +487,24 @@ const ProductList = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
+                          <Button
+                            variant="text"
+                            color="primary"
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: "bold",
+                              fontSize: "1rem",
+                              p: 0,
+                              minWidth: 0,
+                              '&:hover': { textDecoration: 'underline' },
+                            }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleOpenProductDetailsModal(product);
+                            }}
+                          >
                             {product.productName}
-                          </Typography>
+                          </Button>
                         </TableCell>
                         <TableCell align="center">
                           {product.totalStock}
@@ -563,8 +593,9 @@ const ProductList = () => {
 
       {selectedProduct && (
         <>
+          {/* Sử dụng phiên bản mới với Ant Design + Framer Motion */}
           <ProductDetails
-            open={showProductDetailsModal}
+            show={showProductDetailsModal}
             handleClose={() => setShowProductDetailsModal(false)}
             product={selectedProduct}
           />
