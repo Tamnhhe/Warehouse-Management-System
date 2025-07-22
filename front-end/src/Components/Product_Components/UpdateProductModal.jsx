@@ -168,23 +168,25 @@ const UpdateProductModal = ({
     }
   };
 
-  const validate = () => {
+  const validate = async () => {
     let tempErrors = {};
     tempErrors.productName = productData.productName ? "" : "Tên sản phẩm không được bỏ trống.";
     tempErrors.categoryId = productData.categoryId ? "" : "Vui lòng chọn danh mục.";
     tempErrors.unit = productData.unit ? "" : "Đơn vị không được bỏ trống.";
     tempErrors.quantitative = productData.quantitative !== "" && !isNaN(productData.quantitative) ? "" : "Định lượng không hợp lệ.";
+    // Hình ảnh KHÔNG bắt buộc, chỉ kiểm tra nếu có
     if (productData.productImage && !["image/jpeg", "image/png"].includes(productData.productImage.type)) {
-      tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
+        tempErrors.productImage = "Hình ảnh phải là định dạng JPEG hoặc PNG.";
     } else {
-      tempErrors.productImage = "";
+        tempErrors.productImage = "";
     }
+    // Validate inventories
     if (!productData.location.length) {
-      tempErrors.location = "Vui lòng thêm ít nhất một kho và số lượng tồn kho.";
+        tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
     } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
-      tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
+        tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
     } else {
-      tempErrors.location = "";
+        tempErrors.location = "";
     }
 
     // Kiểm tra tổng số lượng tồn kho phải bằng tổng số lượng sản phẩm
@@ -194,9 +196,9 @@ const UpdateProductModal = ({
     }
 
     if (hasSupplier && !productData.supplierId) {
-      tempErrors.supplierId = "Vui lòng chọn nhà cung cấp.";
+        tempErrors.supplierId = "Vui lòng chọn nhà cung cấp.";
     } else {
-      tempErrors.supplierId = "";
+        tempErrors.supplierId = "";
     }
     setErrors(tempErrors);
 
