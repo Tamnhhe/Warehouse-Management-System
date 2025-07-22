@@ -143,7 +143,19 @@ const getAllProducts = async (req, res) => {
     const products = await Product.find()
       .populate("categoryId", "categoryName status")
       .populate("location.inventoryId", "name");
-    res.status(200).json(products);
+    const response = products.map((product) => ({
+      ...product.toObject(),
+      categoryName: product.categoryId?.categoryName || "Không xác định",
+      locations: product.location.map((loc) => ({
+        ...loc,
+        inventoryName: loc.inventoryId?.name || "Không xác định",
+      })),
+      importPrice: product.location.reduce(
+        (sum, loc) => sum + (loc.price || 0) * (loc.stock || 0),
+        0
+      ) / product.totalStock || 0,
+    }));
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
