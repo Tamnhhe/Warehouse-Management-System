@@ -1,0 +1,73 @@
+openapi: 3.0.0
+info:
+  title: Warehouse Test Data API
+  version: 1.0.0
+  description: API để import và xóa dữ liệu test cho hệ thống kho
+servers:
+  - url: http://localhost:9999
+paths:
+  /test/import-data:
+    post:
+      summary: Import dữ liệu test vào các bảng (trừ User)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adjustments:
+                  type: array
+                  items:
+                    type: object
+                products:
+                  type: array
+                  items:
+                    type: object
+                inventories:
+                  type: array
+                  items:
+                    type: object
+                categories:
+                  type: array
+                  items:
+                    type: object
+                suppliers:
+                  type: array
+                  items:
+                    type: object
+                supplierProducts:
+                  type: array
+                  items:
+                    type: object
+                inventoryTransactions:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Import thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+  /test/clear-data:
+    post:
+      summary: Xóa sạch dữ liệu test trong database (trừ User)
+      responses:
+        "200":
+          description: Đã xóa sạch dữ liệu test
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string

@@ -1,0 +1,103 @@
+[{
+  "_id": {
+    "$oid": "687fcf5e273b5658f389864e"
+  },
+  "supplier": {
+    "$oid": "687fccc9273b5658f38985a1"
+  },
+  "stock": 0,
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "productImage": "/uploads/1753206622200-496423996-image_processing20241021-2-173e1ev.png",
+  "productName": "Iphone 16 Pro Max",
+  "quantitative": 1,
+  "unit": "Chiếc",
+  "createdAt": {
+    "$date": "2025-07-22T17:50:22.211Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcf74273b5658f3898660"
+  },
+  "supplier": {
+    "$oid": "687fcd1d273b5658f38985a8"
+  },
+  "stock": 0,
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "productImage": "/uploads/1753206644000-878118038-galaxy_s24_ultra_761_576_2_1.png",
+  "productName": "Samsung S24 Ultra",
+  "quantitative": 1,
+  "unit": "Chiếc",
+  "createdAt": {
+    "$date": "2025-07-22T17:50:44.009Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd023273b5658f3898682"
+  },
+  "supplier": {
+    "$oid": "687fcfff273b5658f389866d"
+  },
+  "stock": 0,
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "productImage": "/uploads/1753206819510-165231485-xe-may-vinh-truong-tien-giang-01_d328ca27abea4524b847e06bd912ff81_grande.jpg",
+  "productName": "Honda SH 150i (đỏ)",
+  "quantitative": 1,
+  "unit": "Chiếc",
+  "createdAt": {
+    "$date": "2025-07-22T17:53:39.517Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd03c273b5658f389868f"
+  },
+  "supplier": {
+    "$oid": "687fcfff273b5658f389866d"
+  },
+  "stock": 0,
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "productImage": "/uploads/1753206844954-203066495-Honda-Wave-alpha-110-ban-tieu-chuan-mau-xanh-1.jpg",
+  "productName": "Honda Wave 110cc",
+  "quantitative": 1,
+  "unit": "Chiếc",
+  "createdAt": {
+    "$date": "2025-07-22T17:54:04.962Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd105273b5658f38986b2"
+  },
+  "supplier": {
+    "$oid": "687fd0b1273b5658f38986a3"
+  },
+  "stock": 5,
+  "expiry": {
+    "$date": "2027-06-23T00:00:00.000Z"
+  },
+  "categoryId": {
+    "$oid": "687fcbe2305ceddd031f8927"
+  },
+  "productImage": "/uploads/1753207045708-836553553-JBL-Flip5-Black-A.jpg",
+  "productName": "Loa JBL flip 5",
+  "quantitative": 1,
+  "unit": "Cái",
+  "createdAt": {
+    "$date": "2025-07-22T17:57:25.714Z"
+  },
+  "__v": 0
+}]

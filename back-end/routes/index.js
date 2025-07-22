@@ -22,6 +22,7 @@ router.use("/inventoryTransactions", inventoryTransactionRouter);
 router.use("/categories", categoryRouter); // Nguyễn Đức Linh - HE170256 23/1/2025
 router.use("/users", userRouter);
 router.use("/supplierProduct", supplierProductRouter);
+router.use("/test", require("./testData.route"));
 
 router.use("/stocktaking", stocktakingRouter);
 router.use("/branches", branchRouter);

@@ -1,0 +1,48 @@
+[{
+  "_id": {
+    "$oid": "687fccc9273b5658f38985a1"
+  },
+  "name": "Công Ty TNHH Apple Việt Nam",
+  "address": "Phòng 901, Ngôi Nhà Đức Tại Tp. Hồ Chí Minh, số 33, đường Lê Duẩn, Phường Bến Nghé, Quận 1, thành phố Hồ Chí Minh, Việt Nam",
+  "contact": 18001192,
+  "email": "sales@apple.com",
+  "description": "Cung cấp các thiết bị điện tử công nghệ cao",
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcd1d273b5658f38985a8"
+  },
+  "name": "Công ty TNHH Điện Tử Samsung Vina",
+  "address": "Số 2, đường Hải Triều, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+  "contact": 2839157310,
+  "email": "sales@samsung.com",
+  "description": "Cung cấp các thiết bị điện tử thông minh",
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcfff273b5658f389866d"
+  },
+  "name": "Công ty TNHH Honda Việt Nam",
+  "address": "Số 1, Đường Thái Hà, Quận Đống Đa, Hà Nội",
+  "contact": 915888999,
+  "email": "support@honda.com",
+  "description": "Cung cấp các loại phương tiện xe máy ô tô trên toàn quốc",
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd0b1273b5658f38986a3"
+  },
+  "name": "Công Ty CPTM JBL Việt Nam",
+  "address": "Số 365, đường Điện Biên Phủ, P4, Q3, TP. Hồ Chí Minh",
+  "contact": 8403602246,
+  "email": "sales01@tca.vn",
+  "description": "Cung cấp các sản phẩm tai nghe chính hãng",
+  "status": "active",
+  "__v": 0
+}]

@@ -1,0 +1,40 @@
+[{
+  "_id": {
+    "$oid": "687fcbba305ceddd031f891f"
+  },
+  "categoryName": "Tivi",
+  "classifications": [],
+  "status": "active",
+  "description": "Thiết bị điện tử",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "categoryName": "Xe Máy",
+  "classifications": [],
+  "status": "active",
+  "description": "Phương Tiện Di Chuyển",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcbe2305ceddd031f8927"
+  },
+  "categoryName": "Loa",
+  "classifications": [],
+  "status": "active",
+  "description": "Thiết bị âm thanh",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "categoryName": "Điện Thoại",
+  "classifications": [],
+  "status": "active",
+  "description": "Thiết bị điện tử thông minh",
+  "__v": 0
+}]

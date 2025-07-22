@@ -1,0 +1,34 @@
+[{
+  "_id": {
+    "$oid": "687fd361273b5658f38988c0"
+  },
+  "stocktakingTaskId": {
+    "$oid": "687fd34f273b5658f389886d"
+  },
+  "inventoryId": {
+    "$oid": "687fce8e273b5658f3898616"
+  },
+  "products": [
+    {
+      "productId": {
+        "$oid": "687fcf5e273b5658f389864c"
+      },
+      "oldQuantity": 50,
+      "newQuantity": 45,
+      "difference": -5,
+      "_id": {
+        "$oid": "687fd361273b5658f38988c1"
+      }
+    }
+  ],
+  "createdBy": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "createdAt": {
+    "$date": "2025-07-22T18:07:29.041Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T18:07:29.041Z"
+  },
+  "__v": 0
+}]

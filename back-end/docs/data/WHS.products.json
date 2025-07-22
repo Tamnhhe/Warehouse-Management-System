@@ -1,0 +1,96 @@
+[{
+  "_id": {
+    "$oid": "687fcf74273b5658f389865e"
+  },
+  "productName": "Samsung S24 Ultra",
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "totalStock": 0,
+  "thresholdStock": 15,
+  "productImage": "/uploads/1753206644000-878118038-galaxy_s24_ultra_761_576_2_1.png",
+  "unit": "Chiếc",
+  "quantitative": 1,
+  "location": [],
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd023273b5658f3898680"
+  },
+  "productName": "Honda SH 150i (đỏ)",
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "totalStock": 0,
+  "thresholdStock": 12,
+  "productImage": "/uploads/1753206819510-165231485-xe-may-vinh-truong-tien-giang-01_d328ca27abea4524b847e06bd912ff81_grande.jpg",
+  "unit": "Chiếc",
+  "quantitative": 1,
+  "location": [],
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd03c273b5658f389868d"
+  },
+  "productName": "Honda Wave 110cc",
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "totalStock": 0,
+  "thresholdStock": 10,
+  "productImage": "/uploads/1753206844954-203066495-Honda-Wave-alpha-110-ban-tieu-chuan-mau-xanh-1.jpg",
+  "unit": "Chiếc",
+  "quantitative": 1,
+  "location": [],
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd105273b5658f38986b5"
+  },
+  "productName": "Loa JBL flip 5",
+  "categoryId": {
+    "$oid": "687fcbe2305ceddd031f8927"
+  },
+  "totalStock": 0,
+  "thresholdStock": 0,
+  "productImage": "/uploads/1753207045708-836553553-JBL-Flip5-Black-A.jpg",
+  "unit": "Cái",
+  "quantitative": 1,
+  "status": "active",
+  "location": [],
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fd664273b5658f3898c12"
+  },
+  "productName": "Iphone 16 Pro Max",
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "totalStock": 5,
+  "thresholdStock": 10,
+  "productImage": "/uploads/1753208420142-397343847-image_processing20241021-2-173e1ev.png",
+  "unit": "Chiếc",
+  "quantitative": 1,
+  "location": [
+    {
+      "inventoryId": {
+        "$oid": "687fce9a273b5658f389861c"
+      },
+      "stock": 5,
+      "price": 27990000,
+      "_id": {
+        "$oid": "687fd677273b5658f3898c37"
+      }
+    }
+  ],
+  "status": "active",
+  "__v": 1
+}]

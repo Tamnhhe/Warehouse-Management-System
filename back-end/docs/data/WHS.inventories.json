@@ -1,0 +1,192 @@
+[{
+  "_id": {
+    "$oid": "687fcdf7273b5658f38985ec"
+  },
+  "name": "Khu 1",
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:44:23.997Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:44:23.997Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce23273b5658f38985f2"
+  },
+  "name": "Khu 2",
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:45:07.664Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:45:07.664Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce2e273b5658f38985f8"
+  },
+  "name": "Khu 3",
+  "categoryId": {
+    "$oid": "687fcbc6305ceddd031f8925"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:45:18.213Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:45:18.213Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce50273b5658f38985fe"
+  },
+  "name": "Tầng 1 A1",
+  "categoryId": {
+    "$oid": "687fcbe2305ceddd031f8927"
+  },
+  "maxQuantitative": 50,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:45:52.340Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:45:52.340Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce5b273b5658f3898604"
+  },
+  "name": "Tầng 1 A2",
+  "categoryId": {
+    "$oid": "687fcbe2305ceddd031f8927"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:46:03.082Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:46:03.082Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce6c273b5658f389860a"
+  },
+  "name": "Tầng 2 A1",
+  "categoryId": {
+    "$oid": "687fcbba305ceddd031f891f"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:46:20.840Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:46:20.840Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce7b273b5658f3898610"
+  },
+  "name": "Tầng 2 A2",
+  "categoryId": {
+    "$oid": "687fcbba305ceddd031f891f"
+  },
+  "maxQuantitative": 100,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": 0,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:46:35.294Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T17:46:35.294Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fce9a273b5658f389861c"
+  },
+  "name": "Tầng 1 B2",
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "maxQuantitative": 1000,
+  "currentQuantitative": 0,
+  "maxWeight": 100,
+  "currentWeight": -10,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [],
+  "createdAt": {
+    "$date": "2025-07-22T17:47:06.431Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-22T18:25:31.214Z"
+  },
+  "__v": 2
+}]

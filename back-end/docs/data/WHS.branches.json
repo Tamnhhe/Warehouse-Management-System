@@ -1,0 +1,11 @@
+[{
+  "_id": {
+    "$oid": "687fd3ab273b5658f3898945"
+  },
+  "name": "Chi nhánh Bắc Từ Liêm",
+  "receiver": "Thùy My",
+  "address": "Phố Kiều Mai, Phú Diễn, Bắc Từ Liêm, Hà Nội",
+  "phone": "0912654921",
+  "email": "thuymy@gmail.com",
+  "__v": 0
+}]

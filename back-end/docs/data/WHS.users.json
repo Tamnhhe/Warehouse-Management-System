@@ -1,0 +1,62 @@
+[{
+  "_id": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "fullName": "Huy Tâm",
+  "account": {
+    "email": "tamnhhe@gmail.com",
+    "password": "$2b$10$tfERWDy3WhuNed5I4QNrp.19bdVJhD9BFZnPaXTkf7cEO8BdO/eh6"
+  },
+  "profile": {
+    "phoneNumber": "0369994876",
+    "address": "Hà Nội",
+    "dob": {
+      "$date": "2003-08-25T00:00:00.000Z"
+    },
+    "gender": "",
+    "idCard": 26203003344
+  },
+  "role": "manager",
+  "type": "parttime",
+  "schedule": {
+    "workDays": [],
+    "shifts": []
+  },
+  "status": "active",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "687fcdab273b5658f38985c5"
+  },
+  "fullName": "Linh Đàm",
+  "account": {
+    "email": "horusoulproject@gmail.com",
+    "password": "$2b$10$Sx2NCHQTKDAmvb8QPVQfA.y0tjqHgD3mHrijL3zOx/iVIeHZ8rxRa"
+  },
+  "profile": {
+    "phoneNumber": "0999444222",
+    "avatar": null,
+    "dob": {
+      "$date": "2005-05-25T00:00:00.000Z"
+    },
+    "address": "Quốc Oai, Hà nội",
+    "gender": "female",
+    "idCard": 123456789068
+  },
+  "salary": 50000,
+  "role": "employee",
+  "type": "fulltime",
+  "schedule": {
+    "workDays": [
+      "Wednesday",
+      "Tuesday",
+      "Monday"
+    ],
+    "shifts": [],
+    "startTime": "08:00",
+    "endTime": "17:00"
+  },
+  "status": "active",
+  "__v": 0
+}]
