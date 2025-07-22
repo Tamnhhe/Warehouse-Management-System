@@ -19,6 +19,24 @@ const createTransaction = async (req, res, next) => {
       return res.status(400).json({ message: "Thiếu thông tin sản phẩm" });
     }
 
+    // Kiểm tra thông tin branch cho giao dịch xuất kho
+    if (transactionType === "export" && !branch) {
+      return res.status(400).json({
+        message: "Thông tin chi nhánh là bắt buộc cho giao dịch xuất kho",
+      });
+    }
+
+    // Validate branch nếu được cung cấp
+    let validatedBranch = null;
+    if (branch) {
+      validatedBranch = await db.Branch.findById(branch);
+      if (!validatedBranch) {
+        return res.status(400).json({
+          message: "Chi nhánh không tồn tại trong hệ thống",
+        });
+      }
+    }
+
     // Tính toán tổng tiền nếu không được cung cấp (cho trường hợp xuất kho)
     let calculatedTotalPrice = totalPrice;
     if (calculatedTotalPrice == null && transactionType === "export") {
@@ -102,6 +120,19 @@ const createTransaction = async (req, res, next) => {
         .json({ message: "Không có sản phẩm nào hợp lệ để xử lý" });
     }
 
+    // Lấy thông tin branch chi tiết nếu có
+    let branchInfo = {};
+    if (validatedBranch) {
+      branchInfo = {
+        branch: validatedBranch._id,
+        branchName: validatedBranch.name,
+        branchReceiver: validatedBranch.receiver,
+        branchAddress: validatedBranch.address,
+        branchPhone: validatedBranch.phone,
+        branchEmail: validatedBranch.email,
+      };
+    }
+
     const newTransaction = new db.InventoryTransaction({
       supplier: transactionSupplier,
       transactionType,
@@ -110,7 +141,7 @@ const createTransaction = async (req, res, next) => {
       operator: manager._id,
       totalPrice: calculatedTotalPrice,
       status: status || "pending",
-      branch,
+      ...branchInfo,
     });
 
     const savedTransaction = await newTransaction.save();
@@ -133,6 +164,7 @@ const getAllTransactions = async (req, res) => {
   try {
     const transactions = await db.InventoryTransaction.find()
       .populate("supplier", "name") // Lấy TÊN thay vì chỉ ID
+      .populate("branch", "name receiver address phone email") // Populate thông tin branch
       .sort({ transactionDate: -1 });
 
     res.status(200).json(transactions);
@@ -145,7 +177,7 @@ const getAllTransactions = async (req, res) => {
 // Lấy một giao dịch theo ID
 const getTransactionById = async (req, res) => {
   try {
-    // Lấy giao dịch và populate supplierProductId, productId và operator
+    // Lấy giao dịch và populate supplierProductId, productId, operator và branch
     const transaction = await db.InventoryTransaction.findById(req.params.id)
       .populate({
         path: "products.supplierProductId",
@@ -156,7 +188,8 @@ const getTransactionById = async (req, res) => {
         model: "Product",
         strictPopulate: false, // Cho phép populate trường không có trong schema
       })
-      .populate("operator");
+      .populate("operator")
+      .populate("branch", "name receiver address phone email"); // Populate thông tin branch
 
     console.log(" API DATA:", JSON.stringify(transaction, null, 2));
 

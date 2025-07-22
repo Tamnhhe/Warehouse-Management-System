@@ -31,6 +31,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
+import CreateBranchDialog from "./CreateBranchDialog";
 import {
   Search as SearchIcon,
   Delete as DeleteIcon,
@@ -74,7 +75,23 @@ const ExportProduct = () => {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [modalProduct, setModalProduct] = useState(null);
-  const [branch, setBranch] = useState("Chi nhánh A");
+  const [branch, setBranch] = useState("");
+  const [branches, setBranches] = useState([]);
+  const [openCreateBranch, setOpenCreateBranch] = useState(false);
+  // Lấy danh sách chi nhánh từ backend
+  useEffect(() => {
+    axios
+      .get("http://localhost:9999/branches/getAllBranches")
+      .then((res) => {
+        if (res.data.success && Array.isArray(res.data.data)) {
+          setBranches(res.data.data);
+          if (!branch && res.data.data.length > 0) {
+            setBranch(res.data.data[0]._id);
+          }
+        }
+      })
+      .catch((err) => console.error("Không tải được danh sách chi nhánh", err));
+  }, []);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
@@ -179,6 +196,11 @@ const ExportProduct = () => {
     const updatedProducts = [...selectedProducts];
     updatedProducts.splice(index, 1);
     setSelectedProducts(updatedProducts);
+  };
+
+  const handleCreateBranchSuccess = (newBranch) => {
+    setBranches((prev) => [...prev, newBranch]);
+    setBranch(newBranch._id);
   };
 
   const handleSubmit = async () => {
@@ -382,7 +404,7 @@ const ExportProduct = () => {
                     )}
                   </AnimatePresence>
 
-                  <Box sx={{ mt: 2 }}>
+                  <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "center" }}>
                     <FormControl fullWidth>
                       <InputLabel>Chi nhánh</InputLabel>
                       <Select
@@ -390,13 +412,26 @@ const ExportProduct = () => {
                         onChange={(e) => setBranch(e.target.value)}
                         label="Chi nhánh"
                       >
-                        <MenuItem value="Chi nhánh A">Chi nhánh A</MenuItem>
-                        <MenuItem value="Chi nhánh B">Chi nhánh B</MenuItem>
-                        <MenuItem value="Chi nhánh C">Chi nhánh C</MenuItem>
-                        <MenuItem value="Chi nhánh D">Chi nhánh D</MenuItem>
+                        {branches.map((b) => (
+                          <MenuItem key={b._id} value={b._id}>
+                            {b.name} - {b.address}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setOpenCreateBranch(true)}
+                      sx={{ whiteSpace: "nowrap" }}
+                    >
+                      Tạo chi nhánh
+                    </Button>
                   </Box>
+                  <CreateBranchDialog
+                    open={openCreateBranch}
+                    onClose={() => setOpenCreateBranch(false)}
+                    onSuccess={handleCreateBranchSuccess}
+                  />
                 </motion.div>
               </Grid>
 
@@ -592,13 +627,12 @@ const ExportProduct = () => {
                   {modalProduct.location
                     ? Array.isArray(modalProduct.location)
                       ? modalProduct.location
-                          .map(
-                            (loc) =>
-                              `${loc.inventoryId?.name || "Không rõ"}: ${
-                                loc.stock
-                              } ${modalProduct.unit}`
-                          )
-                          .join(", ")
+                        .map(
+                          (loc) =>
+                            `${loc.inventoryId?.name || "Không rõ"}: ${loc.stock
+                            } ${modalProduct.unit}`
+                        )
+                        .join(", ")
                       : "Không rõ"
                     : "Chưa có"}
                 </Typography>

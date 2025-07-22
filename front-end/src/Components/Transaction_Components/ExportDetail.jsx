@@ -72,6 +72,14 @@ const ExportDetail = () => {
   const confirmReturn = async () => {
     try {
       // Create a new import transaction with the products from this export
+      // Tính tổng tiền cho phiếu nhập trả hàng
+      let totalPrice = 0;
+      transaction.products.forEach((product) => {
+        // Nếu có giá thì tính, nếu không thì mặc định 0
+        const price = typeof product.price === "number" ? product.price : 0;
+        const qty = typeof product.requestQuantity === "number" ? product.requestQuantity : 0;
+        totalPrice += price * qty;
+      });
       const importData = {
         products: transaction.products.map((product) => ({
           productId: product.productId?._id || product.productId,
@@ -82,6 +90,7 @@ const ExportDetail = () => {
         note: `Trả hàng từ phiếu xuất ${transaction._id}`,
         branch: transaction.branch,
         returnedFrom: transaction._id, // Reference to the original export
+        totalPrice,
       };
 
       const response = await axios.post(
@@ -89,9 +98,11 @@ const ExportDetail = () => {
         importData
       );
 
-      if (response.data) {
+      if (response.data && response.data._id) {
         // Navigate to the edit page for the new import transaction
         navigate(`/edit-transaction/${response.data._id}`);
+      } else {
+        alert("Tạo phiếu nhập trả hàng thành công, nhưng không lấy được mã phiếu mới. Vui lòng kiểm tra lại!");
       }
     } catch (error) {
       console.error("Lỗi khi tạo phiếu nhập kho:", error);
@@ -118,13 +129,12 @@ const ExportDetail = () => {
             <p>
               <strong>Trạng thái:</strong>{" "}
               <span
-                className={`badge ${
-                  transaction.status === "pending"
-                    ? "bg-warning"
-                    : transaction.status === "completed"
+                className={`badge ${transaction.status === "pending"
+                  ? "bg-warning"
+                  : transaction.status === "completed"
                     ? "bg-success"
                     : "bg-danger"
-                }`}
+                  }`}
               >
                 {transaction.status === "pending" && "Chờ xử lý"}
                 {transaction.status === "completed" && "Hoàn thành"}
@@ -141,9 +151,17 @@ const ExportDetail = () => {
 
         <div className="section my-4">
           <h5>Thông tin chi nhánh xuất hàng:</h5>
-          <p>
-            <strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}
-          </p>
+          {transaction.branch && typeof transaction.branch === "object" ? (
+            <>
+              <p><strong>Chi nhánh:</strong> {transaction.branch.name || "Không xác định"}</p>
+              {transaction.branch.receiver && <p><strong>Người nhận:</strong> {transaction.branch.receiver}</p>}
+              {transaction.branch.address && <p><strong>Địa chỉ:</strong> {transaction.branch.address}</p>}
+              {transaction.branch.phone && <p><strong>SĐT:</strong> {transaction.branch.phone}</p>}
+              {transaction.branch.email && <p><strong>Email:</strong> {transaction.branch.email}</p>}
+            </>
+          ) : (
+            <p><strong>Chi nhánh:</strong> {typeof transaction.branch === "string" ? transaction.branch : "Không xác định"}</p>
+          )}
         </div>
 
         <div className="section my-4">
@@ -170,14 +188,18 @@ const ExportDetail = () => {
                 <tr key={index}>
                   <td>{index + 1}</td>
                   <td>
-                    {product.productId?.productName ||
-                      product.supplierProductId?.productName ||
-                      product.productName ||
-                      product.supplierProductId?.product?.productName ||
-                      "--"}
+                    {product.productId && typeof product.productId === "object"
+                      ? product.productId.productName || product.productId.name || "--"
+                      : typeof product.productId === "string"
+                        ? product.productId
+                        : product.supplierProductId && typeof product.supplierProductId === "object"
+                          ? product.supplierProductId.productName || product.supplierProductId.name || "--"
+                          : typeof product.supplierProductId === "string"
+                            ? product.supplierProductId
+                            : "--"}
                   </td>
-                  <td>{product.requestQuantity}</td>
-                  <td>{product.achievedProduct}</td>
+                  <td>{typeof product.requestQuantity === "number" ? product.requestQuantity : "--"}</td>
+                  <td>{typeof product.achievedProduct === "number" ? product.achievedProduct : "--"}</td>
                 </tr>
               );
             })}

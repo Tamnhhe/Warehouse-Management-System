@@ -188,7 +188,11 @@ const ExportProductList = () => {
                 component={TableRow}
                 hover
               >
-                <TableCell>{transaction.branch || "Không xác định"}</TableCell>
+                <TableCell>
+                  {transaction.branch && typeof transaction.branch === "object"
+                    ? `${transaction.branch.name} - ${transaction.branch.address}`
+                    : "Không xác định"}
+                </TableCell>
                 <TableCell>
                   {new Date(transaction.transactionDate).toLocaleDateString()}
                 </TableCell>
@@ -250,11 +254,10 @@ const ExportProductList = () => {
             <Card sx={{ mb: 2 }}>
               <CardHeader
                 title={`Phiếu #${transaction._id.slice(-6)}`}
-                subheader={`${
-                  transaction.branch || "Không xác định"
-                } - ${new Date(
-                  transaction.transactionDate
-                ).toLocaleDateString()}`}
+                subheader={`${transaction.branch || "Không xác định"
+                  } - ${new Date(
+                    transaction.transactionDate
+                  ).toLocaleDateString()}`}
                 action={
                   <Chip
                     label={getStatusLabel(transaction.status)}
