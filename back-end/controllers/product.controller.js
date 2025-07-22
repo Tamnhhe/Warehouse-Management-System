@@ -2,6 +2,7 @@ const Product = require("../models/product.model");
 const Category = require("../models/category.model");
 const Inventory = require("../models/inventory.model");
 const SupplierProduct = require("../models/supplierProduct.model");
+
 // Tạo mới một sản phẩm
 const createProduct = async (req, res, next) => {
   try {

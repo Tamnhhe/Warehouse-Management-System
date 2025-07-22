@@ -531,7 +531,6 @@ const createReceipt = async (req, res) => {
       supplierName: supplierDoc.name,
       totalPrice,
       status: "pending",
-      branch: "Main Branch",
     });
 
     res.status(201).json({

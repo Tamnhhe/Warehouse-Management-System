@@ -42,7 +42,11 @@ const ProductSchema = new mongoose.Schema({
         stock: { //Tồn kho
             type: Number,
             default: 0, // Mặc định là 0 nếu không có giá trị
-        }
+        },
+        price: { //Giá
+            type: Number,
+            default: 0, // Mặc định là 0 nếu không có giá trị
+        },
     }],
     status: { //Trang thái
         type: String,
