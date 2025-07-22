@@ -171,13 +171,13 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
             tempErrors.productImage = "";
         }
         // Validate inventories
-        if (!productData.location.length) {
-            tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
-        } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
-            tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
-        } else {
-            tempErrors.location = "";
-        }
+        // if (!productData.location.length) {
+        //     tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
+        // } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
+        //     tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
+        // } else {
+        //     tempErrors.location = "";
+        // }
         // Validate supplier if checked
         if (hasSupplier && !productData.supplierId) {
             tempErrors.supplierId = "Vui lòng chọn nhà cung cấp.";
@@ -253,7 +253,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                         inputProps={{ min: 0 }}
                     />
                     {/* Inventory selection */}
-                    <Box>
+                    {/* <Box>
                         <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kệ và nhập tồn kho cho từng kệ:</Typography>
                         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                             <FormControl sx={{ minWidth: 160 }}>
@@ -299,7 +299,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                             </Box>
                         )}
                         {errors.location && <FormHelperText error>{errors.location}</FormHelperText>}
-                    </Box>
+                    </Box> */}
                     <FormControl fullWidth>
                         <InputLabel id="status-select-label">Trạng Thái</InputLabel>
                         <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>

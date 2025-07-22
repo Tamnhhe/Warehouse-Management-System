@@ -265,14 +265,14 @@ const updateTransactionStatus = async (req, res) => {
         // Cập nhật tổng tồn kho của sản phẩm
         const updatedProduct = await db.Product.findByIdAndUpdate(
           dbProduct._id,
-          { $inc: { totalStock: product.receiveQuantity } },
+          { $inc: { totalStock: product.achievedProduct } },
           { new: true }
         );
 
         // Phân bổ sản phẩm vào các kệ theo thứ tự ưu tiên và giới hạn dung lượng
         await distributeProductToInventories(
           updatedProduct._id,
-          product.receiveQuantity,
+          product.achievedProduct,
           product.weight || 0
         );
 
