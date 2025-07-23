@@ -1,7 +1,7 @@
-
 const express = require("express");
 const inventoryTransactionRouter = express.Router();
 const { InventoryTransactionController } = require("../controllers");
+const { authenticateJWT } = require("../middlewares/jwtMiddleware");
 
 inventoryTransactionRouter.get(
   "/getAllTransactions",
@@ -23,6 +23,7 @@ inventoryTransactionRouter.put(
 
 inventoryTransactionRouter.post(
   "/createTransaction",
+  authenticateJWT,
   InventoryTransactionController.createTransaction
 );
 inventoryTransactionRouter.post(

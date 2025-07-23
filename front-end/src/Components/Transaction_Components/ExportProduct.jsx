@@ -41,6 +41,7 @@ import {
 } from "@mui/icons-material";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import authorApi from "../../API/baseAPI/authorAPI";
 import { useNavigate } from "react-router-dom";
 import palette from "../../Constants/palette";
 
@@ -81,8 +82,8 @@ const ExportProduct = () => {
   const [openCreateBranch, setOpenCreateBranch] = useState(false);
   // Lấy danh sách chi nhánh từ backend
   useEffect(() => {
-    axios
-      .get("http://localhost:9999/branches/getAllBranches")
+    authorApi
+      .get("/branches/getAllBranches")
       .then((res) => {
         if (res.data.success && Array.isArray(res.data.data)) {
           setBranches(res.data.data);
@@ -100,8 +101,8 @@ const ExportProduct = () => {
   useEffect(() => {
     setLoading(true);
     // Fetch regular products instead of supplier products
-    axios
-      .get("http://localhost:9999/products/getAllProducts")
+    authorApi
+      .get("/products/getAllProducts")
       .then((response) => {
         const allProducts = response.data;
         console.log("Raw products:", allProducts);
@@ -140,8 +141,8 @@ const ExportProduct = () => {
   }, []);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:9999/categories/getAllCategories")
+    authorApi
+      .get("/categories/getAllCategories")
       .then((res) => setCategories(res.data))
       .catch((err) => console.error("Không tải được danh mục", err));
   }, []);
@@ -271,6 +272,23 @@ const ExportProduct = () => {
       return;
     }
 
+    // Kiểm tra giá xuất nhỏ hơn giá nhập từ supplierProduct
+    const priceViolations = [];
+    for (const product of selectedProducts) {
+      // Nếu đã có supplierProductPrice (giá nhập) trong product
+      if (product.supplierProductPrice !== undefined) {
+        const exportPrice = parseFloat(product.exportPrice) || 0;
+        const importPrice = parseFloat(product.supplierProductPrice) || 0;
+        if (exportPrice < importPrice) {
+          priceViolations.push(`${product.productName}: Giá xuất (${exportPrice}) < Giá nhập (${importPrice})`);
+        }
+      }
+    }
+    if (priceViolations.length > 0) {
+      setError(`Giá xuất phải lớn hơn hoặc bằng giá nhập!\n${priceViolations.join("; ")}`);
+      return;
+    }
+
     try {
       // Chuẩn bị dữ liệu gửi đi
       const requestData = {
@@ -289,8 +307,8 @@ const ExportProduct = () => {
         JSON.stringify(requestData, null, 2)
       );
 
-      const response = await axios.post(
-        "http://localhost:9999/inventoryTransactions/createTransaction",
+      const response = await authorApi.post(
+        "/inventoryTransactions/createTransaction",
         requestData
       );
 

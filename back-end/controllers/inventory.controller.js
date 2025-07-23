@@ -47,12 +47,6 @@ const createTransaction = async (req, res, next) => {
 
   await newTransaction.save();
 
-  // Nếu là xuất kho thì trừ hàng luôn (nếu muốn)
-  if (transactionType === "export") {
-    const { deductProductsFromInventories } = require("./inventory.controller");
-    await deductProductsFromInventories(products);
-  }
-
   return res
     .status(201)
     .json({ message: "Giao dịch được tạo thành công", newTransaction });

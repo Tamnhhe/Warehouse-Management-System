@@ -90,10 +90,20 @@ const createTransaction = async (req, res, next) => {
     }
 
     // Lấy user đang đăng nhập làm người xử lý đơn
-    if (!req.user || !req.user._id) {
-      return res
-        .status(400)
-        .json({ message: "Không xác định được người tạo đơn!" });
+    let operatorId = null;
+    if (req.user && req.user._id) {
+      operatorId = req.user._id;
+    } else {
+      // Tìm user mặc định nếu không có authentication
+      const defaultUser = await db.User.findOne().limit(1);
+      if (defaultUser) {
+        operatorId = defaultUser._id;
+      } else {
+        return res.status(400).json({
+          message:
+            "Không xác định được người tạo đơn! Vui lòng đăng nhập hoặc tạo ít nhất một user trong hệ thống.",
+        });
+      }
     }
 
     // Tìm một supplier mặc định nếu không được cung cấp
@@ -193,18 +203,74 @@ const createTransaction = async (req, res, next) => {
       };
     }
 
+    // Kiểm tra giá xuất nhỏ hơn giá nhập
+    if (transactionType === "export") {
+      const invalidProducts = [];
+      for (const product of processedProducts) {
+        const supplierProduct = await db.SupplierProduct.findById(
+          product.supplierProductId
+        );
+        if (supplierProduct && typeof supplierProduct.price === "number") {
+          if (product.price < supplierProduct.price) {
+            invalidProducts.push({
+              productName: supplierProduct.productName,
+              exportPrice: product.price,
+              importPrice: supplierProduct.price,
+            });
+          }
+        }
+      }
+      if (invalidProducts.length > 0) {
+        return res.status(400).json({
+          message: "Giá xuất kho nhỏ hơn giá nhập!",
+          details: invalidProducts,
+        });
+      }
+    }
+
     const newTransaction = new db.InventoryTransaction({
       supplier: transactionSupplier,
       transactionType,
       transactionDate: transactionDate || Date.now(),
       products: processedProducts,
-      operator: req.user._id,
+      operator: operatorId,
       totalPrice: calculatedTotalPrice,
       status: "pending",
       ...branchInfo,
     });
 
     const savedTransaction = await newTransaction.save();
+
+    // Nếu là xuất kho thì trừ số lượng ngay lập tức
+    if (transactionType === "export") {
+      for (const product of processedProducts) {
+        const supplierProduct = await db.SupplierProduct.findById(
+          product.supplierProductId
+        );
+
+        if (supplierProduct) {
+          // Tìm sản phẩm trong hệ thống
+          const dbProduct = await db.Product.findOne({
+            productName: supplierProduct.productName,
+          });
+
+          if (dbProduct) {
+            // Trừ tổng tồn kho của sản phẩm
+            await db.Product.findByIdAndUpdate(
+              dbProduct._id,
+              { $inc: { totalStock: -product.requestQuantity } },
+              { new: true }
+            );
+
+            // Giảm số lượng sản phẩm từ các kệ theo thứ tự FIFO
+            await removeProductFromInventories(
+              dbProduct._id,
+              product.requestQuantity
+            );
+          }
+        }
+      }
+    }
 
     return res.status(201).json({
       message: "Giao dịch được tạo thành công",
@@ -401,17 +467,18 @@ const updateTransactionStatus = async (req, res) => {
       }
     }
 
-    // Update product and supplier product when status is 'completed' and transaction type is 'export'
-    if (status === "completed" && transaction.transactionType === "export") {
+    // Xử lý khi hủy giao dịch xuất kho - hoàn trả số lượng vào kho
+    if (status === "cancelled" && transaction.transactionType === "export") {
       for (const product of products) {
         const supplierProduct = await db.SupplierProduct.findById(
           product.supplierProductId
         );
 
         if (!supplierProduct) {
-          res
-            .status(404)
-            .json("Supplier product not found:", product.supplierProductId);
+          console.warn(
+            "Supplier product not found:",
+            product.supplierProductId
+          );
           continue;
         }
 
@@ -421,24 +488,63 @@ const updateTransactionStatus = async (req, res) => {
         });
 
         if (!dbProduct) {
-          res.status(404).json({
-            message: `Product: ${supplierProduct.productName} not found`,
-          });
+          console.warn(`Product: ${supplierProduct.productName} not found`);
+          continue;
         }
 
-        dbProduct.totalStock -= product.receiveQuantity;
-
-        // Cập nhật tổng tồn kho của sản phẩm
-        const updatedProduct = await db.Product.findByIdAndUpdate(
+        // Hoàn trả tổng tồn kho của sản phẩm
+        await db.Product.findByIdAndUpdate(
           dbProduct._id,
-          { $inc: { totalStock: -product.receiveQuantity } },
+          { $inc: { totalStock: product.requestQuantity } },
           { new: true }
         );
 
-        // Giảm số lượng sản phẩm từ các kệ theo thứ tự FIFO
+        // Phân bổ lại sản phẩm vào các kệ (như nhập kho)
+        await distributeProductToInventories(dbProduct, {
+          achievedProduct: product.requestQuantity,
+          price: product.price,
+          expiry: product.expiry,
+          quantitative: dbProduct.quantitative || 1,
+        });
+      }
+    }
+
+    // Xử lý khi hủy giao dịch nhập kho - trừ số lượng đã nhập
+    if (status === "cancelled" && transaction.transactionType === "import") {
+      for (const product of products) {
+        const supplierProduct = await db.SupplierProduct.findById(
+          product.supplierProductId
+        );
+
+        if (!supplierProduct) {
+          console.warn(
+            "Supplier product not found:",
+            product.supplierProductId
+          );
+          continue;
+        }
+
+        // Tìm sản phẩm trong hệ thống
+        const dbProduct = await db.Product.findOne({
+          productName: supplierProduct.productName,
+        });
+
+        if (!dbProduct) {
+          console.warn(`Product: ${supplierProduct.productName} not found`);
+          continue;
+        }
+
+        // Trừ tổng tồn kho của sản phẩm
+        await db.Product.findByIdAndUpdate(
+          dbProduct._id,
+          { $inc: { totalStock: -product.achievedProduct } },
+          { new: true }
+        );
+
+        // Giảm số lượng sản phẩm từ các kệ
         await removeProductFromInventories(
-          updatedProduct._id,
-          product.receiveQuantity
+          dbProduct._id,
+          product.achievedProduct
         );
       }
     }
