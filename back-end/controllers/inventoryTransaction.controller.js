@@ -509,8 +509,13 @@ const updateTransactionStatus = async (req, res) => {
       }
     }
 
-    // Xử lý khi hủy giao dịch nhập kho - trừ số lượng đã nhập
-    if (status === "cancelled" && transaction.transactionType === "import") {
+    // Xử lý khi hủy giao dịch nhập kho từ trạng thái completed
+    if (
+      status === "cancelled" &&
+      transaction.transactionType === "import" &&
+      transaction.status === "completed"
+    ) {
+      // Chỉ trừ tồn kho nếu phiếu đã từng được hoàn thành (đã cộng tồn kho trước đó)
       for (const product of products) {
         const supplierProduct = await db.SupplierProduct.findById(
           product.supplierProductId
@@ -534,7 +539,7 @@ const updateTransactionStatus = async (req, res) => {
           continue;
         }
 
-        // Trừ tổng tồn kho của sản phẩm
+        // Trừ tổng tồn kho của sản phẩm (vì trước đó đã cộng khi completed)
         await db.Product.findByIdAndUpdate(
           dbProduct._id,
           { $inc: { totalStock: -product.achievedProduct } },
@@ -667,8 +672,8 @@ async function distributeProductToInventories(product, productData) {
       categoryId: product.categoryId,
     }).sort({ createdAt: 1 }); // Sắp xếp theo FIFO (có thể dùng createdAt hoặc priority)
 
-    let remainingQuantitativeToDistribute =
-      productData.achievedProduct * product.quantitative || 0;
+    // ✅ SỬA: Số lượng sản phẩm cần phân bổ (không nhân với quantitative)
+    let remainingProductsToDistribute = productData.achievedProduct;
 
     const totalInventoryRemainingSpace = inventories.reduce(
       (total, inventory) => {
@@ -678,78 +683,82 @@ async function distributeProductToInventories(product, productData) {
       },
       0
     );
-    if (totalInventoryRemainingSpace < remainingQuantitativeToDistribute) {
+
+    // ✅ SỬA: So sánh với số lượng sản phẩm chứ không phải định lượng
+    if (totalInventoryRemainingSpace < remainingProductsToDistribute) {
       throw new Error(
-        `Không đủ dung lượng trong các kệ để phân bổ ${remainingQuantitativeToDistribute} đơn vị.`
+        `Không đủ dung lượng trong các kệ để phân bổ ${remainingProductsToDistribute} sản phẩm.`
       );
     }
 
     // Phân bổ sản phẩm vào các kệ theo thứ tự
     for (const inventory of inventories) {
-      if (remainingQuantitativeToDistribute <= 0) break;
+      if (remainingProductsToDistribute <= 0) break;
 
       // Tính số lượng có thể phân bổ vào kệ này
       const availableSpace =
         inventory.maxQuantitative - inventory.currentQuantitative;
-      const quantityToAllocate = Math.min(
+      const productsToAllocate = Math.min(
         availableSpace,
-        remainingQuantitativeToDistribute
+        remainingProductsToDistribute
       );
 
-      if (quantityToAllocate > 0) {
+      if (productsToAllocate > 0) {
         // Cập nhật sản phẩm trong kệ
         const productIndex = inventory.products.findIndex(
           (p) => p.productId.toString() === product._id.toString()
         );
 
         if (productIndex !== -1) {
-          inventory.products[productIndex].quantity += quantityToAllocate;
+          // ✅ SỬA: Cộng đúng số lượng sản phẩm được phân bổ vào kệ này
+          inventory.products[productIndex].quantity += productsToAllocate;
         } else {
-          // Thêm sản phẩm mới vào kệ
+          // ✅ SỬA: Thêm đúng số lượng sản phẩm được phân bổ vào kệ này
           inventory.products.push({
             productId: product._id,
-            quantity: productData.achievedProduct,
+            quantity: productsToAllocate,
             expiry: productData.expiry || null,
             quantitative: productData.quantitative || 0,
             price: productData.price || 0,
           });
         }
 
-        // Cập nhật trọng lượng và số lượng hiện tại của kệ
-        inventory.currentQuantitative +=
-          quantityToAllocate * (productData.quantitative || 1);
+        // ✅ SỬA: Cập nhật currentQuantitative chỉ bằng số lượng sản phẩm
+        inventory.currentQuantitative += productsToAllocate;
         console.log("Updated inventory:", inventory);
         await inventory.save();
 
-        //Update product location too
+        // Update product location too
         const updatedProduct = await db.Product.findById(product._id);
-        const newLocation = [
-          {
-            inventoryId: inventory._id,
-            stock: productData.achievedProduct,
-            price: productData.price || 0,
-          },
-        ];
 
         const existedlocation = updatedProduct.location.find(
           (loc) => loc.inventoryId.toString() === inventory._id.toString()
         );
+
         if (!existedlocation) {
-          updatedProduct.location.push(...newLocation);
+          // ✅ SỬA: Thêm location với đúng số lượng được phân bổ vào kệ này
+          updatedProduct.location.push({
+            inventoryId: inventory._id,
+            stock: productsToAllocate,
+            price: productData.price || 0,
+          });
         } else {
+          // ✅ SỬA: Cập nhật location với đúng số lượng
           updatedProduct.location.map((loc) => {
             if (loc.inventoryId.toString() === inventory._id.toString()) {
               // Khi nhập hàng, cập nhật lại giá trung bình cộng gia quyền
               loc.price =
                 (loc.price * loc.stock +
-                  productData.price * productData.achievedProduct) /
-                  (loc.stock + productData.achievedProduct) || 0;
-              loc.stock += productData.achievedProduct;
+                  productData.price * productsToAllocate) /
+                  (loc.stock + productsToAllocate) || 0;
+              loc.stock += productsToAllocate;
             }
           });
         }
         await updatedProduct.save();
-        remainingQuantitativeToDistribute -= quantityToAllocate;
+
+        // ✅ SỬA: Trừ đúng số lượng đã phân bổ
+        remainingProductsToDistribute -= productsToAllocate;
       }
     }
   } catch (err) {

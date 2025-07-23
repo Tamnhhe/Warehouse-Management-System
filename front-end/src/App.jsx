@@ -27,7 +27,7 @@ import EditTransaction from "./Components/Transaction_Components/EditTransaction
 import Dashboard from "./Components/DashBoard_Components/DashBoard";
 import ListAllUsers from "./Components/Manager_Components/ListAllUsers";
 import Header from "./Components/Utils/Header";
-import ListCategory from "./Components/Category_Components/ListCategory";
+import ListCategory from "./Components/Category_Components/ListCategory.jsx";
 // Bỏ import Sidebar vì không dùng nữa
 // import Sidebar from "./Components/Utils/Sidebar";
 import ProductList from "./Components/Product_Components/ProductList";

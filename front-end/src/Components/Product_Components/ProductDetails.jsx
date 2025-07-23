@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Modal, Descriptions, Spin, Image, Typography, Row, Col, Tag, Divider, Card } from "antd";
@@ -175,7 +174,24 @@ const ProductDetails = ({ show, handleClose, product }) => {
                     </Descriptions.Item>
                     <Descriptions.Item label={<span><EnvironmentOutlined /> Vị trí lưu trữ</span>}>
                       <div>
-                        <b>Kệ hàng:</b> {product.location || "-"}
+                        <b>Kệ hàng:</b> {
+                          product.location ? (
+                            Array.isArray(product.location) ? (
+                              product.location.length > 0 ? (
+                                <div>
+                                  {product.location.map((loc, index) => (
+                                    <div key={index} style={{ marginLeft: 8, marginTop: 4 }}>
+                                      • {loc.inventoryId?.name || `Kệ ${index + 1}`}: {loc.stock || 0} sản phẩm
+                                      {loc.price && <span> - Giá: {loc.price.toLocaleString()} VND</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : "Chưa có vị trí"
+                            ) : (
+                              product.location
+                            )
+                          ) : "-"
+                        }
                         {shelfInfo && (
                           <>
                             <br />

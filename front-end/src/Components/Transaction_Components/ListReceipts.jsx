@@ -92,8 +92,8 @@ const ListReceipts = () => {
     setSortByDateOrder(sortByDateOrder === "asc" ? "desc" : "asc");
 
   const openStatusModal = (transaction) => {
-    // Nếu đã hoàn thành thì không mở modal đổi trạng thái
-    if (transaction.status === "completed") return;
+    // Nếu đã hoàn thành hoặc đã hủy thì không mở modal đổi trạng thái
+    if (transaction.status === "completed" || transaction.status === "cancelled") return;
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
@@ -184,7 +184,10 @@ const ListReceipts = () => {
                   label={transaction.status}
                   color={getStatusChipColor(transaction.status)}
                   size="small"
-                  sx={{ textTransform: "capitalize", cursor: transaction.status === "completed" ? "not-allowed" : "pointer" }}
+                  sx={{
+                    textTransform: "capitalize",
+                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                  }}
                   onClick={() => openStatusModal(transaction)}
                 />
               </TableCell>
@@ -201,13 +204,19 @@ const ListReceipts = () => {
                   onClick={() =>
                     navigate(`/edit-transaction/${transaction._id}`)
                   }
+                  sx={{
+                    display: transaction.status === "cancelled" ? "none" : "inline-flex"
+                  }}
                 >
                   <EditNoteIcon />
                 </IconButton>
                 <IconButton
                   title="Thay đổi trạng thái"
                   onClick={() => openStatusModal(transaction)}
-                  disabled={transaction.status === "completed"}
+                  disabled={transaction.status === "completed" || transaction.status === "cancelled"}
+                  sx={{
+                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                  }}
                 >
                   <SyncLockIcon />
                 </IconButton>
@@ -239,7 +248,10 @@ const ListReceipts = () => {
                   label={transaction.status}
                   color={getStatusChipColor(transaction.status)}
                   size="small"
-                  sx={{ textTransform: "capitalize", cursor: transaction.status === "completed" ? "not-allowed" : "pointer" }}
+                  sx={{
+                    textTransform: "capitalize",
+                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                  }}
                   onClick={() => openStatusModal(transaction)}
                 />
               }
@@ -273,7 +285,7 @@ const ListReceipts = () => {
               <Button
                 startIcon={<SyncLockIcon />}
                 onClick={() => openStatusModal(transaction)}
-                disabled={transaction.status === "completed"}
+                disabled={transaction.status === "completed" || transaction.status === "cancelled"}
               >
                 Đổi trạng thái
               </Button>
