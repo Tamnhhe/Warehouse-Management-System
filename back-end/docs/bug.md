@@ -76,3 +76,19 @@ Sửa sản phẩm đang gặp lỗi khi chọn kệ(),
 Tạo sản phẩm cũng cho phép chọn kệ để lưu sản phẩm nhưng kh cần nhập số lượng
 
 và kệ hàng sẽ hiển thị tên sản phẩm và vẫn là 0% nếu sản phẩm đó chưa có số lượng
+
+23/7/2025
+
+Bug: Tính giá tự động khi xuất, giá xuất phải lớn hơn giá nhập, sản phẩm xuất ra sẽ trừ số lượng,nếu đơn tiếp theo xuất mà kh đủ số lượng thì sẽ hiển thị thông báo lỗi, và sẽ không cho xuất
+
+và sẽ có hệ thống lưu nháp vào cookie nếu mất đăng nhập login
+
+Check xuất sản phẩm khi xuất 1 cách chặt chẽ, không được sai các trường dữ liệu.
+
+Không rõ ràng trong chi nhánh và hiển thị, kiểm kê lỗi khi sản phẩm chưa có kệ,
+
+Dashboard: Tiến độ nhập xuất hình sin để đánh giá và báo cáo doanh thu cho hệ thống
+
+Hệ thống đang đi theo hướng tạp hóa gia đình,
+
+Socket.io chưa hoạt động để gửi thông báo đến Manager
