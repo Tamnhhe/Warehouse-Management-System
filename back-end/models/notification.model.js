@@ -1,40 +1,65 @@
-
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const NotificationSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  message: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: [
+      "employee_action",
+      "manager_approval",
+      "inventoryEntry",
+      "lowStock",
+      "productUpdate",
+      "transactionRequest",
+    ],
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "User",
+  },
+  data: {
+    type: String, // JSON string để lưu thêm data
+    default: "{}",
+  },
+  isRead: {
+    type: Boolean,
+    default: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  // Giữ lại các fields cũ để backward compatibility
+  recipient: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "User",
+    default: undefined,
+  },
+  relatedData: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: false,
+    },
     type: {
-        type: String,
-        required: true,
-        enum: ['inventoryEntry', 'lowStock', 'productUpdate', 'transactionRequest'],
+      type: String,
+      required: false,
     },
-    recipient: {
-        type: [mongoose.Schema.Types.ObjectId],
-        required: true,
-        ref: 'User', // Liên kết đến collection User
-    },
-    message: {
-        type: String,
-        required: true, // Nội dung thông báo
-        trim: true,
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    relatedData: {// Thông tin liên quan như sản phẩm, đơn hàng, hoặc nhập kho
-        id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: false,
-        },
-        type: { // Loại dữ liệu liên quan, ví dụ: "Product", "Order", "WarehouseEntry"
-            type: String,
-            required: false,
-        },
-    },
-    isSeen: { // xem thông báo chưa
-        type: Boolean,
-        default: false,
-    },
+  },
+  isSeen: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-module.exports = mongoose.model('Notification', NotificationSchema);
+module.exports = mongoose.model("Notification", NotificationSchema);

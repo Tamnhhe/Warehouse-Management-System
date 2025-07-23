@@ -33,6 +33,8 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import MenuIcon from "@mui/icons-material/Menu"; // Icon Hamburger
 import useUser from "../../Hooks/useUser";
+import NotificationBell from "../NotificationBell/NotificationBell";
+
 // Bảng màu của bạn
 const palette = {
   dark: "#155E64",
@@ -339,22 +341,16 @@ function Header() {
               </Box>
             )}
 
-            {/* --- Box này để đẩy phần Profile/Login sang phảiสุด --- */}
+            {/* --- Box này để đẩy phần Profile/Login sang phải nhất --- */}
             {!isMobile && <Box sx={{ flexGrow: 1 }} />}
 
-            {/* --- Profile Avatar / Nút Login --- */}
+            {/* --- Avatar người dùng / Nút Đăng nhập --- */}
             <Box>
               {currentToken ? (
                 <>
-                  <Tooltip title="Thông báo">
-                    <IconButton color="inherit" aria-label="show notifications">
-                      <Badge badgeContent={4} color="error">
-                        <NotificationsIcon
-                          sx={{ color: isHomePage ? "action" : "inherit" }}
-                        />
-                      </Badge>
-                    </IconButton>
-                  </Tooltip>
+                  {/* Thay thế icon thông báo cũ bằng NotificationBell component */}
+                  <NotificationBell userId={profile?.id} />
+
                   <Tooltip title={profile?.fullName || "Tài khoản"}>
                     <IconButton
                       onClick={handleProfileMenuOpen}

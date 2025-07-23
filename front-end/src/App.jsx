@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -45,9 +45,13 @@ import InventoryCheck from "./Components/Inventory_Components/InventoryCheck";
 import Stocktaking from "./Components/Inventory_Components/Stocktaking";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
+import { jwtDecode } from "jwt-decode";
 
 // Context
 import { NotyfProvider } from "./Contexts/NotyfContext";
+import { NotificationProvider } from "./Contexts/NotificationProvider";
+
+// Layout component
 const Layout = ({ children }) => {
   const location = useLocation();
   const hidePaths = [
@@ -84,6 +88,36 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <Router>
+      <AppWithAuth />
+    </Router>
+  );
+}
+
+function AppWithAuth() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Lấy user info từ localStorage hoặc token
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        setUser({
+          id: decodedToken.id || decodedToken._id,
+          role: decodedToken.role,
+          branchId: decodedToken.branchId,
+          username: decodedToken.username,
+          fullName: decodedToken.fullName,
+        });
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        localStorage.removeItem("authToken");
+      }
+    }
+  }, []);
+
+  return (
+    <NotificationProvider user={user}>
       <Layout>
         <Routes>
           {/* Các Routes vẫn giữ nguyên không thay đổi */}
@@ -312,7 +346,7 @@ function App() {
           />
         </Routes>
       </Layout>
-    </Router>
+    </NotificationProvider>
   );
 }
 

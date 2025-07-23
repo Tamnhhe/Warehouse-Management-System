@@ -1,5 +1,6 @@
 const db = require("../models/index");
 const mongoose = require("mongoose");
+const notificationController = require("./notification.controller");
 
 // Lấy tất cả giao dịch xuất/nhập kho
 const getAllTransactions = async (req, res) => {
@@ -270,6 +271,27 @@ const createTransaction = async (req, res, next) => {
           }
         }
       }
+    }
+
+    // Gửi thông báo Socket.IO cho manager
+    try {
+      const io = req.app.get("io");
+      const employee = await db.User.findById(operatorId);
+      const actionType = transactionType === "import" ? "nhập kho" : "xuất kho";
+      const timestamp = new Date().toLocaleString("vi-VN");
+
+      if (employee && io) {
+        await notificationController.notifyManagerOnEmployeeAction(
+          io,
+          employee.fullName || employee.username,
+          actionType,
+          timestamp,
+          employee.branchId
+        );
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Không làm gián đoạn quá trình tạo transaction
     }
 
     return res.status(201).json({
@@ -562,6 +584,34 @@ const updateTransactionStatus = async (req, res) => {
 
     if (!updatedTransaction) {
       return res.status(404).json({ message: "Giao dịch không tồn tại!" });
+    }
+
+    // Gửi thông báo Socket.IO cho nhân viên khi manager duyệt/từ chối
+    try {
+      const io = req.app.get("io");
+      const manager = req.user; // Giả sử user đang đăng nhập là manager
+      const actionType =
+        transaction.transactionType === "import" ? "nhập kho" : "xuất kho";
+      const timestamp = new Date().toLocaleString("vi-VN");
+      const statusText =
+        status === "completed"
+          ? "duyệt"
+          : status === "cancelled"
+          ? "từ chối"
+          : "cập nhật";
+
+      if (manager && transaction.operator && io) {
+        await notificationController.notifyEmployeeOnManagerApproval(
+          io,
+          transaction.operator._id,
+          manager.fullName || manager.username,
+          `${statusText} phiếu ${actionType}`,
+          timestamp
+        );
+      }
+    } catch (notificationError) {
+      console.error("Error sending approval notification:", notificationError);
+      // Không làm gián đoạn quá trình cập nhật status
     }
 
     res.json(updatedTransaction);

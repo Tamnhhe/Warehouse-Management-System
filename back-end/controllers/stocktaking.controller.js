@@ -4,6 +4,7 @@ const Adjustment = db.Adjustment;
 const Inventory = db.Inventory;
 const Product = db.Product;
 const User = db.User;
+const notificationController = require("./notification.controller");
 
 // Tạo phiếu kiểm kê
 exports.createStocktakingTask = async (req, res) => {
@@ -37,6 +38,29 @@ exports.createStocktakingTask = async (req, res) => {
       checkedAt: new Date(),
     });
     await task.save();
+
+    // Gửi thông báo Socket.IO cho manager khi tạo phiếu kiểm kê
+    try {
+      const io = req.app.get("io");
+      const employee = await User.findById(auditor);
+      const timestamp = new Date().toLocaleString("vi-VN");
+
+      if (employee && io) {
+        await notificationController.notifyManagerOnEmployeeAction(
+          io,
+          employee.fullName || employee.username,
+          "kiểm kê",
+          timestamp,
+          employee.branchId
+        );
+      }
+    } catch (notificationError) {
+      console.error(
+        "Error sending stocktaking notification:",
+        notificationError
+      );
+    }
+
     res.status(201).json({ message: "Tạo phiếu kiểm kê thành công", task });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -80,6 +104,29 @@ exports.createPendingStocktakingTask = async (req, res) => {
       status: "pending",
     });
     await task.save();
+
+    // Gửi thông báo Socket.IO cho manager khi tạo phiếu kiểm kê pending
+    try {
+      const io = req.app.get("io");
+      const employee = await User.findById(auditor);
+      const timestamp = new Date().toLocaleString("vi-VN");
+
+      if (employee && io) {
+        await notificationController.notifyManagerOnEmployeeAction(
+          io,
+          employee.fullName || employee.username,
+          "kiểm kê",
+          timestamp,
+          employee.branchId
+        );
+      }
+    } catch (notificationError) {
+      console.error(
+        "Error sending pending stocktaking notification:",
+        notificationError
+      );
+    }
+
     res
       .status(201)
       .json({ message: "Tạo phiếu kiểm kê (pending) thành công", task });
@@ -140,7 +187,9 @@ exports.createAdjustment = async (req, res) => {
         .json({ message: "Chỉ quản lý mới có quyền tạo phiếu điều chỉnh" });
     }
 
-    const task = await StocktakingTask.findById(stocktakingTaskId);
+    const task = await StocktakingTask.findById(stocktakingTaskId).populate(
+      "auditor"
+    );
     if (!task)
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
     if (task.status !== "completed")
@@ -220,6 +269,28 @@ exports.createAdjustment = async (req, res) => {
     // Gắn adjustmentId vào task
     task.adjustmentId = adjustment._id;
     await task.save();
+
+    // Gửi thông báo Socket.IO cho nhân viên khi manager tạo phiếu điều chỉnh
+    try {
+      const io = req.app.get("io");
+      const manager = user; // user đã được lấy ở trên
+      const timestamp = new Date().toLocaleString("vi-VN");
+
+      if (manager && task.auditor && io) {
+        await notificationController.notifyEmployeeOnManagerApproval(
+          io,
+          task.auditor._id,
+          manager.fullName || manager.username,
+          "điều chỉnh sản phẩm trong phiếu kiểm kê",
+          timestamp
+        );
+      }
+    } catch (notificationError) {
+      console.error(
+        "Error sending adjustment notification:",
+        notificationError
+      );
+    }
 
     res
       .status(201)
