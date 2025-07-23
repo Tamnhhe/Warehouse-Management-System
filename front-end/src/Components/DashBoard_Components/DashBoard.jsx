@@ -159,18 +159,17 @@ function ChartDisplay({ activeTab, chartData, timeRange, salesData }) {
           activeTab === "stock"
             ? "Số lượng sản phẩm"
             : activeTab === "price"
-            ? "So sánh giá sản phẩm"
-            : activeTab === "category"
-            ? "Lượng sản phẩm của danh mục"
-            : activeTab === "status"
-            ? "Tình trạng kho"
-            : `Xu hướng tiêu thụ (${
-                timeRange === "Tuần"
-                  ? "7 ngày trước"
-                  : timeRange === "tháng"
-                  ? "30 ngày trước "
-                  : "90 ngày trước "
-              })`,
+              ? "So sánh giá sản phẩm"
+              : activeTab === "category"
+                ? "Lượng sản phẩm của danh mục"
+                : activeTab === "status"
+                  ? "Tình trạng kho"
+                  : `Xu hướng tiêu thụ (${timeRange === "Tuần"
+                    ? "7 ngày trước"
+                    : timeRange === "tháng"
+                      ? "30 ngày trước "
+                      : "90 ngày trước "
+                  })`,
       },
       legend: {
         display: activeTab === "stock",
@@ -327,14 +326,14 @@ function DataTable({
                         product.stockStatus === "Normal"
                           ? "#d4edda"
                           : product.stockStatus === "Critical"
-                          ? "#f8d7da"
-                          : "#fff3cd",
+                            ? "#f8d7da"
+                            : "#fff3cd",
                       color:
                         product.stockStatus === "Normal"
                           ? "#155724"
                           : product.stockStatus === "Critical"
-                          ? "#721c24"
-                          : "#856404",
+                            ? "#721c24"
+                            : "#856404",
                       fontSize: "0.85em",
                     }}
                   >
@@ -363,8 +362,8 @@ function DataTable({
                           product.daysUntilExpiry <= 30
                             ? colors.danger
                             : product.daysUntilExpiry <= 90
-                            ? colors.warning
-                            : colors.success,
+                              ? colors.warning
+                              : colors.success,
                         fontWeight:
                           product.daysUntilExpiry <= 30 ? "bold" : "normal",
                       }}
@@ -475,7 +474,7 @@ function Recommendations({
   const healthyPercentage = Math.round(
     (productData.filter((p) => p.stockStatus === "Normal").length /
       productData.length) *
-      100
+    100
   );
   return (
     <div style={{ ...cardStyle, marginTop: "20px" }}>
@@ -676,12 +675,18 @@ function Dashboard() {
     // Calculate transaction statistics
     const completed = data.filter((t) => t.status === "completed").length;
     const pending = data.filter((t) => t.status === "pending").length;
+
+    // ✅ SỬA: Tính tổng giá trị giao dịch từ transaction.products thay vì transaction.items
     const totalValue = data.reduce((sum, t) => {
-      const transactionValue = t.items
-        ? t.items.reduce(
-            (itemSum, item) => itemSum + item.price * item.quantity,
-            0
-          )
+      const transactionValue = t.products && Array.isArray(t.products)
+        ? t.products.reduce(
+          (itemSum, product) => {
+            const price = parseFloat(product.price) || 0;
+            const quantity = parseInt(product.requestQuantity) || 0;
+            return itemSum + (price * quantity);
+          },
+          0
+        )
         : 0;
       return sum + transactionValue;
     }, 0);
@@ -695,7 +700,7 @@ function Dashboard() {
 
     // Get recent transactions
     const recent = [...data]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .sort((a, b) => new Date(b.createdAt || b.transactionDate) - new Date(a.createdAt || a.transactionDate))
       .slice(0, 5);
     setRecentTransactions(recent);
   };
@@ -879,8 +884,8 @@ function Dashboard() {
                 p.stockStatus === "Critical"
                   ? colors.danger
                   : p.stockStatus === "Low"
-                  ? colors.warning
-                  : colors.success
+                    ? colors.warning
+                    : colors.success
               ),
             borderWidth: 1,
           },
@@ -965,8 +970,8 @@ function Dashboard() {
               transactionStats.completed,
               transactionStats.pending,
               transactionData.length -
-                transactionStats.completed -
-                transactionStats.pending,
+              transactionStats.completed -
+              transactionStats.pending,
             ],
             backgroundColor: [colors.success, colors.warning, colors.danger],
             borderWidth: 1,
@@ -1035,8 +1040,8 @@ function Dashboard() {
             return typeof value === "string" && value.includes(",")
               ? `"${value}"`
               : value !== undefined && value !== null
-              ? value
-              : "";
+                ? value
+                : "";
           })
           .join(",")
       ),
@@ -1176,16 +1181,20 @@ function Dashboard() {
           </thead>
           <tbody>
             {recentTransactions.map((transaction, index) => {
-              // Calculate transaction total
-              const total = transaction.items
-                ? transaction.items.reduce(
-                    (sum, item) => sum + item.price * item.quantity,
-                    0
-                  )
+              // ✅ SỬA: Tính tổng giá trị từ transaction.products thay vì transaction.items
+              const total = transaction.products && Array.isArray(transaction.products)
+                ? transaction.products.reduce(
+                  (sum, product) => {
+                    const price = parseFloat(product.price) || 0;
+                    const quantity = parseInt(product.requestQuantity) || 0;
+                    return sum + (price * quantity);
+                  },
+                  0
+                )
                 : 0;
 
-              // Format date
-              const transactionDate = new Date(transaction.createdAt);
+              // Format date - ưu tiên transactionDate trước createdAt
+              const transactionDate = new Date(transaction.transactionDate || transaction.createdAt);
               const formattedDate = transactionDate.toLocaleDateString("vi-VN");
 
               return (
@@ -1203,7 +1212,7 @@ function Dashboard() {
                   <td
                     style={{ padding: "10px", borderBottom: "1px solid #ddd" }}
                   >
-                    {transaction.type === "import" ? "Nhập kho" : "Xuất kho"}
+                    {transaction.transactionType === "import" ? "Nhập kho" : "Xuất kho"}
                   </td>
                   <td
                     style={{ padding: "10px", borderBottom: "1px solid #ddd" }}
@@ -1234,22 +1243,22 @@ function Dashboard() {
                           transaction.status === "completed"
                             ? "#d4edda"
                             : transaction.status === "pending"
-                            ? "#fff3cd"
-                            : "#f8d7da",
+                              ? "#fff3cd"
+                              : "#f8d7da",
                         color:
                           transaction.status === "completed"
                             ? "#155724"
                             : transaction.status === "pending"
-                            ? "#856404"
-                            : "#721c24",
+                              ? "#856404"
+                              : "#721c24",
                         fontSize: "0.85em",
                       }}
                     >
                       {transaction.status === "completed"
                         ? "Hoàn thành"
                         : transaction.status === "pending"
-                        ? "Đang xử lý"
-                        : "Đã hủy"}
+                          ? "Đang xử lý"
+                          : "Đã hủy"}
                     </span>
                   </td>
                 </tr>

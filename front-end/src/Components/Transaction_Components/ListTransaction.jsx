@@ -1,7 +1,76 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Modal, Button, Form, Row, Col, Card, Spinner } from "react-bootstrap";
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  CardHeader,
+  Grid,
+  Box,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Chip,
+  CircularProgress,
+  TableSortLabel,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  RadioGroup,
+  Radio,
+  FormLabel,
+  Stack,
+  TextField,
+  InputAdornment,
+} from "@mui/material";
+import { motion } from "framer-motion";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditNoteIcon from "@mui/icons-material/EditNote";
+import SyncLockIcon from "@mui/icons-material/SyncLock";
+import SearchIcon from "@mui/icons-material/Search";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import useTransaction from "../../Hooks/useTransaction";
+import palette from "../../Constants/palette";
+
+const getStatusChipColor = (status) => {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "pending":
+      return "warning";
+    case "cancelled":
+      return "error";
+    default:
+      return "default";
+  }
+};
+
+const getStatusLabel = (status) => {
+  switch (status) {
+    case "completed":
+      return "Hoàn thành";
+    case "pending":
+      return "Chờ xử lý";
+    case "cancelled":
+      return "Từ chối";
+    default:
+      return status;
+  }
+};
 
 const ListTransaction = () => {
   const [showModal, setShowModal] = useState(false);
@@ -13,7 +82,15 @@ const ListTransaction = () => {
   const [sortOrder, setSortOrder] = useState("asc");
   const [sortByDateOrder, setSortByDateOrder] = useState("desc");
   const [filterStatus, setFilterStatus] = useState([]);
+
+  // New search and date filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   // Use transaction custom hook
   const {
@@ -29,18 +106,55 @@ const ListTransaction = () => {
 
   useEffect(() => {
     let updatedTransactions = [...transactions];
+
+    // Filter by transaction type
     if (filterTransactionType !== "all") {
       updatedTransactions = updatedTransactions.filter(
         (t) => t.transactionType === filterTransactionType
       );
     }
+
+    // Filter by status
     if (filterStatus.length > 0) {
       updatedTransactions = updatedTransactions.filter((t) =>
         filterStatus.includes(t.status)
       );
     }
+
+    // Filter by search term (supplier name or branch name/receiver)
+    if (searchTerm.trim()) {
+      updatedTransactions = updatedTransactions.filter((t) => {
+        const supplierName = t.supplier?.name?.toLowerCase() || "";
+        const branchName = t.branch?.name?.toLowerCase() || "";
+        const branchReceiver = t.branch?.receiver?.toLowerCase() || "";
+        const searchLower = searchTerm.toLowerCase();
+
+        return supplierName.includes(searchLower) ||
+          branchName.includes(searchLower) ||
+          branchReceiver.includes(searchLower);
+      });
+    }
+
+    // Filter by date range
+    if (startDate) {
+      updatedTransactions = updatedTransactions.filter((t) => {
+        const transactionDate = new Date(t.transactionDate);
+        const filterStartDate = new Date(startDate);
+        return transactionDate >= filterStartDate;
+      });
+    }
+
+    if (endDate) {
+      updatedTransactions = updatedTransactions.filter((t) => {
+        const transactionDate = new Date(t.transactionDate);
+        const filterEndDate = new Date(endDate);
+        filterEndDate.setHours(23, 59, 59, 999); // Include the entire end date
+        return transactionDate <= filterEndDate;
+      });
+    }
+
     setFilteredTransactions(updatedTransactions);
-  }, [filterTransactionType, filterStatus, transactions]);
+  }, [filterTransactionType, filterStatus, transactions, searchTerm, startDate, endDate]);
 
   const handleStatusFilterChange = (event) => {
     const { value, checked } = event.target;
@@ -67,14 +181,10 @@ const ListTransaction = () => {
     if (!selectedTransaction) return;
     const res = await updateTransactionStatus(selectedTransaction._id, { status: newStatus });
     if (res && res.status) {
-      const updatedList = transactions.map((t) =>
-        t._id === selectedTransaction._id
-          ? { ...t, status: res.status }
-          : t
-      );
       setEditedTransactions((prev) =>
         new Set(prev).add(selectedTransaction._id)
       );
+      getAllTransactions(); // Refresh data
       setShowModal(false);
     }
   };
@@ -82,13 +192,18 @@ const ListTransaction = () => {
   const handleFilterChange = (event) =>
     setFilterTransactionType(event.target.value);
 
-  const handleSortBySupplier = () => {
+  const handleSortBySupplierOrBranch = () => {
     const sortedTransactions = [...filteredTransactions].sort((a, b) => {
-      const supplierA = a.supplier?.name ?? "";
-      const supplierB = b.supplier?.name ?? "";
+      const nameA = a.transactionType === "import"
+        ? (a.supplier?.name || "")
+        : (a.branch?.receiver || a.branch?.name || "");
+      const nameB = b.transactionType === "import"
+        ? (b.supplier?.name || "")
+        : (b.branch?.receiver || b.branch?.name || "");
+
       return sortOrder === "asc"
-        ? supplierA.localeCompare(supplierB, "vi")
-        : supplierB.localeCompare(supplierA, "vi");
+        ? nameA.localeCompare(nameB, "vi")
+        : nameB.localeCompare(nameA, "vi");
     });
     setFilteredTransactions(sortedTransactions);
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -104,145 +219,162 @@ const ListTransaction = () => {
     setSortByDateOrder(sortByDateOrder === "asc" ? "desc" : "asc");
   };
 
+  const getEntityName = (transaction) => {
+    if (transaction.transactionType === "import") {
+      return transaction.supplier?.name || "Chưa có nhà cung cấp";
+    } else {
+      return transaction.branch?.receiver || transaction.branch?.name || "Chưa có người nhận";
+    }
+  };
+
+  const calculateTransactionTotal = (transaction) => {
+    if (transaction.transactionType === "import") {
+      // Đối với phiếu nhập, sử dụng totalPrice có sẵn
+      return transaction.totalPrice || 0;
+    } else {
+      // Đối với phiếu xuất, tính tổng từ products
+      if (!transaction.products || transaction.products.length === 0) {
+        return 0;
+      }
+
+      return transaction.products.reduce((total, product) => {
+        // Ưu tiên exportPrice, nếu không có thì dùng price
+        const price = typeof product.exportPrice === "number"
+          ? product.exportPrice
+          : (typeof product.price === "number" ? product.price : 0);
+        const quantity = typeof product.requestQuantity === "number"
+          ? product.requestQuantity
+          : 0;
+        return total + (price * quantity);
+      }, 0);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
+    setFilterStatus([]);
+    setFilterTransactionType("all");
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 },
+  };
+
   if (loading) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "80vh" }}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
       >
-        <Spinner animation="border" variant="primary" />
-        <span className="ms-2">Đang tải dữ liệu...</span>
-      </div>
+        <CircularProgress sx={{ color: palette.medium }} />
+        <Typography sx={{ ml: 2 }}>Đang tải dữ liệu...</Typography>
+      </Box>
     );
   }
 
-  return (
-    <div className="container mt-4">
-      <h2 className="text-center text-primary mb-4">Danh sách giao dịch</h2>
-
-      <Card className="mb-4">
-        <Card.Body>
-          <Row className="gy-3">
-            <Col md={4}>
-              <Form.Group controlId="filterType">
-                <Form.Label className="fw-bold">Loại giao dịch</Form.Label>
-                <Form.Select
-                  value={filterTransactionType}
-                  onChange={handleFilterChange}
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="import">Nhập hàng</option>
-                  <option value="export">Xuất hàng</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={8}>
-              <Form.Group>
-                <Form.Label className="fw-bold">Trạng thái</Form.Label>
-                <div className="d-flex flex-wrap gap-3">
-                  <Form.Check
-                    inline
-                    label="Chờ xử lý"
-                    value="pending"
-                    checked={filterStatus.includes("pending")}
-                    onChange={handleStatusFilterChange}
-                  />
-                  <Form.Check
-                    inline
-                    label="Hoàn thành"
-                    value="completed"
-                    checked={filterStatus.includes("completed")}
-                    onChange={handleStatusFilterChange}
-                  />
-                  <Form.Check
-                    inline
-                    label="Từ chối"
-                    value="cancelled"
-                    checked={filterStatus.includes("cancelled")}
-                    onChange={handleStatusFilterChange}
-                  />
-                </div>
-              </Form.Group>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {/* Desktop Table */}
-      <div className="d-none d-md-block table-responsive">
-        <table className="table table-striped table-bordered table-hover align-middle">
-          <thead className="table-light">
-            <tr>
-              <th>#</th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={handleSortBySupplier}
+  const renderDesktopView = () => (
+    <TableContainer component={Paper}>
+      <Table sx={{ minWidth: 650 }}>
+        <TableHead>
+          <TableRow
+            sx={{
+              "& .MuiTableCell-root": {
+                fontWeight: "bold",
+                backgroundColor: "#f5f5f5",
+              },
+            }}
+          >
+            <TableCell>#</TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={true}
+                direction={sortOrder}
+                onClick={handleSortBySupplierOrBranch}
               >
-                Nhà cung cấp {sortOrder === "asc" ? "↑" : "↓"}
-              </th>
-              <th>Loại giao dịch</th>
-              <th
-                style={{ cursor: "pointer" }}
+                Nhà cung cấp / Người nhận
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>Loại giao dịch</TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={true}
+                direction={sortByDateOrder}
                 onClick={handleSortByDate}
               >
-                Ngày giao dịch {sortByDateOrder === "asc" ? "↑" : "↓"}
-              </th>
-              <th>Tổng tiền</th>
-              <th>Trạng thái</th>
-              <th style={{ minWidth: "220px" }}>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTransactions.map((transaction, index) => (
-              <tr key={transaction._id}>
-                <td>{index + 1}</td>
-                <td>
-                  {transaction.transactionType === "import"
-                    ? transaction.supplier?.name || "N/A"
-                    : "-"}
-                </td>
-                <td>
-                  <span
-                    className={`badge ${transaction.transactionType === "import"
-                      ? "bg-success"
-                      : "bg-danger"
-                      }`}
-                  >
-                    {transaction.transactionType === "import"
-                      ? "Nhập"
-                      : "Xuất"}
-                  </span>
-                </td>
-                <td>
+                Ngày giao dịch
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>Tổng tiền</TableCell>
+            <TableCell>Trạng thái</TableCell>
+            <TableCell align="center">Hành động</TableCell>
+          </TableRow>
+        </TableHead>
+        <motion.tbody
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {filteredTransactions.length > 0 ? (
+            filteredTransactions.map((transaction, index) => (
+              <motion.tr
+                key={transaction._id}
+                variants={itemVariants}
+                component={TableRow}
+                hover
+              >
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {getEntityName(transaction)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {transaction.transactionType === "import" ? "Nhà cung cấp" : "Người nhận"}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={transaction.transactionType === "import" ? "Nhập" : "Xuất"}
+                    color={transaction.transactionType === "import" ? "success" : "error"}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
                   {transaction.transactionDate
-                    ? new Date(transaction.transactionDate).toLocaleDateString()
+                    ? new Date(transaction.transactionDate).toLocaleDateString("vi-VN")
                     : "N/A"}
-                </td>
-                <td className="text-end">
-                  {transaction.totalPrice
-                    ? transaction.totalPrice.toLocaleString() + " VNĐ"
-                    : "N/A"}
-                </td>
-                <td>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const total = calculateTransactionTotal(transaction);
+                    return total > 0 ? total.toLocaleString("vi-VN") + " VNĐ" : "N/A";
+                  })()}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={getStatusLabel(transaction.status)}
+                    color={getStatusChipColor(transaction.status)}
+                    size="small"
+                    sx={{ cursor: transaction.status === "pending" && !editedTransactions.has(transaction._id) ? "pointer" : "default" }}
                     onClick={() => openStatusModal(transaction)}
-                    disabled={
-                      transaction.status !== "pending" ||
-                      editedTransactions.has(transaction._id)
-                    }
-                  >
-                    {transaction.status === "pending" && "🟡 Chờ xử lý"}
-                    {transaction.status === "completed" && "✅ Hoàn thành"}
-                    {transaction.status === "cancelled" && "❌ Từ chối"}
-                  </Button>
-                </td>
-                <td>
-                  <Button
-                    variant="info"
-                    size="sm"
-                    className="me-2"
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <IconButton
+                    title="Xem chi tiết"
                     onClick={() =>
                       navigate(
                         transaction.transactionType === "import"
@@ -250,159 +382,389 @@ const ListTransaction = () => {
                           : `/export-detail/${transaction._id}`
                       )
                     }
+                    sx={{ color: palette.medium }}
                   >
-                    Xem
-                  </Button>
+                    <VisibilityIcon />
+                  </IconButton>
                   {transaction.transactionType === "import" && (
-                    <Button
-                      variant="warning"
-                      size="sm"
+                    <IconButton
+                      title="Rà soát"
                       onClick={() =>
                         navigate(`/edit-transaction/${transaction._id}`)
                       }
                       disabled={transaction.status !== "pending"}
+                      sx={{ color: transaction.status === "pending" ? "warning.main" : "grey.400" }}
                     >
-                      Rà soát
-                    </Button>
+                      <EditNoteIcon />
+                    </IconButton>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </TableCell>
+              </motion.tr>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                <Typography variant="body1">
+                  Không có giao dịch nào
+                </Typography>
+              </TableCell>
+            </TableRow>
+          )}
+        </motion.tbody>
+      </Table>
+    </TableContainer>
+  );
 
-      {/* Mobile Card */}
-      <div className="d-md-none">
-        {filteredTransactions.map((transaction) => (
-          <Card key={transaction._id} className="mb-3">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <div>
-                <strong>
-                  {transaction.transactionType === "import"
-                    ? transaction.supplier?.name || "Giao dịch nhập"
-                    : "Giao dịch xuất"}
-                </strong>
-              </div>
-              <span
-                className={`badge ${transaction.transactionType === "import"
-                  ? "bg-success"
-                  : "bg-danger"
-                  }`}
-              >
-                {transaction.transactionType === "import" ? "Nhập" : "Xuất"}
-              </span>
-            </Card.Header>
-            <Card.Body>
-              <p className="mb-2">
-                <strong>Ngày:</strong>{" "}
-                {transaction.transactionDate
-                  ? new Date(transaction.transactionDate).toLocaleDateString()
-                  : "N/A"}
-              </p>
-              <p className="mb-2">
-                <strong>Tổng tiền:</strong>{" "}
-                <span className="text-danger fw-bold">
-                  {transaction.totalPrice
-                    ? transaction.totalPrice.toLocaleString() + " VNĐ"
-                    : "N/A"}
-                </span>
-              </p>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <strong>Trạng thái:</strong>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => openStatusModal(transaction)}
-                  disabled={
-                    transaction.status !== "pending" ||
-                    editedTransactions.has(transaction._id)
-                  }
-                >
-                  {transaction.status === "pending" && "🟡 Chờ xử lý"}
-                  {transaction.status === "completed" && "✅ Hoàn thành"}
-                  {transaction.status === "cancelled" && "❌ Từ chối"}
-                </Button>
-              </div>
-            </Card.Body>
-            <Card.Footer className="text-end">
-              <Button
-                variant="info"
-                size="sm"
-                className="me-2"
-                onClick={() =>
-                  navigate(
-                    transaction.transactionType === "import"
-                      ? `/transaction/${transaction._id}`
-                      : `/export-detail/${transaction._id}`
-                  )
+  const renderMobileView = () => (
+    <Box
+      component={motion.div}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {filteredTransactions.length > 0 ? (
+        filteredTransactions.map((transaction) => (
+          <motion.div key={transaction._id} variants={itemVariants}>
+            <Card sx={{ mb: 2 }}>
+              <CardHeader
+                title={getEntityName(transaction)}
+                subheader={
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {transaction.transactionType === "import" ? "Nhà cung cấp" : "Người nhận"}
+                    </Typography>
+                    <br />
+                    <Typography variant="caption">
+                      {transaction.transactionDate
+                        ? new Date(transaction.transactionDate).toLocaleDateString("vi-VN")
+                        : "N/A"}
+                    </Typography>
+                  </Box>
                 }
+                action={
+                  <Chip
+                    label={transaction.transactionType === "import" ? "Nhập" : "Xuất"}
+                    color={transaction.transactionType === "import" ? "success" : "error"}
+                    size="small"
+                  />
+                }
+              />
+              <CardContent>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Tổng tiền:</strong>{" "}
+                  <span style={{ color: palette.medium, fontWeight: "bold" }}>
+                    {(() => {
+                      const total = calculateTransactionTotal(transaction);
+                      return total > 0 ? total.toLocaleString("vi-VN") + " VNĐ" : "N/A";
+                    })()}
+                  </span>
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                  <Typography variant="body2"><strong>Trạng thái:</strong></Typography>
+                  <Chip
+                    label={getStatusLabel(transaction.status)}
+                    color={getStatusChipColor(transaction.status)}
+                    size="small"
+                    sx={{ cursor: transaction.status === "pending" && !editedTransactions.has(transaction._id) ? "pointer" : "default" }}
+                    onClick={() => openStatusModal(transaction)}
+                  />
+                </Box>
+              </CardContent>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-around",
+                  p: 1,
+                  borderTop: "1px solid #eee",
+                }}
               >
-                Xem chi tiết
-              </Button>
-              {transaction.transactionType === "import" && (
                 <Button
-                  variant="warning"
-                  size="sm"
+                  startIcon={<VisibilityIcon />}
                   onClick={() =>
-                    navigate(`/edit-transaction/${transaction._id}`)
+                    navigate(
+                      transaction.transactionType === "import"
+                        ? `/transaction/${transaction._id}`
+                        : `/export-detail/${transaction._id}`
+                    )
                   }
-                  disabled={transaction.status !== "pending"}
+                  sx={{ color: palette.medium }}
                 >
-                  Rà soát
+                  Xem chi tiết
                 </Button>
-              )}
-            </Card.Footer>
-          </Card>
-        ))}
-      </div>
+                {transaction.transactionType === "import" && (
+                  <Button
+                    startIcon={<EditNoteIcon />}
+                    onClick={() =>
+                      navigate(`/edit-transaction/${transaction._id}`)
+                    }
+                    disabled={transaction.status !== "pending"}
+                    color="warning"
+                  >
+                    Rà soát
+                  </Button>
+                )}
+              </Box>
+            </Card>
+          </motion.div>
+        ))
+      ) : (
+        <Card sx={{ mb: 2, p: 3, textAlign: "center" }}>
+          <Typography variant="body1">Không có giao dịch nào</Typography>
+        </Card>
+      )}
+    </Box>
+  );
 
-      {/* Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Cập nhật trạng thái</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+      <Typography
+        variant="h4"
+        gutterBottom
+        sx={{
+          fontWeight: "bold",
+          color: palette.dark,
+          mb: 3,
+          textAlign: "center",
+        }}
+      >
+        Danh sách giao dịch
+      </Typography>
+
+      {/* Search and Date Filter */}
+      <Card sx={{ mb: 4, p: 3 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Tìm kiếm theo tên nhà cung cấp hoặc người nhận..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: palette.medium }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: palette.medium,
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: palette.medium,
+                  },
+                },
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="Từ ngày"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarTodayIcon sx={{ color: palette.medium, fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="Đến ngày"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarTodayIcon sx={{ color: palette.medium, fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Clear Filters Button */}
+        {(searchTerm || startDate || endDate || filterStatus.length > 0 || filterTransactionType !== "all") && (
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={clearFilters}
+              sx={{
+                color: palette.medium,
+                borderColor: palette.medium,
+                "&:hover": {
+                  borderColor: palette.dark,
+                  color: palette.dark,
+                },
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          </Box>
+        )}
+      </Card>
+
+      {/* Filter Cards */}
+      <Card sx={{ mb: 4, p: 2 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+              Loại giao dịch
+            </Typography>
+            <FormControl component="fieldset">
+              <RadioGroup
+                row
+                value={filterTransactionType}
+                onChange={handleFilterChange}
+              >
+                <FormControlLabel
+                  value="all"
+                  control={<Radio size="small" sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                  label="Tất cả"
+                />
+                <FormControlLabel
+                  value="import"
+                  control={<Radio size="small" sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                  label="Nhập hàng"
+                />
+                <FormControlLabel
+                  value="export"
+                  control={<Radio size="small" sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                  label="Xuất hàng"
+                />
+              </RadioGroup>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={8}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+              Trạng thái
+            </Typography>
+            <FormGroup row>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    sx={{ "&.Mui-checked": { color: palette.medium } }}
+                    value="pending"
+                    checked={filterStatus.includes("pending")}
+                    onChange={handleStatusFilterChange}
+                  />
+                }
+                label="Chờ xử lý"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    sx={{ "&.Mui-checked": { color: palette.medium } }}
+                    value="completed"
+                    checked={filterStatus.includes("completed")}
+                    onChange={handleStatusFilterChange}
+                  />
+                }
+                label="Hoàn thành"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    sx={{ "&.Mui-checked": { color: palette.medium } }}
+                    value="cancelled"
+                    checked={filterStatus.includes("cancelled")}
+                    onChange={handleStatusFilterChange}
+                  />
+                }
+                label="Từ chối"
+              />
+            </FormGroup>
+          </Grid>
+        </Grid>
+      </Card>
+
+      {/* Results Summary */}
+      {(searchTerm || startDate || endDate || filterStatus.length > 0 || filterTransactionType !== "all") && (
+        <Card sx={{ mb: 3, p: 2, backgroundColor: `${palette.light}20` }}>
+          <Typography variant="body2" color="text.secondary">
+            Hiển thị <strong>{filteredTransactions.length}</strong> kết quả
+            {searchTerm && ` cho "${searchTerm}"`}
+            {startDate && ` từ ${new Date(startDate).toLocaleDateString("vi-VN")}`}
+            {endDate && ` đến ${new Date(endDate).toLocaleDateString("vi-VN")}`}
+          </Typography>
+        </Card>
+      )}
+
+      {isMobile ? renderMobileView() : renderDesktopView()}
+
+      {/* Status Update Modal */}
+      <Dialog open={showModal} onClose={() => setShowModal(false)}>
+        <DialogTitle>Cập nhật trạng thái</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
             Giao dịch: <strong>{selectedTransaction?._id}</strong>
-          </p>
-          <Form>
-            <Form.Check
-              type="radio"
-              id="status-pending"
-              label="🟡 Chờ xử lý"
-              value="pending"
-              checked={newStatus === "pending"}
+          </Typography>
+          <FormControl component="fieldset">
+            <FormLabel>Chọn trạng thái mới:</FormLabel>
+            <RadioGroup
+              value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
-            />
-            <Form.Check
-              type="radio"
-              id="status-completed"
-              label="✅ Hoàn thành"
-              value="completed"
-              checked={newStatus === "completed"}
-              onChange={(e) => setNewStatus(e.target.value)}
-            />
-            <Form.Check
-              type="radio"
-              id="status-cancelled"
-              label="❌ Từ chối"
-              value="cancelled"
-              checked={newStatus === "cancelled"}
-              onChange={(e) => setNewStatus(e.target.value)}
-            />
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Hủy
-          </Button>
-          <Button variant="primary" onClick={handleStatusChange}>
+              sx={{ mt: 1 }}
+            >
+              <FormControlLabel
+                value="pending"
+                control={<Radio sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                label="🟡 Chờ xử lý"
+              />
+              <FormControlLabel
+                value="completed"
+                control={<Radio sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                label="✅ Hoàn thành"
+              />
+              <FormControlLabel
+                value="cancelled"
+                control={<Radio sx={{ "&.Mui-checked": { color: palette.medium } }} />}
+                label="❌ Từ chối"
+              />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowModal(false)}>Hủy</Button>
+          <Button
+            onClick={handleStatusChange}
+            variant="contained"
+            sx={{
+              bgcolor: palette.medium,
+              "&:hover": { bgcolor: palette.dark },
+            }}
+          >
             Xác nhận
           </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 
