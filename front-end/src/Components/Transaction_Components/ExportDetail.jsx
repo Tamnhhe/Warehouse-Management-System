@@ -70,45 +70,33 @@ const ExportDetail = () => {
   };
 
   const confirmReturn = async () => {
-    try {
-      // Create a new import transaction with the products from this export
-      // Tính tổng tiền cho phiếu nhập trả hàng
-      let totalPrice = 0;
-      transaction.products.forEach((product) => {
-        // Nếu có giá thì tính, nếu không thì mặc định 0
-        const price = typeof product.price === "number" ? product.price : 0;
-        const qty = typeof product.requestQuantity === "number" ? product.requestQuantity : 0;
-        totalPrice += price * qty;
-      });
-      const importData = {
-        products: transaction.products.map((product) => ({
-          productId: product.productId?._id || product.productId,
-          requestQuantity: product.requestQuantity,
-        })),
-        transactionType: "import",
-        status: "pending",
-        note: `Trả hàng từ phiếu xuất ${transaction._id}`,
-        branch: transaction.branch,
-        returnedFrom: transaction._id, // Reference to the original export
-        totalPrice,
-      };
-
-      const response = await axios.post(
-        "http://localhost:9999/inventoryTransactions/createTransaction",
-        importData
-      );
-
-      if (response.data && response.data._id) {
-        // Navigate to the edit page for the new import transaction
-        navigate(`/edit-transaction/${response.data._id}`);
-      } else {
-        alert("Tạo phiếu nhập trả hàng thành công, nhưng không lấy được mã phiếu mới. Vui lòng kiểm tra lại!");
-      }
-    } catch (error) {
-      console.error("Lỗi khi tạo phiếu nhập kho:", error);
-    } finally {
-      setReturnConfirmModal(false);
-    }
+    // Chuyển sang màn tạo phiếu nhập đúng link, mang theo dữ liệu phiếu xuất
+    const importData = {
+      products: transaction.products.map((product) => ({
+        productId: product.productId?._id || product.productId,
+        productName:
+          (product.productId && typeof product.productId === "object"
+            ? product.productId.productName || product.productId.name
+            : typeof product.productId === "string"
+              ? product.productId
+              : product.supplierProductId && typeof product.supplierProductId === "object"
+                ? product.supplierProductId.productName || product.supplierProductId.name
+                : typeof product.supplierProductId === "string"
+                  ? product.supplierProductId
+                  : "") || "",
+        supplier:
+          (product.supplierProductId && typeof product.supplierProductId === "object"
+            ? product.supplierProductId.supplier?.name || product.supplierProductId.supplierName || ""
+            : product.supplierName || ""),
+        quantity: product.requestQuantity,
+        price: typeof product.price === "number" ? product.price : 0,
+      })),
+      branch: transaction.branch,
+      note: `Trả hàng từ phiếu xuất ${transaction._id}`,
+      returnedFrom: transaction._id,
+    };
+    navigate("/receipt/create", { state: importData });
+    setReturnConfirmModal(false);
   };
 
   if (!transaction) return <p>Đang tải dữ liệu...</p>;
@@ -179,11 +167,17 @@ const ExportDetail = () => {
               <th>Tên sản phẩm</th>
               <th>SL yêu cầu</th>
               <th>SL xuất</th>
+              <th>Giá xuất</th>
+              <th>Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             {transaction.products.map((product, index) => {
-              console.log("Product item:", product);
+              // Ưu tiên lấy giá xuất từ exportPrice, nếu không có thì lấy price
+              const price = typeof product.exportPrice === "number"
+                ? product.exportPrice
+                : (typeof product.price === "number" ? product.price : 0);
+              const qty = typeof product.requestQuantity === "number" ? product.requestQuantity : 0;
               return (
                 <tr key={index}>
                   <td>{index + 1}</td>
@@ -200,11 +194,20 @@ const ExportDetail = () => {
                   </td>
                   <td>{typeof product.requestQuantity === "number" ? product.requestQuantity : "--"}</td>
                   <td>{typeof product.achievedProduct === "number" ? product.achievedProduct : "--"}</td>
+                  <td>{price.toLocaleString("vi-VN")} VND</td>
+                  <td>{(price * qty).toLocaleString("vi-VN")} VND</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+
+        {/* Tổng giá trị phiếu xuất */}
+        <div className="mt-3 text-end">
+          <h5>
+            Tổng giá trị phiếu xuất: {transaction.products.reduce((sum, p) => sum + (typeof p.price === "number" ? p.price : 0) * (typeof p.requestQuantity === "number" ? p.requestQuantity : 0), 0).toLocaleString("vi-VN")} VND
+          </h5>
+        </div>
 
         <div className="mt-5">
           <p>

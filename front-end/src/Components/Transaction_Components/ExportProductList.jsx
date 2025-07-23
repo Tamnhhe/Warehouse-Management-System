@@ -171,6 +171,7 @@ const ExportProductList = () => {
               </TableSortLabel>
             </TableCell>
             <TableCell>Số sản phẩm</TableCell>
+            <TableCell>Giá trị phiếu xuất</TableCell>
             <TableCell>Trạng thái</TableCell>
             <TableCell align="center">Hành động</TableCell>
           </TableRow>
@@ -181,55 +182,64 @@ const ExportProductList = () => {
           animate="visible"
         >
           {filteredAndSortedTransactions.length > 0 ? (
-            filteredAndSortedTransactions.map((transaction) => (
-              <motion.tr
-                key={transaction._id}
-                variants={itemVariants}
-                component={TableRow}
-                hover
-              >
-                <TableCell>
-                  {transaction.branch && typeof transaction.branch === "object"
-                    ? `${transaction.branch.name} - ${transaction.branch.address}`
-                    : "Không xác định"}
-                </TableCell>
-                <TableCell>
-                  {new Date(transaction.transactionDate).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  {transaction.products?.length || 0} sản phẩm
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={getStatusLabel(transaction.status)}
-                    color={getStatusChipColor(transaction.status)}
-                    size="small"
-                    sx={{ cursor: "pointer" }}
-                    onClick={() => openStatusModal(transaction)}
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    title="Xem chi tiết"
-                    onClick={() =>
-                      navigate(`/export-detail/${transaction._id}`)
-                    }
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                  <IconButton
-                    title="Thay đổi trạng thái"
-                    onClick={() => openStatusModal(transaction)}
-                    color="primary"
-                  >
-                    <SyncLockIcon />
-                  </IconButton>
-                </TableCell>
-              </motion.tr>
-            ))
+            filteredAndSortedTransactions.map((transaction) => {
+              const totalExportPrice = transaction.products?.reduce(
+                (sum, p) => sum + (p.price || 0) * (p.requestQuantity || 1),
+                0
+              );
+              return (
+                <motion.tr
+                  key={transaction._id}
+                  variants={itemVariants}
+                  component={TableRow}
+                  hover
+                >
+                  <TableCell>
+                    {transaction.branch && typeof transaction.branch === "object"
+                      ? `${transaction.branch.name} - ${transaction.branch.address}`
+                      : "Không xác định"}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(transaction.transactionDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.products?.length || 0} sản phẩm
+                  </TableCell>
+                  <TableCell>
+                    {totalExportPrice?.toLocaleString("vi-VN")} VND
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getStatusLabel(transaction.status)}
+                      color={getStatusChipColor(transaction.status)}
+                      size="small"
+                      sx={{ cursor: "pointer" }}
+                      onClick={() => openStatusModal(transaction)}
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      title="Xem chi tiết"
+                      onClick={() =>
+                        navigate(`/export-detail/${transaction._id}`)
+                      }
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton
+                      title="Thay đổi trạng thái"
+                      onClick={() => openStatusModal(transaction)}
+                      color="primary"
+                    >
+                      <SyncLockIcon />
+                    </IconButton>
+                  </TableCell>
+                </motion.tr>
+              );
+            })
           ) : (
             <TableRow>
-              <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+              <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                 <Typography variant="body1">
                   Không có phiếu xuất kho nào
                 </Typography>
@@ -249,54 +259,63 @@ const ExportProductList = () => {
       animate="visible"
     >
       {filteredAndSortedTransactions.length > 0 ? (
-        filteredAndSortedTransactions.map((transaction) => (
-          <motion.div key={transaction._id} variants={itemVariants}>
-            <Card sx={{ mb: 2 }}>
-              <CardHeader
-                title={`Phiếu #${transaction._id.slice(-6)}`}
-                subheader={`${transaction.branch || "Không xác định"
-                  } - ${new Date(
-                    transaction.transactionDate
-                  ).toLocaleDateString()}`}
-                action={
-                  <Chip
-                    label={getStatusLabel(transaction.status)}
-                    color={getStatusChipColor(transaction.status)}
-                    size="small"
+        filteredAndSortedTransactions.map((transaction) => {
+          const totalExportPrice = transaction.products?.reduce(
+            (sum, p) => sum + (p.price || 0) * (p.requestQuantity || 1),
+            0
+          );
+          return (
+            <motion.div key={transaction._id} variants={itemVariants}>
+              <Card sx={{ mb: 2 }}>
+                <CardHeader
+                  title={`Phiếu #${transaction._id.slice(-6)}`}
+                  subheader={`${transaction.branch || "Không xác định"
+                    } - ${new Date(
+                      transaction.transactionDate
+                    ).toLocaleDateString()}`}
+                  action={
+                    <Chip
+                      label={getStatusLabel(transaction.status)}
+                      color={getStatusChipColor(transaction.status)}
+                      size="small"
+                      onClick={() => openStatusModal(transaction)}
+                    />
+                  }
+                />
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary">
+                    Số lượng sản phẩm: {transaction.products?.length || 0}
+                  </Typography>
+                  <Typography variant="body2" color="primary">
+                    Giá trị phiếu xuất: {totalExportPrice?.toLocaleString("vi-VN")} VND
+                  </Typography>
+                </CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-around",
+                    p: 1,
+                    borderTop: "1px solid #eee",
+                  }}
+                >
+                  <Button
+                    startIcon={<VisibilityIcon />}
+                    onClick={() => navigate(`/export-detail/${transaction._id}`)}
+                  >
+                    Xem chi tiết
+                  </Button>
+                  <Button
+                    startIcon={<SyncLockIcon />}
                     onClick={() => openStatusModal(transaction)}
-                  />
-                }
-              />
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  Số lượng sản phẩm: {transaction.products?.length || 0}
-                </Typography>
-              </CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-around",
-                  p: 1,
-                  borderTop: "1px solid #eee",
-                }}
-              >
-                <Button
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => navigate(`/export-detail/${transaction._id}`)}
-                >
-                  Xem chi tiết
-                </Button>
-                <Button
-                  startIcon={<SyncLockIcon />}
-                  onClick={() => openStatusModal(transaction)}
-                  color="primary"
-                >
-                  Đổi trạng thái
-                </Button>
-              </Box>
-            </Card>
-          </motion.div>
-        ))
+                    color="primary"
+                  >
+                    Đổi trạng thái
+                  </Button>
+                </Box>
+              </Card>
+            </motion.div>
+          );
+        })
       ) : (
         <Card sx={{ mb: 2, p: 3, textAlign: "center" }}>
           <Typography variant="body1">Không có phiếu xuất kho nào</Typography>

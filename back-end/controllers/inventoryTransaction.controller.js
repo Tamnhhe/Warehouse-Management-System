@@ -19,8 +19,12 @@ const getAllTransactions = async (req, res) => {
 // Lấy một giao dịch theo ID
 const getTransactionById = async (req, res) => {
   try {
-    // Lấy giao dịch và populate supplierProductId, productId, operator và branch
+    // Lấy giao dịch và populate đầy đủ supplier, supplierProductId, productId, operator và branch
     const transaction = await db.InventoryTransaction.findById(req.params.id)
+      .populate({
+        path: "supplier",
+        select: "name address contact email description status",
+      })
       .populate({
         path: "products.supplierProductId",
         model: "SupplierProduct",
@@ -85,10 +89,11 @@ const createTransaction = async (req, res, next) => {
       calculatedTotalPrice = 0;
     }
 
-    // Tìm một user với vai trò 'manager'
-    const manager = await db.User.findOne({ role: "manager" });
-    if (!manager) {
-      return res.status(400).json({ message: "Manager not found." });
+    // Lấy user đang đăng nhập làm người xử lý đơn
+    if (!req.user || !req.user._id) {
+      return res
+        .status(400)
+        .json({ message: "Không xác định được người tạo đơn!" });
     }
 
     // Tìm một supplier mặc định nếu không được cung cấp
@@ -143,11 +148,25 @@ const createTransaction = async (req, res, next) => {
             receiveQuantity: parseInt(item.requestQuantity) || 1,
             defectiveProduct: 0,
             achievedProduct: parseInt(item.requestQuantity) || 1,
-            price: 0,
+            price:
+              typeof item.exportPrice === "number"
+                ? item.exportPrice
+                : typeof item.price === "number"
+                ? item.price
+                : 0,
           });
         } else if (item.supplierProductId) {
           // Trường hợp đã có supplierProductId
-          processedProducts.push(item);
+          // Đảm bảo giá xuất được lưu đúng vào trường price
+          processedProducts.push({
+            ...item,
+            price:
+              typeof item.exportPrice === "number"
+                ? item.exportPrice
+                : typeof item.price === "number"
+                ? item.price
+                : 0,
+          });
         }
       } catch (error) {
         console.error("Lỗi xử lý sản phẩm:", error);
@@ -179,7 +198,7 @@ const createTransaction = async (req, res, next) => {
       transactionType,
       transactionDate: transactionDate || Date.now(),
       products: processedProducts,
-      operator: manager._id,
+      operator: req.user._id,
       totalPrice: calculatedTotalPrice,
       status: "pending",
       ...branchInfo,

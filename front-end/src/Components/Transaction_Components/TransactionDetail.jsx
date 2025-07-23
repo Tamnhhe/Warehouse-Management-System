@@ -56,26 +56,22 @@ const DetailTransaction = () => {
 
         <div className="section my-4">
           <h5>Thông tin người xử lý:</h5>
-          <p><strong>Họ tên:</strong> {transaction.operator?.fullName || "Chưa rõ"}</p>
-          <p><strong>Chi nhánh:</strong> {transaction.branch || "Chi nhánh chính"}</p>
+          <p><strong>Họ tên:</strong> {transaction.operator?.fullName || "Huy Tâm"}</p>
         </div>
 
         <div className="section my-4">
-          {transaction.transactionType === "import" ? (
-            <>
-              <h5>Thông tin nhà cung cấp:</h5>
-              <p><strong>Tên NCC:</strong> {transaction.supplier?.name || "Không có"}</p>
-              <p><strong>Địa chỉ:</strong> {transaction.supplier?.address || "Không có"}</p>
-              <p><strong>Email:</strong> {transaction.supplier?.email || "Không có"}</p>
-              <p><strong>SĐT:</strong> {transaction.supplier?.contact || "Không có"}</p>
-            </>
-          ) : (
-            <>
-              <h5>Thông tin chi nhánh nhận:</h5>
-              <p><strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}</p>
-            </>
-          )}
+          <h5>Thông tin nhà cung cấp:</h5>
+          <p><strong>Tên NCC:</strong> {transaction.supplier?.name || "Không có"}</p>
+          <p><strong>Địa chỉ:</strong> {transaction.supplier?.address || "Không có"}</p>
+          <p><strong>Email:</strong> {transaction.supplier?.email || "Không có"}</p>
+          <p><strong>SĐT:</strong> {transaction.supplier?.contact || "Không có"}</p>
         </div>
+        {transaction.transactionType === "export" && (
+          <div className="section my-4">
+            <h5>Thông tin chi nhánh nhận:</h5>
+            <p><strong>Chi nhánh:</strong> {transaction.branch || "Không xác định"}</p>
+          </div>
+        )}
 
         <table className="table table-bordered text-center">
           <thead className="table-light">
