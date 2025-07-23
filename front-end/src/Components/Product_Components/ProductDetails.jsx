@@ -89,9 +89,9 @@ const ProductDetails = ({ show, handleClose, product }) => {
           footer={null}
           centered
           width={700}
-          bodyStyle={{ padding: 0, borderRadius: 16 }}
+          styles={{ body: { padding: 0, borderRadius: 16 } }}
           style={{ top: 40 }}
-          destroyOnClose
+          destroyOnHidden={true}
         >
           <motion.div
             variants={fadeIn}
@@ -155,7 +155,7 @@ const ProductDetails = ({ show, handleClose, product }) => {
                             key={sp._id || idx}
                             size="small"
                             style={{ marginBottom: 8, background: "#f6ffed", border: "1px solid #b7eb8f" }}
-                            bodyStyle={{ padding: 10 }}
+                            styles={{ body: { padding: 10 } }} // Updated from bodyStyle to styles.body
                           >
                             <b>{sp.supplier?.name || "Không rõ tên"}</b>
                             {sp.supplier?.status && (

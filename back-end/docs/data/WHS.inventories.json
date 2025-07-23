@@ -168,25 +168,36 @@
 },
 {
   "_id": {
-    "$oid": "687fce9a273b5658f389861c"
+    "$oid": "68810469587d4c5076ae6afd"
   },
   "name": "Tầng 1 B2",
   "categoryId": {
     "$oid": "687fcbf1305ceddd031f8929"
   },
   "maxQuantitative": 1000,
-  "currentQuantitative": 0,
+  "currentQuantitative": 100,
   "maxWeight": 100,
-  "currentWeight": -10,
+  "currentWeight": 0,
   "status": "active",
   "priority": 0,
   "maxCapacityPerProduct": null,
-  "products": [],
+  "products": [
+    {
+      "productId": {
+        "$oid": "6881044c587d4c5076ae6ae0"
+      },
+      "quantity": 100,
+      "price": 27900000,
+      "_id": {
+        "$oid": "68810487587d4c5076ae6b28"
+      }
+    }
+  ],
   "createdAt": {
-    "$date": "2025-07-22T17:47:06.431Z"
+    "$date": "2025-07-23T15:48:57.010Z"
   },
   "updatedAt": {
-    "$date": "2025-07-22T18:25:31.214Z"
+    "$date": "2025-07-23T15:49:27.812Z"
   },
-  "__v": 2
+  "__v": 1
 }]

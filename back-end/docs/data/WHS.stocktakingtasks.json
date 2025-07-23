@@ -1,39 +1,35 @@
 [{
   "_id": {
-    "$oid": "687fd34f273b5658f389886d"
+    "$oid": "688101e5fc24a8220a960280"
   },
   "inventoryId": {
-    "$oid": "687fce8e273b5658f3898616"
+    "$oid": "687fce9a273b5658f389861c"
   },
   "products": [
     {
       "productId": {
-        "$oid": "687fcf5e273b5658f389864c"
+        "$oid": "688101b2fc24a8220a9601c8"
       },
-      "systemQuantity": 50,
-      "actualQuantity": 45,
-      "difference": -5,
-      "note": "4 chiếc bị rơi nát",
+      "systemQuantity": 10,
+      "actualQuantity": null,
+      "difference": null,
       "_id": {
-        "$oid": "687fd34f273b5658f389886e"
+        "$oid": "688101e5fc24a8220a960281"
       }
     }
   ],
   "auditor": {
-    "$oid": "687fcb16305ceddd031f88f4"
+    "$oid": "6822aa2b7b1ef5596ea4b66b"
   },
-  "status": "completed",
+  "status": "pending",
   "checkedAt": {
-    "$date": "2025-07-22T18:07:22.365Z"
+    "$date": "2025-07-23T15:38:13.622Z"
   },
   "createdAt": {
-    "$date": "2025-07-22T18:07:11.161Z"
+    "$date": "2025-07-23T15:38:13.623Z"
   },
   "updatedAt": {
-    "$date": "2025-07-22T18:07:29.053Z"
+    "$date": "2025-07-23T15:38:13.623Z"
   },
-  "__v": 1,
-  "adjustmentId": {
-    "$oid": "687fd361273b5658f38988c0"
-  }
+  "__v": 0
 }]

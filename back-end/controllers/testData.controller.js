@@ -12,6 +12,7 @@ const fileModelMap = {
   "WHS.suppliers.json": db.Supplier,
   "WHS.supplierProducts.json": db.SupplierProduct,
   "WHS.inventoryTransactions.json": db.InventoryTransaction,
+  "WHS.stocktakingtasks.json": db.StocktakingTask,
 };
 
 // Đệ quy chuyển đổi các trường đặc biệt sang ObjectId/Date
@@ -67,6 +68,7 @@ exports.clearTestData = async (req, res) => {
     for (const [file, Model] of Object.entries(fileModelMap)) {
       await Model.deleteMany({});
     }
+    await db.StocktakingTask.deleteMany({});
     res.json({ success: true, message: "All test data cleared except User." });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

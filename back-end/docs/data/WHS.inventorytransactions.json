@@ -1,130 +1,38 @@
 [{
   "_id": {
-    "$oid": "687fd673273b5658f3898c24"
+    "$oid": "68810484587d4c5076ae6b18"
   },
   "supplier": {
     "$oid": "687fccc9273b5658f38985a1"
   },
   "transactionType": "import",
   "transactionDate": {
-    "$date": "2025-07-22T18:20:35.230Z"
+    "$date": "2025-07-23T15:49:24.065Z"
   },
   "products": [
     {
       "supplierProductId": {
         "$oid": "687fcf5e273b5658f389864e"
       },
-      "requestQuantity": 10,
-      "receiveQuantity": 10,
+      "requestQuantity": 100,
+      "receiveQuantity": 100,
       "defectiveProduct": 0,
-      "achievedProduct": 10,
-      "price": 27990000,
+      "achievedProduct": 100,
+      "price": 27900000,
       "expiry": null,
       "quantitative": 1,
       "_id": {
-        "$oid": "687fd673273b5658f3898c25"
+        "$oid": "68810484587d4c5076ae6b19"
       }
     }
   ],
-  "totalPrice": 279900000,
+  "totalPrice": 2790000000,
   "status": "completed",
   "createdAt": {
-    "$date": "2025-07-22T18:20:35.232Z"
+    "$date": "2025-07-23T15:49:24.067Z"
   },
   "updatedAt": {
-    "$date": "2025-07-22T18:20:39.681Z"
-  },
-  "__v": 0
-},
-{
-  "_id": {
-    "$oid": "687fd689273b5658f3898c6a"
-  },
-  "supplier": {
-    "$oid": "687fccc9273b5658f38985a1"
-  },
-  "transactionType": "export",
-  "transactionDate": {
-    "$date": "2025-07-22T18:20:57.725Z"
-  },
-  "products": [
-    {
-      "supplierProductId": {
-        "$oid": "687fcf5e273b5658f389864e"
-      },
-      "productId": {
-        "$oid": "687fd664273b5658f3898c12"
-      },
-      "requestQuantity": 5,
-      "receiveQuantity": 5,
-      "defectiveProduct": 0,
-      "achievedProduct": 5,
-      "price": 0,
-      "quantitative": 0,
-      "_id": {
-        "$oid": "687fd689273b5658f3898c6b"
-      }
-    }
-  ],
-  "operator": {
-    "$oid": "687fcb16305ceddd031f88f4"
-  },
-  "totalPrice": 0,
-  "branch": {
-    "$oid": "687fd3ab273b5658f3898945"
-  },
-  "status": "completed",
-  "createdAt": {
-    "$date": "2025-07-22T18:20:57.727Z"
-  },
-  "updatedAt": {
-    "$date": "2025-07-22T18:21:05.607Z"
-  },
-  "__v": 0
-},
-{
-  "_id": {
-    "$oid": "687fd7970116d2f539ec00e0"
-  },
-  "supplier": {
-    "$oid": "687fccc9273b5658f38985a1"
-  },
-  "transactionType": "export",
-  "transactionDate": {
-    "$date": "2025-07-22T18:25:27.349Z"
-  },
-  "products": [
-    {
-      "supplierProductId": {
-        "$oid": "687fcf5e273b5658f389864e"
-      },
-      "productId": {
-        "$oid": "687fd664273b5658f3898c12"
-      },
-      "requestQuantity": 5,
-      "receiveQuantity": 5,
-      "defectiveProduct": 0,
-      "achievedProduct": 5,
-      "price": 0,
-      "quantitative": 0,
-      "_id": {
-        "$oid": "687fd7970116d2f539ec00e1"
-      }
-    }
-  ],
-  "operator": {
-    "$oid": "687fcb16305ceddd031f88f4"
-  },
-  "totalPrice": 0,
-  "branch": {
-    "$oid": "687fd3ab273b5658f3898945"
-  },
-  "status": "completed",
-  "createdAt": {
-    "$date": "2025-07-22T18:25:27.358Z"
-  },
-  "updatedAt": {
-    "$date": "2025-07-22T18:25:31.223Z"
+    "$date": "2025-07-23T15:49:27.820Z"
   },
   "__v": 0
 }]

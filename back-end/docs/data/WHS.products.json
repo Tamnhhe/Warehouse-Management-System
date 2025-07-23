@@ -62,32 +62,33 @@
   "productImage": "/uploads/1753207045708-836553553-JBL-Flip5-Black-A.jpg",
   "unit": "Cái",
   "quantitative": 1,
-  "status": "active",
   "location": [],
+  "status": "active",
   "__v": 0
 },
 {
   "_id": {
-    "$oid": "687fd664273b5658f3898c12"
+    "$oid": "6881044c587d4c5076ae6ae0"
   },
   "productName": "Iphone 16 Pro Max",
   "categoryId": {
     "$oid": "687fcbf1305ceddd031f8929"
   },
-  "totalStock": 5,
+  "totalStock": 100,
   "thresholdStock": 10,
-  "productImage": "/uploads/1753208420142-397343847-image_processing20241021-2-173e1ev.png",
+  "productImage": "/uploads/1753285708221-104598589-1753285042206-973785764-apple-iphone-16-pro-max-white-titanium-smartphone-EKrrokE-600.jpg",
   "unit": "Chiếc",
   "quantitative": 1,
   "location": [
     {
       "inventoryId": {
-        "$oid": "687fce9a273b5658f389861c"
+        "$oid": "68810469587d4c5076ae6afd"
       },
-      "stock": 5,
-      "price": 27990000,
+      "stock": 100,
+      "price": 27900000,
+      "totalImportValue": 0,
       "_id": {
-        "$oid": "687fd677273b5658f3898c37"
+        "$oid": "68810487587d4c5076ae6b2b"
       }
     }
   ],
