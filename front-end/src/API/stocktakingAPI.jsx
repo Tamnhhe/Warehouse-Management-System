@@ -81,3 +81,14 @@ export const getAdjustmentHistory = async () => {
     throw error;
   }
 };
+
+// Xóa phiếu kiểm kê
+export const deleteStocktakingTask = async (taskId) => {
+  try {
+    const response = await authorApi.delete(`${BASE_URL}/delete/${taskId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi khi xóa phiếu kiểm kê:", error);
+    throw error;
+  }
+};

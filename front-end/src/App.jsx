@@ -233,7 +233,7 @@ function AppWithAuth() {
           <Route
             path="/transaction/:id"
             element={
-              <ProtectedRoute allowedRoles={["manager"]}>
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
                 <DetailTransaction />
               </ProtectedRoute>
             }
@@ -241,7 +241,7 @@ function AppWithAuth() {
           <Route
             path="/export-detail/:id"
             element={
-              <ProtectedRoute allowedRoles={["manager"]}>
+              <ProtectedRoute allowedRoles={["manager", "employee"]}>
                 <ExportDetail />
               </ProtectedRoute>
             }

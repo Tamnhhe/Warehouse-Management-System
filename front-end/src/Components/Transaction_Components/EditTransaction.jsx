@@ -10,16 +10,19 @@ const EditTransaction = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ products: [] });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true); // ✅ THÊM: Loading state
 
   useEffect(() => {
     axios
       .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
       .then((res) => {
+        console.log("Transaction data:", res.data); // Debug log
         if (res.data?.products) {
           setFormData({
             products: res.data.products.map((p) => ({
               supplierProductId: p.supplierProductId?._id || null,
-              productName: p.supplierProductId?.product?.productName || "Không có tên",
+              // ✅ SỬA: Lấy tên sản phẩm từ supplierProductId.productName
+              productName: p.supplierProductId?.productName || "Không có tên",
               requestQuantity: p.requestQuantity ?? 0,
               receiveQuantity: p.receiveQuantity ?? 0,
               defectiveProduct: p.defectiveProduct ?? 0,
@@ -30,7 +33,11 @@ const EditTransaction = () => {
           });
         }
       })
-      .catch((err) => console.error("Lỗi khi lấy dữ liệu:", err));
+      .catch((err) => {
+        console.error("Lỗi khi lấy dữ liệu:", err);
+        setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
+      })
+      .finally(() => setLoading(false)); // ✅ THÊM: Đặt loading thành false sau khi hoàn thành gọi API
   }, [id]);
 
   // <-- KHU VỰC THAY ĐỔI LỚN: Cập nhật hàm handleChange để tự động tính toán -->
@@ -54,13 +61,13 @@ const EditTransaction = () => {
       if (field === 'achievedProduct' || field === 'receiveQuantity') {
         const receiveQty = (field === 'receiveQuantity') ? Number(productToUpdate.receiveQuantity) : Number(productToUpdate.receiveQuantity);
         const achievedQty = (field === 'achievedProduct') ? Number(productToUpdate.achievedProduct) : Number(productToUpdate.achievedProduct);
-        
+
         // Đảm bảo số lượng đạt không lớn hơn số lượng nhận
         if (achievedQty > receiveQty) {
-            productToUpdate.achievedProduct = receiveQty; // Giới hạn giá trị
-            productToUpdate.defectiveProduct = 0;
+          productToUpdate.achievedProduct = receiveQty; // Giới hạn giá trị
+          productToUpdate.defectiveProduct = 0;
         } else {
-            productToUpdate.defectiveProduct = Math.max(0, receiveQty - achievedQty);
+          productToUpdate.defectiveProduct = Math.max(0, receiveQty - achievedQty);
         }
       }
 
@@ -81,7 +88,7 @@ const EditTransaction = () => {
       setError(`Lỗi dữ liệu ở sản phẩm "${validationError.productName}". Tổng số lượng Đạt và Lỗi không bằng Số lượng nhận.`);
       return;
     }
-    
+
     axios
       .put(`http://localhost:9999/inventoryTransactions/updateTransaction/${id}`, formData, {
         headers: { "Content-Type": "application/json" },
@@ -95,12 +102,16 @@ const EditTransaction = () => {
       );
   };
 
+  if (loading) {
+    return <div className="text-center mt-5">Loading...</div>; // ✅ THÊM: Hiển thị loading
+  }
+
   return (
     <div className="container mt-4">
       <h2 className="mb-4">Rà soát sản phẩm trong phiếu nhập</h2>
       <Form onSubmit={handleSubmit}>
         {error && <Alert variant="danger">{error}</Alert>}
-        
+
         {/* GIAO DIỆN BẢNG CHO DESKTOP */}
         <div className="d-none d-md-block table-responsive">
           <table className="table table-bordered align-middle">
@@ -145,7 +156,7 @@ const EditTransaction = () => {
                   <Form.Label column sm="5">SL Nhận</Form.Label>
                   <Col sm="7"><Form.Control type="number" value={product.receiveQuantity} onChange={(e) => handleChange(e, index, "receiveQuantity")} /></Col>
                 </Form.Group>
-                 <Form.Group as={Row} className="mb-2" controlId={`ach-${index}`}>
+                <Form.Group as={Row} className="mb-2" controlId={`ach-${index}`}>
                   <Form.Label column sm="5">SL Đạt</Form.Label>
                   <Col sm="7"><Form.Control type="number" value={product.achievedProduct} onChange={(e) => handleChange(e, index, "achievedProduct")} /></Col>
                 </Form.Group>
@@ -153,7 +164,7 @@ const EditTransaction = () => {
                   <Form.Label column sm="5">SL Lỗi</Form.Label>
                   <Col sm="7"><Form.Control type="number" value={product.defectiveProduct} readOnly /></Col>
                 </Form.Group>
-                 <Form.Group as={Row} className="mb-2" controlId={`price-${index}`}>
+                <Form.Group as={Row} className="mb-2" controlId={`price-${index}`}>
                   <Form.Label column sm="5">Giá nhập</Form.Label>
                   <Col sm="7"><Form.Control type="number" value={product.price} onChange={(e) => handleChange(e, index, "price")} /></Col>
                 </Form.Group>
@@ -165,7 +176,7 @@ const EditTransaction = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="mt-4">
           <Button type="submit" variant="primary">Lưu thay đổi</Button>
           <Button type="button" variant="secondary" className="ms-2" onClick={() => navigate("/list-transaction")}>Quay lại</Button>

@@ -39,6 +39,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import SyncLockIcon from "@mui/icons-material/SyncLock";
 import useTransaction from "../../Hooks/useTransaction";
+import useAuth from "../../Hooks/useAuth"; // ✅ Thêm useAuth
 
 const palette = {
   dark: "#155E64",
@@ -77,6 +78,10 @@ const ListReceipts = () => {
     updateTransactionStatus,
   } = useTransaction();
 
+  // ✅ Thêm useAuth để kiểm tra role
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
+
   useEffect(() => {
     getAllTransactions();
   }, []);
@@ -92,8 +97,10 @@ const ListReceipts = () => {
     setSortByDateOrder(sortByDateOrder === "asc" ? "desc" : "asc");
 
   const openStatusModal = (transaction) => {
-    // Nếu đã hoàn thành hoặc đã hủy thì không mở modal đổi trạng thái
+    // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
+    if (!isManager) return;
     if (transaction.status === "completed" || transaction.status === "cancelled") return;
+
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
@@ -186,7 +193,7 @@ const ListReceipts = () => {
                   size="small"
                   sx={{
                     textTransform: "capitalize",
-                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                    cursor: (isManager && transaction.status === "pending") ? "pointer" : "default" // ✅ Chỉ cho cursor pointer với manager và pending
                   }}
                   onClick={() => openStatusModal(transaction)}
                 />
@@ -210,16 +217,19 @@ const ListReceipts = () => {
                 >
                   <EditNoteIcon />
                 </IconButton>
-                <IconButton
-                  title="Thay đổi trạng thái"
-                  onClick={() => openStatusModal(transaction)}
-                  disabled={transaction.status === "completed" || transaction.status === "cancelled"}
-                  sx={{
-                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
-                  }}
-                >
-                  <SyncLockIcon />
-                </IconButton>
+                {/* ✅ CHỈ HIỂN THỊ NÚT ĐỔI TRẠNG THÁI CHO MANAGER */}
+                {isManager && (
+                  <IconButton
+                    title="Thay đổi trạng thái"
+                    onClick={() => openStatusModal(transaction)}
+                    disabled={transaction.status === "completed" || transaction.status === "cancelled"}
+                    sx={{
+                      cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    <SyncLockIcon />
+                  </IconButton>
+                )}
               </TableCell>
             </motion.tr>
           ))}
@@ -250,7 +260,7 @@ const ListReceipts = () => {
                   size="small"
                   sx={{
                     textTransform: "capitalize",
-                    cursor: (transaction.status === "completed" || transaction.status === "cancelled") ? "not-allowed" : "pointer"
+                    cursor: (isManager && transaction.status === "pending") ? "pointer" : "default" // ✅ Chỉ cho cursor pointer với manager và pending
                   }}
                   onClick={() => openStatusModal(transaction)}
                 />
@@ -282,13 +292,16 @@ const ListReceipts = () => {
               >
                 Rà soát
               </Button>
-              <Button
-                startIcon={<SyncLockIcon />}
-                onClick={() => openStatusModal(transaction)}
-                disabled={transaction.status === "completed" || transaction.status === "cancelled"}
-              >
-                Đổi trạng thái
-              </Button>
+              {/* ✅ CHỈ HIỂN THỊ NÚT ĐỔI TRẠNG THÁI CHO MANAGER */}
+              {isManager && (
+                <Button
+                  startIcon={<SyncLockIcon />}
+                  onClick={() => openStatusModal(transaction)}
+                  disabled={transaction.status === "completed" || transaction.status === "cancelled"}
+                >
+                  Đổi trạng thái
+                </Button>
+              )}
             </Box>
           </Card>
         </motion.div>

@@ -28,6 +28,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import useSupplier from "../../Hooks/useSupplier";
 import useSupplierProduct from "../../Hooks/useSupplierProduct";
 import useCategory from "../../Hooks/useCategory";
+import authorApi from "../../API/baseAPI/authorAPI"; // Thêm import này
 
 const palette = {
   dark: "#155E64",
@@ -91,16 +92,12 @@ const CreateReceipt = () => {
           categoryName: p.categoryName,
           quantity: p.quantity,
           price: p.price,
-          // Không gửi weight
         })),
       };
 
       try {
-        await fetch("http://localhost:9999/inventoryTransactions/create-receipts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        // Sử dụng authorApi thay vì fetch trực tiếp
+        await authorApi.post("/inventoryTransactions/create-receipts", payload);
         setSuccess(true);
         setTimeout(() => navigate("/receipts"), 2000);
       } catch (err) {

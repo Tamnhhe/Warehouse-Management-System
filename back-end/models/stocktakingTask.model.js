@@ -25,7 +25,7 @@ const StocktakingTaskSchema = new Schema(
     checkedAt: { type: Date, default: Date.now },
     status: {
       type: String,
-      enum: ["pending", "completed"],
+      enum: ["pending", "completed", "adjusted"], // Thêm trạng thái "adjusted"
       default: "pending",
     },
     adjustmentId: { type: Schema.Types.ObjectId, ref: "Adjustment" }, // Nếu có phiếu điều chỉnh

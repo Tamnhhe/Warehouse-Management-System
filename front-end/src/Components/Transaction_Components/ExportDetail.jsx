@@ -6,6 +6,7 @@ import { Button, Modal, Form } from "react-bootstrap";
 import html2pdf from "html2pdf.js";
 import "./InvoiceStyles.css";
 import useTransaction from "../../Hooks/useTransaction";
+import useAuth from "../../Hooks/useAuth"; // ✅ Import useAuth để lấy thông tin user
 
 const ExportDetail = () => {
   const { id } = useParams();
@@ -16,6 +17,7 @@ const ExportDetail = () => {
   const [newStatus, setNewStatus] = useState("");
   const [returnConfirmModal, setReturnConfirmModal] = useState(false);
   const { updateTransactionStatus } = useTransaction();
+  const { user } = useAuth(); // ✅ Lấy thông tin user để kiểm tra role
 
   useEffect(() => {
     axios
@@ -50,6 +52,9 @@ const ExportDetail = () => {
   };
 
   const openStatusModal = () => {
+    // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
+    if (!isManager) return;
+
     setShowStatusModal(true);
   };
 
@@ -100,6 +105,9 @@ const ExportDetail = () => {
   };
 
   if (!transaction) return <p>Đang tải dữ liệu...</p>;
+
+  // ✅ Kiểm tra xem user có phải manager không
+  const isManager = user?.role === "manager";
 
   return (
     <div className="container my-4 invoice-container">
@@ -230,9 +238,12 @@ const ExportDetail = () => {
         <Button variant="success" onClick={handleDownload}>
           Tải xuống PDF
         </Button>
-        <Button variant="warning" onClick={openStatusModal}>
-          Cập nhật trạng thái
-        </Button>
+        {/* ✅ CHỈ HIỂN THỊ NÚT CẬP NHẬT TRẠNG THÁI CHO MANAGER */}
+        {isManager && (
+          <Button variant="warning" onClick={openStatusModal}>
+            Cập nhật trạng thái
+          </Button>
+        )}
         <Button
           variant="danger"
           onClick={handleReturnProducts}
@@ -242,55 +253,57 @@ const ExportDetail = () => {
         </Button>
       </div>
 
-      {/* Status Update Modal */}
-      <Modal
-        show={showStatusModal}
-        onHide={() => setShowStatusModal(false)}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Cập nhật trạng thái phiếu xuất</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Mã phiếu: <strong>{transaction._id}</strong>
-          </p>
-          <Form>
-            <Form.Check
-              type="radio"
-              id="status-pending"
-              label="🟡 Chờ xử lý"
-              value="pending"
-              checked={newStatus === "pending"}
-              onChange={(e) => setNewStatus(e.target.value)}
-            />
-            <Form.Check
-              type="radio"
-              id="status-completed"
-              label="✅ Hoàn thành"
-              value="completed"
-              checked={newStatus === "completed"}
-              onChange={(e) => setNewStatus(e.target.value)}
-            />
-            <Form.Check
-              type="radio"
-              id="status-cancelled"
-              label="❌ Từ chối"
-              value="cancelled"
-              checked={newStatus === "cancelled"}
-              onChange={(e) => setNewStatus(e.target.value)}
-            />
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
-            Hủy
-          </Button>
-          <Button variant="primary" onClick={handleStatusChange}>
-            Xác nhận
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Status Update Modal - CHỈ HIỂN THỊ CHO MANAGER */}
+      {isManager && (
+        <Modal
+          show={showStatusModal}
+          onHide={() => setShowStatusModal(false)}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Cập nhật trạng thái phiếu xuất</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              Mã phiếu: <strong>{transaction._id}</strong>
+            </p>
+            <Form>
+              <Form.Check
+                type="radio"
+                id="status-pending"
+                label="🟡 Chờ xử lý"
+                value="pending"
+                checked={newStatus === "pending"}
+                onChange={(e) => setNewStatus(e.target.value)}
+              />
+              <Form.Check
+                type="radio"
+                id="status-completed"
+                label="✅ Hoàn thành"
+                value="completed"
+                checked={newStatus === "completed"}
+                onChange={(e) => setNewStatus(e.target.value)}
+              />
+              <Form.Check
+                type="radio"
+                id="status-cancelled"
+                label="❌ Từ chối"
+                value="cancelled"
+                checked={newStatus === "cancelled"}
+                onChange={(e) => setNewStatus(e.target.value)}
+              />
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleStatusChange}>
+              Xác nhận
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
 
       {/* Return Products Confirmation Modal */}
       <Modal

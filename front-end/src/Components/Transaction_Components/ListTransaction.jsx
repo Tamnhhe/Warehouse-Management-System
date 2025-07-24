@@ -44,6 +44,7 @@ import SyncLockIcon from "@mui/icons-material/SyncLock";
 import SearchIcon from "@mui/icons-material/Search";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import useTransaction from "../../Hooks/useTransaction";
+import useAuth from "../../Hooks/useAuth"; // ✅ Thêm useAuth
 import palette from "../../Constants/palette";
 
 const getStatusChipColor = (status) => {
@@ -78,15 +79,12 @@ const ListTransaction = () => {
   const [newStatus, setNewStatus] = useState("");
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [filterTransactionType, setFilterTransactionType] = useState("all");
-  const [editedTransactions, setEditedTransactions] = useState(new Set());
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [sortByDateOrder, setSortByDateOrder] = useState("desc");
   const [filterStatus, setFilterStatus] = useState([]);
-
-  // New search and date filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [editedTransactions, setEditedTransactions] = useState(new Set());
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -99,6 +97,10 @@ const ListTransaction = () => {
     getAllTransactions,
     updateTransactionStatus,
   } = useTransaction();
+
+  // ✅ Thêm useAuth để kiểm tra role
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
 
   useEffect(() => {
     getAllTransactions();
@@ -167,11 +169,10 @@ const ListTransaction = () => {
   };
 
   const openStatusModal = (transaction) => {
-    if (
-      transaction.status !== "pending" ||
-      editedTransactions.has(transaction._id)
-    )
-      return;
+    // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
+    if (!isManager) return;
+    if (transaction.status !== "pending" || editedTransactions.has(transaction._id)) return;
+
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
@@ -285,170 +286,148 @@ const ListTransaction = () => {
   }
 
   const renderDesktopView = () => (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow
-            sx={{
-              "& .MuiTableCell-root": {
-                fontWeight: "bold",
-                backgroundColor: "#f5f5f5",
-              },
-            }}
-          >
-            <TableCell>#</TableCell>
-            <TableCell>
-              <TableSortLabel
-                active={true}
-                direction={sortOrder}
-                onClick={handleSortBySupplierOrBranch}
-              >
-                Nhà cung cấp / Người nhận
-              </TableSortLabel>
-            </TableCell>
-            <TableCell>Loại giao dịch</TableCell>
-            <TableCell>
-              <TableSortLabel
-                active={true}
-                direction={sortByDateOrder}
-                onClick={handleSortByDate}
-              >
-                Ngày giao dịch
-              </TableSortLabel>
-            </TableCell>
-            <TableCell>Tổng tiền</TableCell>
-            <TableCell>Trạng thái</TableCell>
-            <TableCell align="center">Hành động</TableCell>
-          </TableRow>
-        </TableHead>
-        <motion.tbody
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions.map((transaction, index) => (
-              <motion.tr
-                key={transaction._id}
-                variants={itemVariants}
-                component={TableRow}
-                hover
-              >
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {getEntityName(transaction)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {transaction.transactionType === "import" ? "Nhà cung cấp" : "Người nhận"}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={transaction.transactionType === "import" ? "Nhập" : "Xuất"}
-                    color={transaction.transactionType === "import" ? "success" : "error"}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {transaction.transactionDate
-                    ? new Date(transaction.transactionDate).toLocaleDateString("vi-VN")
-                    : "N/A"}
-                </TableCell>
-                <TableCell>
-                  {(() => {
-                    const total = calculateTransactionTotal(transaction);
-                    return total > 0 ? total.toLocaleString("vi-VN") + " VNĐ" : "N/A";
-                  })()}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={getStatusLabel(transaction.status)}
-                    color={getStatusChipColor(transaction.status)}
-                    size="small"
-                    sx={{ cursor: transaction.status === "pending" && !editedTransactions.has(transaction._id) ? "pointer" : "default" }}
-                    onClick={() => openStatusModal(transaction)}
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    title="Xem chi tiết"
-                    onClick={() =>
-                      navigate(
-                        transaction.transactionType === "import"
-                          ? `/transaction/${transaction._id}`
-                          : `/export-detail/${transaction._id}`
-                      )
-                    }
-                    sx={{ color: palette.medium }}
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                  {transaction.transactionType === "import" && (
-                    <IconButton
-                      title="Rà soát"
-                      onClick={() =>
-                        navigate(`/edit-transaction/${transaction._id}`)
-                      }
-                      disabled={transaction.status !== "pending"}
-                      sx={{ color: transaction.status === "pending" ? "warning.main" : "grey.400" }}
-                    >
-                      <EditNoteIcon />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </motion.tr>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                <Typography variant="body1">
-                  Không có giao dịch nào
-                </Typography>
+    <Card sx={{ p: 3 }}>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow
+              sx={{
+                "& .MuiTableCell-root": {
+                  fontWeight: "bold",
+                  backgroundColor: "#f5f5f5",
+                },
+              }}
+            >
+              <TableCell>#</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={true}
+                  direction={sortOrder}
+                  onClick={handleSortBySupplierOrBranch}
+                >
+                  Nhà cung cấp / Người nhận
+                </TableSortLabel>
               </TableCell>
+              <TableCell>Loại giao dịch</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={true}
+                  direction={sortByDateOrder}
+                  onClick={handleSortByDate}
+                >
+                  Ngày giao dịch
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Tổng tiền</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell align="center">Hành động</TableCell>
             </TableRow>
-          )}
-        </motion.tbody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <motion.tbody
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {filteredTransactions.length > 0 ? (
+              filteredTransactions.map((transaction, index) => (
+                <motion.tr
+                  key={transaction._id}
+                  variants={itemVariants}
+                  component={TableRow}
+                  hover
+                >
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {getEntityName(transaction)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {transaction.transactionType === "import" ? "Nhà cung cấp" : "Người nhận"}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={transaction.transactionType === "import" ? "Nhập" : "Xuất"}
+                      color={transaction.transactionType === "import" ? "success" : "error"}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {transaction.transactionDate
+                      ? new Date(transaction.transactionDate).toLocaleDateString("vi-VN")
+                      : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const total = calculateTransactionTotal(transaction);
+                      return total > 0 ? total.toLocaleString("vi-VN") + " VNĐ" : "N/A";
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getStatusLabel(transaction.status)}
+                      color={getStatusChipColor(transaction.status)}
+                      size="small"
+                      sx={{
+                        cursor: (isManager && transaction.status === "pending" && !editedTransactions.has(transaction._id)) ? "pointer" : "default" // ✅ Chỉ cho cursor pointer với manager
+                      }}
+                      onClick={() => openStatusModal(transaction)}
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      title="Xem chi tiết"
+                      onClick={() =>
+                        navigate(
+                          transaction.transactionType === "import"
+                            ? `/transaction/${transaction._id}`
+                            : `/export-detail/${transaction._id}`
+                        )
+                      }
+                      sx={{ color: palette.medium }}
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+                    {transaction.transactionType === "import" && (
+                      <IconButton
+                        title="Rà soát"
+                        onClick={() =>
+                          navigate(`/edit-transaction/${transaction._id}`)
+                        }
+                        disabled={transaction.status !== "pending"}
+                        sx={{ color: transaction.status === "pending" ? "warning.main" : "grey.400" }}
+                      >
+                        <EditNoteIcon />
+                      </IconButton>
+                    )}
+                  </TableCell>
+                </motion.tr>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                  <Typography>Không có giao dịch nào</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </motion.tbody>
+        </Table>
+      </TableContainer>
+    </Card>
   );
 
   const renderMobileView = () => (
-    <Box
-      component={motion.div}
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <Box>
       {filteredTransactions.length > 0 ? (
-        filteredTransactions.map((transaction) => (
-          <motion.div key={transaction._id} variants={itemVariants}>
-            <Card sx={{ mb: 2 }}>
-              <CardHeader
-                title={getEntityName(transaction)}
-                subheader={
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {transaction.transactionType === "import" ? "Nhà cung cấp" : "Người nhận"}
-                    </Typography>
-                    <br />
-                    <Typography variant="caption">
-                      {transaction.transactionDate
-                        ? new Date(transaction.transactionDate).toLocaleDateString("vi-VN")
-                        : "N/A"}
-                    </Typography>
-                  </Box>
-                }
-                action={
-                  <Chip
-                    label={transaction.transactionType === "import" ? "Nhập" : "Xuất"}
-                    color={transaction.transactionType === "import" ? "success" : "error"}
-                    size="small"
-                  />
-                }
-              />
+        filteredTransactions.map((transaction, index) => (
+          <motion.div
+            key={transaction._id}
+            variants={itemVariants}
+            style={{ marginBottom: 16 }}
+          >
+            <Card>
               <CardContent>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   <strong>Tổng tiền:</strong>{" "}
@@ -465,7 +444,9 @@ const ListTransaction = () => {
                     label={getStatusLabel(transaction.status)}
                     color={getStatusChipColor(transaction.status)}
                     size="small"
-                    sx={{ cursor: transaction.status === "pending" && !editedTransactions.has(transaction._id) ? "pointer" : "default" }}
+                    sx={{
+                      cursor: (isManager && transaction.status === "pending" && !editedTransactions.has(transaction._id)) ? "pointer" : "default" // ✅ Chỉ cho cursor pointer với manager
+                    }}
                     onClick={() => openStatusModal(transaction)}
                   />
                 </Box>
@@ -500,7 +481,7 @@ const ListTransaction = () => {
                     disabled={transaction.status !== "pending"}
                     color="warning"
                   >
-                    Rà soát
+                    Chỉnh sửa
                   </Button>
                 )}
               </Box>
@@ -508,8 +489,8 @@ const ListTransaction = () => {
           </motion.div>
         ))
       ) : (
-        <Card sx={{ mb: 2, p: 3, textAlign: "center" }}>
-          <Typography variant="body1">Không có giao dịch nào</Typography>
+        <Card sx={{ p: 3, textAlign: "center" }}>
+          <Typography>Không có giao dịch nào</Typography>
         </Card>
       )}
     </Box>

@@ -48,5 +48,11 @@ router.get(
   authenticateJWT,
   stocktakingController.getAdjustmentHistory
 );
+// Xóa phiếu kiểm kê (chỉ cho phép xóa phiếu pending)
+router.delete(
+  "/delete/:id",
+  authenticateJWT,
+  stocktakingController.deleteStocktakingTask
+);
 
 module.exports = router;

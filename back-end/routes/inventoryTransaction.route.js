@@ -1,26 +1,33 @@
 const express = require("express");
 const inventoryTransactionRouter = express.Router();
 const { InventoryTransactionController } = require("../controllers");
-const { authenticateJWT } = require("../middlewares/jwtMiddleware");
+const {
+  authenticateJWT,
+  roleAuthenticate,
+} = require("../middlewares/jwtMiddleware");
 
 inventoryTransactionRouter.get(
   "/getAllTransactions",
+  authenticateJWT,
   InventoryTransactionController.getAllTransactions
 );
 inventoryTransactionRouter.get(
   "/getTransactionById/:id",
+  authenticateJWT,
   InventoryTransactionController.getTransactionById
 );
-
 inventoryTransactionRouter.put(
   "/updateTransaction/:id",
+  authenticateJWT,
+  roleAuthenticate(["manager"]), // ✅ CHỈ MANAGER MỚI ĐƯỢC SỬA
   InventoryTransactionController.updateTransaction
 );
 inventoryTransactionRouter.put(
   "/updateTransactionStatus/:id",
+  authenticateJWT,
+  roleAuthenticate(["manager"]), // ✅ CHỈ MANAGER MỚI ĐƯỢC ĐỔI TRẠNG THÁI
   InventoryTransactionController.updateTransactionStatus
 );
-
 inventoryTransactionRouter.post(
   "/createTransaction",
   authenticateJWT,
@@ -28,6 +35,7 @@ inventoryTransactionRouter.post(
 );
 inventoryTransactionRouter.post(
   "/create-receipts",
+  authenticateJWT,
   InventoryTransactionController.createReceipt
 );
 

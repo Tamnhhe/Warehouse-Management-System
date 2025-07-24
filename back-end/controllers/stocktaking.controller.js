@@ -140,11 +140,54 @@ exports.updateStocktakingTask = async (req, res) => {
   try {
     const { id } = req.params;
     const { products } = req.body; // [{productId, actualQuantity, note}]
+    
     const task = await StocktakingTask.findById(id);
     if (!task)
       return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
     if (task.status !== "pending")
       return res.status(400).json({ message: "Phiếu kiểm kê đã hoàn thành" });
+
+    // Validation cho từng sản phẩm
+    const validationErrors = [];
+    for (const product of products) {
+      // Kiểm tra actualQuantity phải là số hợp lệ
+      if (typeof product.actualQuantity !== 'number' || isNaN(product.actualQuantity)) {
+        const productName = task.products.find(p => p.productId.toString() === product.productId)?.productName || product.productId;
+        validationErrors.push(`Số lượng thực tế của sản phẩm "${productName}" phải là một số hợp lệ`);
+        continue;
+      }
+
+      // Kiểm tra số lượng không được âm
+      if (product.actualQuantity < 0) {
+        const productName = task.products.find(p => p.productId.toString() === product.productId)?.productName || product.productId;
+        validationErrors.push(`Số lượng thực tế của sản phẩm "${productName}" không được âm (${product.actualQuantity})`);
+      }
+
+      // Cảnh báo nếu số lượng bằng 0 (không chặn nhưng ghi log)
+      if (product.actualQuantity === 0) {
+        const productName = task.products.find(p => p.productId.toString() === product.productId)?.productName || product.productId;
+        console.warn(`⚠️ Cảnh báo: Sản phẩm "${productName}" có số lượng thực tế bằng 0`);
+      }
+
+      // Kiểm tra chênh lệch quá lớn (có thể là lỗi nhập liệu)
+      const systemQuantity = task.products.find(p => p.productId.toString() === product.productId)?.systemQuantity || 0;
+      const difference = Math.abs(product.actualQuantity - systemQuantity);
+      const percentageDiff = systemQuantity > 0 ? (difference / systemQuantity) * 100 : 0;
+      
+      if (percentageDiff > 50 && systemQuantity > 0) { // Chênh lệch > 50%
+        const productName = task.products.find(p => p.productId.toString() === product.productId)?.productName || product.productId;
+        console.warn(`⚠️ Cảnh báo: Sản phẩm "${productName}" có chênh lệch lớn: Hệ thống ${systemQuantity}, Thực tế ${product.actualQuantity} (${percentageDiff.toFixed(1)}%)`);
+      }
+    }
+
+    // Nếu có lỗi validation, trả về lỗi
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        message: "Dữ liệu kiểm kê không hợp lệ",
+        errors: validationErrors
+      });
+    }
+    
     // Cập nhật actualQuantity và difference
     task.products = task.products.map((tp) => {
       const found = products.find(
@@ -160,11 +203,14 @@ exports.updateStocktakingTask = async (req, res) => {
       }
       return tp;
     });
+    
     task.status = "completed";
     task.checkedAt = new Date();
     await task.save();
+    
     res.json({ message: "Cập nhật phiếu kiểm kê thành công", task });
   } catch (err) {
+    console.error("Lỗi khi cập nhật phiếu kiểm kê:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -198,9 +244,12 @@ exports.createAdjustment = async (req, res) => {
     // Kiểm tra có lệch không
     const diffProducts = task.products.filter((p) => p.difference !== 0);
     if (diffProducts.length === 0) {
+      // Nếu không có lệch, chuyển trạng thái thành "adjusted" luôn
+      task.status = "adjusted";
+      await task.save();
       return res
         .status(200)
-        .json({ message: "Không có lệch kho, không cần điều chỉnh" });
+        .json({ message: "Không có lệch kho, phiếu kiểm kê đã hoàn thành" });
     }
 
     // Tạo phiếu điều chỉnh
@@ -266,8 +315,9 @@ exports.createAdjustment = async (req, res) => {
       }
     }
 
-    // Gắn adjustmentId vào task
+    // Gắn adjustmentId vào task và chuyển trạng thái thành "adjusted"
     task.adjustmentId = adjustment._id;
+    task.status = "adjusted"; // Chuyển sang trạng thái "adjusted"
     await task.save();
 
     // Gửi thông báo Socket.IO cho nhân viên khi manager tạo phiếu điều chỉnh
@@ -351,6 +401,34 @@ exports.getStocktakingTaskDetail = async (req, res) => {
     }
     res.json(task);
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Xóa phiếu kiểm kê (chỉ được phép xóa khi status = "pending")
+exports.deleteStocktakingTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Tìm phiếu kiểm kê
+    const task = await StocktakingTask.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: "Không tìm thấy phiếu kiểm kê" });
+    }
+
+    // Chỉ cho phép xóa phiếu kiểm kê có trạng thái "pending"
+    if (task.status !== "pending") {
+      return res.status(400).json({
+        message: "Chỉ có thể xóa phiếu kiểm kê đang chờ xử lý",
+      });
+    }
+
+    // Xóa phiếu kiểm kê
+    await StocktakingTask.findByIdAndDelete(id);
+
+    res.json({ message: "Xóa phiếu kiểm kê thành công" });
+  } catch (err) {
+    console.error("Lỗi khi xóa phiếu kiểm kê:", err);
     res.status(500).json({ message: err.message });
   }
 };

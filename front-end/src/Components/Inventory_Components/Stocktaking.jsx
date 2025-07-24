@@ -24,10 +24,21 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  FormLabel,
+  Divider,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import SelectAllIcon from "@mui/icons-material/SelectAll";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   getInventories,
   getStocktakingHistory,
@@ -35,6 +46,7 @@ import {
   createPendingStocktaking,
   updateStocktaking,
   createAdjustment,
+  deleteStocktakingTask,
 } from "../../API/stocktakingAPI";
 import useAuth from "../../Hooks/useAuth";
 
@@ -43,6 +55,10 @@ function Stocktaking() {
   const [inventories, setInventories] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [openCreate, setOpenCreate] = useState(false);
+
+  // Thêm state cho loại kiểm kê
+  const [stocktakingType, setStocktakingType] = useState("single"); // "single" hoặc "warehouse"
+  const [selectedInventories, setSelectedInventories] = useState([]); // Cho kiểm kê toàn bộ kho
   const [createInventoryId, setCreateInventoryId] = useState("");
   const [createProducts, setCreateProducts] = useState([]);
   const [createProductIds, setCreateProductIds] = useState([]);
@@ -58,6 +74,11 @@ function Stocktaking() {
   const [initialized, setInitialized] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  // Thêm state cho dialog xác nhận xóa
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchInventories = useCallback(async () => {
     try {
@@ -119,11 +140,47 @@ function Stocktaking() {
       return;
     }
 
+    // Reset states
+    setStocktakingType("single");
+    setSelectedInventories([]);
     setCreateInventoryId("");
     setCreateProducts([]);
     setCreateProductIds([]);
     setErrorMessage("");
     setOpenCreate(true);
+  };
+
+  // Xử lý thay đổi loại kiểm kê
+  const handleStocktakingTypeChange = (event) => {
+    const type = event.target.value;
+    setStocktakingType(type);
+
+    if (type === "warehouse") {
+      // Khi chọn kiểm kê toàn bộ kho, tự động chọn tất cả kệ
+      setSelectedInventories(inventories.map(inv => inv._id));
+
+      // Lấy tất cả sản phẩm từ tất cả kệ
+      const allProducts = [];
+      const allProductIds = [];
+      inventories.forEach(inv => {
+        if (inv.products && inv.products.length > 0) {
+          inv.products.forEach(prod => {
+            if (!allProductIds.includes(prod.productId)) {
+              allProducts.push(prod);
+              allProductIds.push(prod.productId);
+            }
+          });
+        }
+      });
+      setCreateProducts(allProducts);
+      setCreateProductIds(allProductIds);
+    } else {
+      // Reset về chế độ chọn từng kệ
+      setSelectedInventories([]);
+      setCreateInventoryId("");
+      setCreateProducts([]);
+      setCreateProductIds([]);
+    }
   };
 
   const handleSelectCreateInventory = (id) => {
@@ -139,6 +196,17 @@ function Stocktaking() {
     );
   };
 
+  // Hàm chọn tất cả sản phẩm trong kệ hiện tại
+  const handleSelectAllProducts = () => {
+    if (createProductIds.length === createProducts.length) {
+      // Nếu đã chọn tất cả, bỏ chọn tất cả
+      setCreateProductIds([]);
+    } else {
+      // Chọn tất cả sản phẩm
+      setCreateProductIds(createProducts.map(prod => prod.productId));
+    }
+  };
+
   const handleSubmitCreate = async () => {
     setCreateLoading(true);
     setErrorMessage("");
@@ -151,43 +219,78 @@ function Stocktaking() {
         return;
       }
 
-      // Kiểm tra dữ liệu đầu vào
-      if (!createInventoryId) {
-        setErrorMessage("Vui lòng chọn kệ");
-        setCreateLoading(false);
-        return;
-      }
-      if (createProductIds.length === 0) {
-        setErrorMessage("Vui lòng chọn ít nhất một sản phẩm");
-        setCreateLoading(false);
-        return;
+      if (stocktakingType === "warehouse") {
+        // Kiểm kê toàn bộ kho - tạo nhiều phiếu kiểm kê
+        if (selectedInventories.length === 0) {
+          setErrorMessage("Không có kệ nào để kiểm kê");
+          setCreateLoading(false);
+          return;
+        }
+
+        const results = [];
+        for (const inventoryId of selectedInventories) {
+          const inv = inventories.find(i => i._id === inventoryId);
+          if (inv && inv.products && inv.products.length > 0) {
+            const productIds = inv.products.map(prod => prod.productId);
+
+            const data = {
+              inventoryId: inventoryId,
+              productIds: productIds,
+              auditor: user._id,
+            };
+
+            try {
+              const result = await createPendingStocktaking(data);
+              results.push(result);
+            } catch (err) {
+              console.error(`Lỗi tạo phiếu kiểm kê cho kệ ${inv.name}:`, err);
+            }
+          }
+        }
+
+        if (results.length > 0) {
+          setSuccessMessage(`Đã tạo thành công ${results.length} phiếu kiểm kê cho toàn bộ kho!`);
+        } else {
+          setErrorMessage("Không thể tạo phiếu kiểm kê nào");
+        }
+      } else {
+        // Kiểm kê từng kệ - logic cũ
+        if (!createInventoryId) {
+          setErrorMessage("Vui lòng chọn kệ");
+          setCreateLoading(false);
+          return;
+        }
+        if (createProductIds.length === 0) {
+          setErrorMessage("Vui lòng chọn ít nhất một sản phẩm");
+          setCreateLoading(false);
+          return;
+        }
+
+        const data = {
+          inventoryId: createInventoryId,
+          productIds: createProductIds,
+          auditor: user._id,
+        };
+
+        await createPendingStocktaking(data);
+        setSuccessMessage("Tạo phiếu kiểm kê thành công!");
       }
 
-      const data = {
-        inventoryId: createInventoryId,
-        productIds: createProductIds,
-        auditor: user._id,
-      };
-      console.log("Gửi dữ liệu:", data);
-      const result = await createPendingStocktaking(data);
-      console.log("Kết quả:", result);
-
-      // Đóng modal trước
+      // Đóng modal và reset states
       setOpenCreate(false);
-
-      // Đảm bảo các state được reset
+      setStocktakingType("single");
+      setSelectedInventories([]);
       setCreateInventoryId("");
       setCreateProducts([]);
       setCreateProductIds([]);
 
       // Hiển thị thông báo thành công
-      setSuccessMessage("Tạo phiếu kiểm kê thành công!");
       setOpenSnackbar(true);
 
       // Tải lại danh sách phiếu kiểm kê
       try {
         await fetchTasks();
-        setErrorMessage(""); // Xóa thông báo lỗi nếu có
+        setErrorMessage("");
       } catch (fetchError) {
         console.error("Lỗi khi tải lại danh sách phiếu:", fetchError);
       }
@@ -243,12 +346,51 @@ function Stocktaking() {
 
   const handleSubmitStocktaking = async () => {
     setErrorMessage("");
-    try {
-      const reqProducts = currentTask.products.map((p) => ({
+    
+    // Validation phía frontend trước khi gửi request
+    const validationErrors = [];
+    const reqProducts = currentTask.products.map((p) => {
+      const actualQuantity = Number(actualQuantities[p.productId] || 0);
+      
+      // Kiểm tra số lượng hợp lệ
+      if (isNaN(actualQuantity)) {
+        validationErrors.push(`Số lượng thực tế của sản phẩm "${p.productName || p.productId}" phải là một số hợp lệ`);
+        return null;
+      }
+      
+      // Kiểm tra số lượng không được âm
+      if (actualQuantity < 0) {
+        validationErrors.push(`Số lượng thực tế của sản phẩm "${p.productName || p.productId}" không được âm (${actualQuantity})`);
+        return null;
+      }
+      
+      // Cảnh báo nếu số lượng bằng 0
+      if (actualQuantity === 0) {
+        console.warn(`⚠️ Cảnh báo: Sản phẩm "${p.productName || p.productId}" có số lượng thực tế bằng 0`);
+      }
+      
+      // Cảnh báo chênh lệch lớn
+      const difference = Math.abs(actualQuantity - p.systemQuantity);
+      const percentageDiff = p.systemQuantity > 0 ? (difference / p.systemQuantity) * 100 : 0;
+      
+      if (percentageDiff > 50 && p.systemQuantity > 0) {
+        console.warn(`⚠️ Cảnh báo: Sản phẩm "${p.productName || p.productId}" có chênh lệch lớn: Hệ thống ${p.systemQuantity}, Thực tế ${actualQuantity} (${percentageDiff.toFixed(1)}%)`);
+      }
+      
+      return {
         productId: p.productId,
-        actualQuantity: Number(actualQuantities[p.productId] || 0),
+        actualQuantity: actualQuantity,
         note: productNotes[p.productId] || "",
-      }));
+      };
+    }).filter(p => p !== null); // Loại bỏ các sản phẩm lỗi
+    
+    // Hiển thị lỗi validation nếu có
+    if (validationErrors.length > 0) {
+      setErrorMessage(validationErrors.join(". "));
+      return;
+    }
+    
+    try {
       const response = await updateStocktaking(currentTask._id, {
         products: reqProducts,
       });
@@ -256,9 +398,15 @@ function Stocktaking() {
       fetchTasks();
     } catch (err) {
       console.error("Lỗi khi xác nhận kiểm kê:", err);
-      setErrorMessage(
-        err.response?.data?.message || "Lỗi khi xác nhận kiểm kê!"
-      );
+      
+      // Xử lý lỗi từ backend
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        setErrorMessage(err.response.data.errors.join(". "));
+      } else {
+        setErrorMessage(
+          err.response?.data?.message || "Lỗi khi xác nhận kiểm kê!"
+        );
+      }
     }
   };
 
@@ -285,8 +433,79 @@ function Stocktaking() {
     }
   };
 
+  // Hàm xử lý xóa phiếu kiểm kê
+  const handleDeleteTask = (task) => {
+    if (task.status !== "pending") {
+      setErrorMessage("Chỉ có thể xóa phiếu kiểm kê đang chờ xử lý");
+      return;
+    }
+    setTaskToDelete(task);
+    setOpenDeleteDialog(true);
+  };
+
+  // Xác nhận xóa phiếu kiểm kê
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      await deleteStocktakingTask(taskToDelete._id);
+      setSuccessMessage("Xóa phiếu kiểm kê thành công!");
+      setOpenSnackbar(true);
+
+      // Tải lại danh sách phiếu kiểm kê
+      await fetchTasks();
+
+      // Đóng dialog
+      setOpenDeleteDialog(false);
+      setTaskToDelete(null);
+    } catch (err) {
+      console.error("Lỗi khi xóa phiếu kiểm kê:", err);
+      setErrorMessage(
+        err.response?.data?.message || "Lỗi khi xóa phiếu kiểm kê!"
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Hủy xóa phiếu kiểm kê
+  const handleCancelDelete = () => {
+    setOpenDeleteDialog(false);
+    setTaskToDelete(null);
+  };
+
+  // Hàm đóng snackbar thông báo
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
+  };
+
+  // Hàm để hiển thị trạng thái
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "pending":
+        return "Chờ kiểm kê";
+      case "completed":
+        return "Chờ điều chỉnh";
+      case "adjusted":
+        return "Đã hoàn thành";
+      default:
+        return status;
+    }
+  };
+
+  // Hàm để lấy màu chip theo trạng thái
+  const getStatusChipColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "warning"; // Màu cam cho chờ kiểm kê
+      case "completed":
+        return "info";    // Màu xanh dương cho chờ điều chỉnh
+      case "adjusted":
+        return "success"; // Màu xanh lá cho đã hoàn thành
+      default:
+        return "default";
+    }
   };
 
   return (
@@ -366,34 +585,52 @@ function Stocktaking() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        {task.status === "completed"
-                          ? "Đã hoàn thành"
-                          : "Chờ kiểm kê"}
+                        <Chip
+                          label={getStatusLabel(task.status)}
+                          color={getStatusChipColor(task.status)}
+                          size="small"
+                        />
                       </TableCell>
                       <TableCell>
                         {task.adjustmentId ? "Đã điều chỉnh" : "-"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<VisibilityIcon />}
-                          onClick={() => handleOpenTask(task)}
-                        >
-                          Xem
-                        </Button>
-                        {task.status === "pending" && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="info"
-                            sx={{ ml: 1 }}
-                            startIcon={<FactCheckIcon />}
-                            onClick={() => handleOpenTask(task)}
-                          >
-                            Kiểm kê
-                          </Button>
-                        )}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Xem chi tiết">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenTask(task)}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Tooltip>
+
+                          {task.status === "pending" && (
+                            <>
+                              <Tooltip title="Kiểm kê">
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="info"
+                                  startIcon={<FactCheckIcon />}
+                                  onClick={() => handleOpenTask(task)}
+                                >
+                                  Kiểm kê
+                                </Button>
+                              </Tooltip>
+
+                              <Tooltip title="Xóa phiếu kiểm kê">
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDeleteTask(task)}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
@@ -424,57 +661,151 @@ function Stocktaking() {
             </Alert>
           </Snackbar>
 
-          {/* Popup tạo phiếu kiểm kê mới */}
+          {/* Popup tạo phiếu kiểm kê mới - CẬP NHẬT */}
           <Dialog
             open={openCreate}
             onClose={() => setOpenCreate(false)}
-            maxWidth="sm"
+            maxWidth="md"
             fullWidth
           >
-            <DialogTitle>Tạo phiếu kiểm kê mới</DialogTitle>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FactCheckIcon color="primary" />
+                Tạo phiếu kiểm kê mới
+              </Box>
+            </DialogTitle>
             <DialogContent>
-              <FormControl fullWidth margin="dense">
-                <InputLabel id="create-inventory-label">Chọn kệ</InputLabel>
-                <Select
-                  labelId="create-inventory-label"
-                  value={createInventoryId}
-                  label="Chọn kệ"
-                  onChange={(e) => handleSelectCreateInventory(e.target.value)}
+              {/* Chọn loại kiểm kê */}
+              <FormControl component="fieldset" sx={{ mb: 3 }}>
+                <FormLabel component="legend" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  Chọn loại kiểm kê
+                </FormLabel>
+                <RadioGroup
+                  value={stocktakingType}
+                  onChange={handleStocktakingTypeChange}
+                  row
                 >
-                  <MenuItem value="">-- Chọn kệ --</MenuItem>
-                  {inventories.map((inv) => (
-                    <MenuItem key={inv._id} value={inv._id}>
-                      {inv.name} ({inv.category?.categoryName || inv.categoryId}
-                      )
-                    </MenuItem>
-                  ))}
-                </Select>
+                  <FormControlLabel
+                    value="single"
+                    control={<Radio />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <SelectAllIcon />
+                        Kiểm kê từng kệ
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel
+                    value="warehouse"
+                    control={<Radio />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WarehouseIcon />
+                        Kiểm kê toàn bộ kho
+                      </Box>
+                    }
+                  />
+                </RadioGroup>
               </FormControl>
-              {createProducts.length > 0 && (
-                <FormControl fullWidth margin="dense">
-                  <InputLabel id="create-product-label">
-                    Chọn sản phẩm kiểm kê
-                  </InputLabel>
-                  <Select
-                    labelId="create-product-label"
-                    multiple
-                    value={createProductIds}
-                    onChange={(e) => setCreateProductIds(e.target.value)}
-                    renderValue={(selected) => selected.length + " sản phẩm"}
-                  >
-                    {createProducts.map((prod) => (
-                      <MenuItem key={prod.productId} value={prod.productId}>
-                        <Checkbox
-                          checked={createProductIds.includes(prod.productId)}
-                        />
-                        <ListItemText
-                          primary={`${prod.productName} (${prod.unit || ""})`}
-                        />
-                      </MenuItem>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {stocktakingType === "warehouse" ? (
+                /* Hiển thị thông tin kiểm kê toàn bộ kho */
+                <Box>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Kiểm kê toàn bộ kho:</strong> Hệ thống sẽ tự động tạo phiếu kiểm kê cho tất cả {inventories.length} kệ có sản phẩm trong kho.
+                    </Typography>
+                  </Alert>
+
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Danh sách kệ sẽ được kiểm kê:
+                  </Typography>
+
+                  <Box sx={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
+                    {inventories.filter(inv => inv.products && inv.products.length > 0).map((inv) => (
+                      <Chip
+                        key={inv._id}
+                        label={`${inv.name} (${inv.products?.length || 0} sản phẩm)`}
+                        variant="outlined"
+                        sx={{ m: 0.5 }}
+                        color="primary"
+                      />
                     ))}
-                  </Select>
-                </FormControl>
+                  </Box>
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    Tổng cộng: {inventories.filter(inv => inv.products && inv.products.length > 0).length} kệ sẽ được tạo phiếu kiểm kê
+                  </Typography>
+                </Box>
+              ) : (
+                /* Hiển thị form chọn từng kệ */
+                <Box>
+                  <FormControl fullWidth margin="dense">
+                    <InputLabel id="create-inventory-label">Chọn kệ</InputLabel>
+                    <Select
+                      labelId="create-inventory-label"
+                      value={createInventoryId}
+                      label="Chọn kệ"
+                      onChange={(e) => handleSelectCreateInventory(e.target.value)}
+                    >
+                      <MenuItem value="">-- Chọn kệ --</MenuItem>
+                      {inventories.map((inv) => (
+                        <MenuItem key={inv._id} value={inv._id}>
+                          {inv.name} ({inv.category?.categoryName || inv.categoryId}) - {inv.products?.length || 0} sản phẩm
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {createProducts.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="h6">
+                          Chọn sản phẩm kiểm kê ({createProductIds.length}/{createProducts.length})
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<SelectAllIcon />}
+                          onClick={handleSelectAllProducts}
+                          sx={{ minWidth: 120 }}
+                        >
+                          {createProductIds.length === createProducts.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                        </Button>
+                      </Box>
+
+                      <FormControl fullWidth margin="dense">
+                        <Select
+                          multiple
+                          value={createProductIds}
+                          onChange={(e) => setCreateProductIds(e.target.value)}
+                          renderValue={(selected) =>
+                            selected.length === createProducts.length
+                              ? "Đã chọn tất cả sản phẩm"
+                              : `${selected.length} sản phẩm được chọn`
+                          }
+                          sx={{ maxHeight: 200 }}
+                        >
+                          {createProducts.map((prod) => (
+                            <MenuItem key={prod.productId} value={prod.productId}>
+                              <Checkbox
+                                checked={createProductIds.includes(prod.productId)}
+                              />
+                              <ListItemText
+                                primary={`${prod.productName} (${prod.unit || ""})`}
+                                secondary={`Số lượng: ${prod.quantity}`}
+                              />
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
+                </Box>
               )}
+
               {errorMessage && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   {errorMessage}
@@ -487,15 +818,17 @@ function Stocktaking() {
                 variant="contained"
                 onClick={handleSubmitCreate}
                 disabled={
-                  !createInventoryId ||
-                  createProductIds.length === 0 ||
-                  createLoading
+                  createLoading ||
+                  (stocktakingType === "single" && (!createInventoryId || createProductIds.length === 0)) ||
+                  (stocktakingType === "warehouse" && inventories.filter(inv => inv.products && inv.products.length > 0).length === 0)
                 }
+                startIcon={createLoading ? <CircularProgress size={20} /> : <FactCheckIcon />}
               >
-                Tạo phiếu
+                {createLoading ? 'Đang tạo...' : 'Tạo phiếu kiểm kê'}
               </Button>
             </DialogActions>
           </Dialog>
+
           {/* Popup chi tiết/thao tác phiếu kiểm kê */}
           <Dialog
             open={openTask}
@@ -531,10 +864,7 @@ function Stocktaking() {
                       : "-"}
                   </Typography>
                   <Typography>
-                    Trạng thái:{" "}
-                    {currentTask.status === "completed"
-                      ? "Đã hoàn thành"
-                      : "Chờ kiểm kê"}
+                    Trạng thái: {getStatusLabel(currentTask.status)}
                   </Typography>
                   <Box sx={{ mt: 2 }}>
                     {currentTask.products.map((prod, idx) => (
@@ -592,7 +922,7 @@ function Stocktaking() {
                             )}
                           </>
                         )}
-                        {currentTask.status === "completed" && (
+                        {(currentTask.status === "completed" || currentTask.status === "adjusted") && (
                           <Typography
                             sx={{
                               mx: 2,
@@ -621,7 +951,8 @@ function Stocktaking() {
                     >
                       Xác nhận kiểm kê
                     </Button>
-                  ) : !currentTask.adjustmentId &&
+                  ) : currentTask.status === "completed" &&
+                    !currentTask.adjustmentId &&
                     !adjustmentResult &&
                     user?.role === "manager" ? (
                     <Button
@@ -632,7 +963,8 @@ function Stocktaking() {
                     >
                       Tạo phiếu điều chỉnh
                     </Button>
-                  ) : !currentTask.adjustmentId &&
+                  ) : currentTask.status === "completed" &&
+                    !currentTask.adjustmentId &&
                     !adjustmentResult &&
                     user?.role !== "manager" ? (
                     <Typography
@@ -645,6 +977,7 @@ function Stocktaking() {
                       Chỉ quản lý mới có quyền tạo phiếu điều chỉnh
                     </Typography>
                   ) : null}
+
                   {adjustmentResult && (
                     <Box
                       sx={{ mt: 3, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}
@@ -664,6 +997,56 @@ function Stocktaking() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenTask(false)}>Đóng</Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Dialog xác nhận xóa phiếu kiểm kê */}
+          <Dialog
+            open={openDeleteDialog}
+            onClose={handleCancelDelete}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DeleteIcon color="error" />
+                Xác nhận xóa phiếu kiểm kê
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Bạn có chắc chắn muốn xóa phiếu kiểm kê này không?
+              </Alert>
+              {taskToDelete && (
+                <Box>
+                  <Typography variant="body1">
+                    <strong>Kệ:</strong> {taskToDelete.inventoryId?.name || "N/A"}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Người kiểm kê:</strong> {taskToDelete.auditor?.fullName || taskToDelete.auditor?.name || "N/A"}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Trạng thái:</strong> {taskToDelete.status === "pending" ? "Chờ kiểm kê" : "Đã hoàn thành"}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Hành động này không thể hoàn tác!
+                  </Typography>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCancelDelete} disabled={deleteLoading}>
+                Hủy
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                color="error"
+                variant="contained"
+                disabled={deleteLoading}
+                startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+              >
+                {deleteLoading ? 'Đang xóa...' : 'Xóa'}
+              </Button>
             </DialogActions>
           </Dialog>
         </>

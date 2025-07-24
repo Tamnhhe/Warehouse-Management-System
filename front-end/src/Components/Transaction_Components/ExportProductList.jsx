@@ -41,6 +41,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import SyncLockIcon from "@mui/icons-material/SyncLock";
 import useTransaction from "../../Hooks/useTransaction";
+import useAuth from "../../Hooks/useAuth"; // ✅ Thêm useAuth
 import palette from "../../Constants/palette";
 
 const getStatusChipColor = (status) => {
@@ -83,6 +84,10 @@ const ExportProductList = () => {
   const { transactions, loading, getAllTransactions, updateTransactionStatus } =
     useTransaction();
 
+  // ✅ Thêm useAuth để kiểm tra role
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
+
   useEffect(() => {
     getAllTransactions();
   }, []);
@@ -98,6 +103,9 @@ const ExportProductList = () => {
     setSortByDateOrder(sortByDateOrder === "asc" ? "desc" : "asc");
 
   const openStatusModal = (transaction) => {
+    // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
+    if (!isManager) return;
+
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
@@ -213,7 +221,9 @@ const ExportProductList = () => {
                       label={getStatusLabel(transaction.status)}
                       color={getStatusChipColor(transaction.status)}
                       size="small"
-                      sx={{ cursor: "pointer" }}
+                      sx={{
+                        cursor: isManager ? "pointer" : "default", // ✅ Chỉ cho cursor pointer với manager
+                      }}
                       onClick={() => openStatusModal(transaction)}
                     />
                   </TableCell>
@@ -226,13 +236,16 @@ const ExportProductList = () => {
                     >
                       <VisibilityIcon />
                     </IconButton>
-                    <IconButton
-                      title="Thay đổi trạng thái"
-                      onClick={() => openStatusModal(transaction)}
-                      color="primary"
-                    >
-                      <SyncLockIcon />
-                    </IconButton>
+                    {/* ✅ CHỈ HIỂN THỊ NÚT ĐỔI TRẠNG THÁI CHO MANAGER */}
+                    {isManager && (
+                      <IconButton
+                        title="Thay đổi trạng thái"
+                        onClick={() => openStatusModal(transaction)}
+                        color="primary"
+                      >
+                        <SyncLockIcon />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </motion.tr>
               );
@@ -278,6 +291,9 @@ const ExportProductList = () => {
                       label={getStatusLabel(transaction.status)}
                       color={getStatusChipColor(transaction.status)}
                       size="small"
+                      sx={{
+                        cursor: isManager ? "pointer" : "default", // ✅ Chỉ cho cursor pointer với manager
+                      }}
                       onClick={() => openStatusModal(transaction)}
                     />
                   }
@@ -304,13 +320,16 @@ const ExportProductList = () => {
                   >
                     Xem chi tiết
                   </Button>
-                  <Button
-                    startIcon={<SyncLockIcon />}
-                    onClick={() => openStatusModal(transaction)}
-                    color="primary"
-                  >
-                    Đổi trạng thái
-                  </Button>
+                  {/* ✅ CHỈ HIỂN THỊ NÚT ĐỔI TRẠNG THÁI CHO MANAGER */}
+                  {isManager && (
+                    <Button
+                      startIcon={<SyncLockIcon />}
+                      onClick={() => openStatusModal(transaction)}
+                      color="primary"
+                    >
+                      Đổi trạng thái
+                    </Button>
+                  )}
                 </Box>
               </Card>
             </motion.div>
