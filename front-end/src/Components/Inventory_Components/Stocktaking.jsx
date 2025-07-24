@@ -49,9 +49,11 @@ import {
   deleteStocktakingTask,
 } from "../../API/stocktakingAPI";
 import useAuth from "../../Hooks/useAuth";
+import useDataRefresh from "../../Hooks/useDataRefresh"; // Thêm import
 
 function Stocktaking() {
   const { user, loading: authLoading, getCurrentUser } = useAuth();
+  const { triggerRefresh } = useDataRefresh(); // Thêm hook để trigger refresh
   const [inventories, setInventories] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [openCreate, setOpenCreate] = useState(false);
@@ -220,39 +222,58 @@ function Stocktaking() {
       }
 
       if (stocktakingType === "warehouse") {
-        // Kiểm kê toàn bộ kho - tạo nhiều phiếu kiểm kê
-        if (selectedInventories.length === 0) {
-          setErrorMessage("Không có kệ nào để kiểm kê");
+        // Kiểm kê toàn bộ kho - tạo 1 phiếu duy nhất chứa tất cả sản phẩm từ tất cả kệ
+        const warehouseInventories = inventories.filter(inv => inv.products && inv.products.length > 0);
+
+        if (warehouseInventories.length === 0) {
+          setErrorMessage("Không có kệ nào có sản phẩm để kiểm kê");
           setCreateLoading(false);
           return;
         }
 
-        const results = [];
-        for (const inventoryId of selectedInventories) {
-          const inv = inventories.find(i => i._id === inventoryId);
-          if (inv && inv.products && inv.products.length > 0) {
-            const productIds = inv.products.map(prod => prod.productId);
+        // Tạo danh sách tất cả sản phẩm từ tất cả kệ
+        const allProductIds = [];
+        const warehouseInventoriesData = [];
 
-            const data = {
-              inventoryId: inventoryId,
-              productIds: productIds,
-              auditor: user._id,
-            };
+        warehouseInventories.forEach(inv => {
+          const inventoryData = {
+            inventoryId: inv._id,
+            inventoryName: inv.name,
+            products: []
+          };
 
-            try {
-              const result = await createPendingStocktaking(data);
-              results.push(result);
-            } catch (err) {
-              console.error(`Lỗi tạo phiếu kiểm kê cho kệ ${inv.name}:`, err);
-            }
-          }
+          inv.products.forEach(prod => {
+            allProductIds.push(prod.productId);
+            inventoryData.products.push({
+              productId: prod.productId,
+              productName: prod.productName,
+              systemQuantity: prod.quantity,
+              unit: prod.unit
+            });
+          });
+
+          warehouseInventoriesData.push(inventoryData);
+        });
+
+        if (allProductIds.length === 0) {
+          setErrorMessage("Không có sản phẩm nào trong kho để kiểm kê");
+          setCreateLoading(false);
+          return;
         }
 
-        if (results.length > 0) {
-          setSuccessMessage(`Đã tạo thành công ${results.length} phiếu kiểm kê cho toàn bộ kho!`);
-        } else {
-          setErrorMessage("Không thể tạo phiếu kiểm kê nào");
-        }
+        // Sử dụng kệ đầu tiên làm đại diện cho phiếu kiểm kê
+        const firstInventory = warehouseInventories[0];
+
+        const data = {
+          inventoryId: firstInventory._id,
+          productIds: allProductIds,
+          auditor: user._id,
+          isWarehouseStocktaking: true,
+          warehouseInventories: warehouseInventoriesData
+        };
+
+        await createPendingStocktaking(data);
+        setSuccessMessage("Đã tạo thành công 1 phiếu kiểm kê cho toàn bộ kho!");
       } else {
         // Kiểm kê từng kệ - logic cũ
         if (!createInventoryId) {
@@ -311,6 +332,7 @@ function Stocktaking() {
     try {
       const data = await getStocktakingDetail(task._id);
       setCurrentTask(data);
+
       if (data.status === "pending") {
         // Chuẩn bị actualQuantities mặc định = systemQuantity
         setActualQuantities(
@@ -346,50 +368,36 @@ function Stocktaking() {
 
   const handleSubmitStocktaking = async () => {
     setErrorMessage("");
-    
-    // Validation phía frontend trước khi gửi request
-    const validationErrors = [];
+
+    // Kiểm tra số lượng âm trước khi gửi
+    const negativeProducts = [];
     const reqProducts = currentTask.products.map((p) => {
       const actualQuantity = Number(actualQuantities[p.productId] || 0);
-      
-      // Kiểm tra số lượng hợp lệ
-      if (isNaN(actualQuantity)) {
-        validationErrors.push(`Số lượng thực tế của sản phẩm "${p.productName || p.productId}" phải là một số hợp lệ`);
-        return null;
-      }
-      
-      // Kiểm tra số lượng không được âm
       if (actualQuantity < 0) {
-        validationErrors.push(`Số lượng thực tế của sản phẩm "${p.productName || p.productId}" không được âm (${actualQuantity})`);
-        return null;
+        negativeProducts.push({
+          name: p.productName || p.productId,
+          quantity: actualQuantity
+        });
       }
-      
-      // Cảnh báo nếu số lượng bằng 0
-      if (actualQuantity === 0) {
-        console.warn(`⚠️ Cảnh báo: Sản phẩm "${p.productName || p.productId}" có số lượng thực tế bằng 0`);
-      }
-      
-      // Cảnh báo chênh lệch lớn
-      const difference = Math.abs(actualQuantity - p.systemQuantity);
-      const percentageDiff = p.systemQuantity > 0 ? (difference / p.systemQuantity) * 100 : 0;
-      
-      if (percentageDiff > 50 && p.systemQuantity > 0) {
-        console.warn(`⚠️ Cảnh báo: Sản phẩm "${p.productName || p.productId}" có chênh lệch lớn: Hệ thống ${p.systemQuantity}, Thực tế ${actualQuantity} (${percentageDiff.toFixed(1)}%)`);
-      }
-      
       return {
         productId: p.productId,
         actualQuantity: actualQuantity,
         note: productNotes[p.productId] || "",
       };
-    }).filter(p => p !== null); // Loại bỏ các sản phẩm lỗi
-    
-    // Hiển thị lỗi validation nếu có
-    if (validationErrors.length > 0) {
-      setErrorMessage(validationErrors.join(". "));
+    });
+
+    // Nếu có sản phẩm âm, hiển thị cảnh báo và không cho phép tiếp tục
+    if (negativeProducts.length > 0) {
+      const productList = negativeProducts
+        .map(p => `${p.name}: ${p.quantity}`)
+        .join(', ');
+      setErrorMessage(
+        `⚠️ CẢNH BÁO: Có ${negativeProducts.length} sản phẩm có số lượng âm! ` +
+        `Vui lòng kiểm tra lại: ${productList}`
+      );
       return;
     }
-    
+
     try {
       const response = await updateStocktaking(currentTask._id, {
         products: reqProducts,
@@ -398,15 +406,9 @@ function Stocktaking() {
       fetchTasks();
     } catch (err) {
       console.error("Lỗi khi xác nhận kiểm kê:", err);
-      
-      // Xử lý lỗi từ backend
-      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
-        setErrorMessage(err.response.data.errors.join(". "));
-      } else {
-        setErrorMessage(
-          err.response?.data?.message || "Lỗi khi xác nhận kiểm kê!"
-        );
-      }
+      setErrorMessage(
+        err.response?.data?.message || "Lỗi khi xác nhận kiểm kê!"
+      );
     }
   };
 
@@ -424,7 +426,16 @@ function Stocktaking() {
         createdBy: user?._id,
       });
       setAdjustmentResult(response.adjustment);
-      fetchTasks();
+
+      // Refresh dữ liệu sau khi tạo phiếu điều chỉnh thành công
+      await fetchTasks();
+      await fetchInventories();
+
+      // Trigger refresh cho tất cả component khác
+      triggerRefresh();
+
+      setSuccessMessage("Tạo phiếu điều chỉnh thành công! Dữ liệu kệ đã được cập nhật.");
+      setOpenSnackbar(true);
     } catch (err) {
       console.error("Lỗi khi tạo phiếu điều chỉnh:", err);
       setErrorMessage(
@@ -435,8 +446,9 @@ function Stocktaking() {
 
   // Hàm xử lý xóa phiếu kiểm kê
   const handleDeleteTask = (task) => {
-    if (task.status !== "pending") {
-      setErrorMessage("Chỉ có thể xóa phiếu kiểm kê đang chờ xử lý");
+    // Cho phép xóa phiếu pending và completed (chờ điều chỉnh)
+    if (task.status !== "pending" && task.status !== "completed") {
+      setErrorMessage("Chỉ có thể xóa phiếu kiểm kê đang chờ xử lý hoặc chờ điều chỉnh");
       return;
     }
     setTaskToDelete(task);
@@ -508,6 +520,12 @@ function Stocktaking() {
     }
   };
 
+  // Hàm kiểm tra có sản phẩm nào có chênh lệch không
+  const hasAnyDifference = (task) => {
+    if (!task || !task.products) return false;
+    return task.products.some(prod => prod.difference !== 0);
+  };
+
   return (
     <Box sx={{ p: 3, background: "#fff", minHeight: "100vh" }}>
       <Typography
@@ -563,7 +581,7 @@ function Stocktaking() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tasks.length > 0 ? (
+                {tasks.length > 0 ?
                   tasks.map((task) => (
                     <TableRow key={task._id}>
                       <TableCell>
@@ -605,19 +623,21 @@ function Stocktaking() {
                             </IconButton>
                           </Tooltip>
 
-                          {task.status === "pending" && (
+                          {(task.status === "pending" || task.status === "completed") && (
                             <>
-                              <Tooltip title="Kiểm kê">
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  color="info"
-                                  startIcon={<FactCheckIcon />}
-                                  onClick={() => handleOpenTask(task)}
-                                >
-                                  Kiểm kê
-                                </Button>
-                              </Tooltip>
+                              {task.status === "pending" && (
+                                <Tooltip title="Kiểm kê">
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="info"
+                                    startIcon={<FactCheckIcon />}
+                                    onClick={() => handleOpenTask(task)}
+                                  >
+                                    Kiểm kê
+                                  </Button>
+                                </Tooltip>
+                              )}
 
                               <Tooltip title="Xóa phiếu kiểm kê">
                                 <IconButton
@@ -633,14 +653,13 @@ function Stocktaking() {
                         </Box>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
+                  )) :
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       Không có dữ liệu phiếu kiểm kê
                     </TableCell>
                   </TableRow>
-                )}
+                }
               </TableBody>
             </Table>
           </TableContainer>
@@ -715,12 +734,12 @@ function Stocktaking() {
                 <Box>
                   <Alert severity="info" sx={{ mb: 2 }}>
                     <Typography variant="body2">
-                      <strong>Kiểm kê toàn bộ kho:</strong> Hệ thống sẽ tự động tạo phiếu kiểm kê cho tất cả {inventories.length} kệ có sản phẩm trong kho.
+                      <strong>Kiểm kê toàn bộ kho:</strong> Hệ thống sẽ tạo 1 phiếu kiểm kê duy nhất chứa tất cả sản phẩm từ {inventories.filter(inv => inv.products && inv.products.length > 0).length} kệ có sản phẩm trong kho.
                     </Typography>
                   </Alert>
 
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    Danh sách kệ sẽ được kiểm kê:
+                    Danh sách kệ có sản phẩm:
                   </Typography>
 
                   <Box sx={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
@@ -736,7 +755,7 @@ function Stocktaking() {
                   </Box>
 
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    Tổng cộng: {inventories.filter(inv => inv.products && inv.products.length > 0).length} kệ sẽ được tạo phiếu kiểm kê
+                    ✅ Sẽ tạo <strong>1 phiếu kiểm kê duy nhất</strong> chứa tất cả sản phẩm từ {inventories.filter(inv => inv.products && inv.products.length > 0).length} kệ
                   </Typography>
                 </Box>
               ) : (
@@ -866,77 +885,195 @@ function Stocktaking() {
                   <Typography>
                     Trạng thái: {getStatusLabel(currentTask.status)}
                   </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    {currentTask.products.map((prod, idx) => (
-                      <Box
-                        key={prod.productId}
-                        sx={{ display: "flex", alignItems: "center", mb: 2 }}
-                      >
-                        <Typography sx={{ minWidth: 120 }}>
-                          {prod.productName || prod.productId}
-                        </Typography>
-                        <Typography sx={{ mx: 2, color: "#1976d2" }}>
-                          Hệ thống: {prod.systemQuantity} {prod.unit}
-                        </Typography>
-                        {currentTask.status === "pending" ? (
-                          <>
-                            <TextField
-                              label="Thực tế"
-                              type="number"
-                              size="small"
-                              value={actualQuantities[prod.productId]}
-                              onChange={(e) =>
-                                handleChangeActual(
-                                  prod.productId,
-                                  e.target.value
-                                )
-                              }
-                              sx={{ width: 100, mr: 2 }}
-                            />
-                            <TextField
-                              label="Ghi chú"
-                              type="text"
-                              size="small"
-                              value={productNotes[prod.productId] || ""}
-                              onChange={(e) =>
-                                handleChangeNote(prod.productId, e.target.value)
-                              }
-                              sx={{ width: 250 }}
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <Typography sx={{ mx: 2 }}>
-                              Thực tế: {prod.actualQuantity} {prod.unit}
+
+                  {/* Hiển thị sản phẩm theo từng kệ nếu là kiểm kê toàn bộ kho */}
+                  {currentTask.isWarehouseStocktaking ? (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                        📦 Kiểm kê theo từng kệ:
+                      </Typography>
+
+                      {/* Nhóm sản phẩm theo kệ */}
+                      {(() => {
+                        const productsByShelf = {};
+                        currentTask.products.forEach(prod => {
+                          const shelfInfo = prod.inventoryName || prod.inventoryId?.name || "Kệ không xác định";
+                          if (!productsByShelf[shelfInfo]) {
+                            productsByShelf[shelfInfo] = [];
+                          }
+                          productsByShelf[shelfInfo].push(prod);
+                        });
+
+                        return Object.entries(productsByShelf).map(([shelfName, products], shelfIndex) => (
+                          <Box key={shelfIndex} sx={{ mb: 3, border: '1px solid #e0e0e0', borderRadius: 2, p: 2 }}>
+                            <Typography variant="h6" sx={{
+                              mb: 2,
+                              color: "#2e7d32",
+                              backgroundColor: "#e8f5e8",
+                              p: 1,
+                              borderRadius: 1,
+                              fontWeight: 600
+                            }}>
+                              🏷️ {shelfName} ({products.length} sản phẩm)
                             </Typography>
-                            {prod.note && (
-                              <Typography
+
+                            {products.map((prod, idx) => (
+                              <Box
+                                key={prod.productId}
                                 sx={{
-                                  mx: 2,
-                                  color: "text.secondary",
-                                  fontStyle: "italic",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  mb: 2,
+                                  p: 1,
+                                  backgroundColor: idx % 2 === 0 ? "#f9f9f9" : "#ffffff",
+                                  borderRadius: 1
                                 }}
                               >
-                                Ghi chú: {prod.note}
-                              </Typography>
-                            )}
-                          </>
-                        )}
-                        {(currentTask.status === "completed" || currentTask.status === "adjusted") && (
-                          <Typography
-                            sx={{
-                              mx: 2,
-                              fontWeight: 500,
-                              color: prod.difference === 0 ? "green" : "red",
-                            }}
-                          >
-                            Chênh lệch: {prod.difference > 0 ? "+" : ""}
-                            {prod.difference} {prod.unit}
+                                <Typography sx={{ minWidth: 150, fontWeight: 500 }}>
+                                  {prod.productName || prod.productId}
+                                </Typography>
+                                <Typography sx={{ mx: 2, color: "#1976d2", minWidth: 120 }}>
+                                  Hệ thống: {prod.systemQuantity} {prod.unit}
+                                </Typography>
+                                {currentTask.status === "pending" ? (
+                                  <>
+                                    <TextField
+                                      label="Thực tế"
+                                      type="number"
+                                      size="small"
+                                      value={actualQuantities[prod.productId]}
+                                      onChange={(e) =>
+                                        handleChangeActual(
+                                          prod.productId,
+                                          e.target.value
+                                        )
+                                      }
+                                      sx={{ width: 100, mr: 2 }}
+                                    />
+                                    <TextField
+                                      label="Ghi chú"
+                                      type="text"
+                                      size="small"
+                                      value={productNotes[prod.productId] || ""}
+                                      onChange={(e) =>
+                                        handleChangeNote(prod.productId, e.target.value)
+                                      }
+                                      sx={{ width: 250 }}
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <Typography sx={{ mx: 2, minWidth: 120 }}>
+                                      Thực tế: {prod.actualQuantity} {prod.unit}
+                                    </Typography>
+                                    {prod.note && (
+                                      <Typography
+                                        sx={{
+                                          mx: 2,
+                                          color: "text.secondary",
+                                          fontStyle: "italic",
+                                          minWidth: 200
+                                        }}
+                                      >
+                                        Ghi chú: {prod.note}
+                                      </Typography>
+                                    )}
+                                  </>
+                                )}
+                                {(currentTask.status === "completed" || currentTask.status === "adjusted") && (
+                                  <Typography
+                                    sx={{
+                                      mx: 2,
+                                      fontWeight: 600,
+                                      color: prod.difference === 0 ? "green" : "red",
+                                      minWidth: 100
+                                    }}
+                                  >
+                                    Lệch: {prod.difference > 0 ? "+" : ""}
+                                    {prod.difference} {prod.unit}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
+                        ));
+                      })()}
+                    </Box>
+                  ) : (
+                    // Hiển thị thông thường cho kiểm kê từng kệ
+                    <Box sx={{ mt: 2 }}>
+                      {currentTask.products.map((prod, idx) => (
+                        <Box
+                          key={prod.productId}
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
+                          <Typography sx={{ minWidth: 120 }}>
+                            {prod.productName || prod.productId}
                           </Typography>
-                        )}
-                      </Box>
-                    ))}
-                  </Box>
+                          <Typography sx={{ mx: 2, color: "#1976d2" }}>
+                            Hệ thống: {prod.systemQuantity} {prod.unit}
+                          </Typography>
+                          {currentTask.status === "pending" ? (
+                            <>
+                              <TextField
+                                label="Thực tế"
+                                type="number"
+                                size="small"
+                                value={actualQuantities[prod.productId]}
+                                onChange={(e) =>
+                                  handleChangeActual(
+                                    prod.productId,
+                                    e.target.value
+                                  )
+                                }
+                                sx={{ width: 100, mr: 2 }}
+                              />
+                              <TextField
+                                label="Ghi chú"
+                                type="text"
+                                size="small"
+                                value={productNotes[prod.productId] || ""}
+                                onChange={(e) =>
+                                  handleChangeNote(prod.productId, e.target.value)
+                                }
+                                sx={{ width: 250 }}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <Typography sx={{ mx: 2 }}>
+                                Thực tế: {prod.actualQuantity} {prod.unit}
+                              </Typography>
+                              {prod.note && (
+                                <Typography
+                                  sx={{
+                                    mx: 2,
+                                    color: "text.secondary",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  Ghi chú: {prod.note}
+                                </Typography>
+                              )}
+                            </>
+                          )}
+                          {(currentTask.status === "completed" || currentTask.status === "adjusted") && (
+                            <Typography
+                              sx={{
+                                mx: 2,
+                                fontWeight: 500,
+                                color: prod.difference === 0 ? "green" : "red",
+                              }}
+                            >
+                              Chênh lệch: {prod.difference > 0 ? "+" : ""}
+                              {prod.difference} {prod.unit}
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+
                   {errorMessage && (
                     <Alert severity="error" sx={{ mt: 2 }}>
                       {errorMessage}
@@ -954,6 +1091,7 @@ function Stocktaking() {
                   ) : currentTask.status === "completed" &&
                     !currentTask.adjustmentId &&
                     !adjustmentResult &&
+                    hasAnyDifference(currentTask) &&
                     user?.role === "manager" ? (
                     <Button
                       variant="contained"
@@ -966,6 +1104,7 @@ function Stocktaking() {
                   ) : currentTask.status === "completed" &&
                     !currentTask.adjustmentId &&
                     !adjustmentResult &&
+                    hasAnyDifference(currentTask) &&
                     user?.role !== "manager" ? (
                     <Typography
                       sx={{
@@ -976,6 +1115,13 @@ function Stocktaking() {
                     >
                       Chỉ quản lý mới có quyền tạo phiếu điều chỉnh
                     </Typography>
+                  ) : currentTask.status === "completed" &&
+                    !hasAnyDifference(currentTask) ? (
+                    <Alert severity="success" sx={{ mt: 2 }}>
+                      <Typography>
+                        ✅ Kiểm kê hoàn tất! Không có chênh lệch nào, không cần tạo phiếu điều chỉnh.
+                      </Typography>
+                    </Alert>
                   ) : null}
 
                   {adjustmentResult && (

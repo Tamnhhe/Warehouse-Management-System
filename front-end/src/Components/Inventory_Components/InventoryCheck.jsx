@@ -19,6 +19,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import "./inventoryPin.css";
 import useInventory from "../../Hooks/useInventory";
 import useCategory from "../../Hooks/useCategory";
+import useDataRefresh from "../../Hooks/useDataRefresh";
 import AddInventoryModal from "./AddInventoryModal";
 
 const colorList = [
@@ -41,6 +42,9 @@ function InventoryCheck() {
     loading: loadingCategories,
     getAllCategories,
   } = useCategory();
+
+  // Thêm hook để listen refresh trigger
+  const { refreshTrigger } = useDataRefresh();
 
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -81,7 +85,7 @@ function InventoryCheck() {
   useEffect(() => {
     fetchInventories();
     getAllCategories();
-  }, []);
+  }, [refreshTrigger]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
