@@ -50,6 +50,7 @@ import { jwtDecode } from "jwt-decode";
 // Context
 import { NotyfProvider } from "./Contexts/NotyfContext";
 import { NotificationProvider } from "./Contexts/NotificationProvider";
+import { DataRefreshProvider } from "./Hooks/useDataRefresh"; // Thêm import này
 
 // Layout component
 const Layout = ({ children }) => {
@@ -117,236 +118,238 @@ function AppWithAuth() {
   }, []);
 
   return (
-    <NotificationProvider user={user}>
-      <Layout>
-        <Routes>
-          {/* Các Routes vẫn giữ nguyên không thay đổi */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute
-                allowedRoles={["employee", "manager"]}
-                redirectTo="/login"
-              >
-                <Landing />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/verify/:token" element={<ConfirmAccount />} />
-          <Route path="/resetPassword/:id/:token" element={<ResetPassword />} />
+    <DataRefreshProvider>
+      <NotificationProvider user={user}>
+        <Layout>
+          <Routes>
+            {/* Các Routes vẫn giữ nguyên không thay đổi */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["employee", "manager"]}
+                  redirectTo="/login"
+                >
+                  <Landing />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify/:token" element={<ConfirmAccount />} />
+            <Route path="/resetPassword/:id/:token" element={<ResetPassword />} />
 
-          {/* Các route yêu cầu đăng nhập */}
-          <Route
-            path="/manager/create-employee"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <CreateEmployee />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/product"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ProductList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/view-profile"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ViewProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/edit-profile"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <EditProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/change-password"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ChangePassword />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export-product"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ExportProduct />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ExportProductList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export-list"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ExportProductList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/receipts"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                {/* 确保 ListReceipts 组件正确导入 */}
-                <ListReceipts />
-              </ProtectedRoute>
-            }
-          />
+            {/* Các route yêu cầu đăng nhập */}
+            <Route
+              path="/manager/create-employee"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <CreateEmployee />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/product"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ProductList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/view-profile"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ViewProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-profile"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <EditProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export-product"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ExportProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ExportProductList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export-list"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ExportProductList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/receipts"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  {/* 确保 ListReceipts 组件正确导入 */}
+                  <ListReceipts />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/receipt/create"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <CreateReceipt />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/receipt/create"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <CreateReceipt />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/list-transaction"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ListTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transaction/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <DetailTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/export-detail/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <ExportDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/edit-transaction/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <EditTransaction />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/get-all-user"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ListAllUsers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/category"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <ListCategory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/get-list-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["employee", "manager"]}>
-                <SupplierList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/add-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <AddNewSuppliers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/edit-suppliers"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <EditSuppliers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/manage-supplier-products"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ManageSupplierProducts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/category/add-category"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <AddCategory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/inventory-check"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <InventoryCheck />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/stocktaking"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <Stocktaking />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/list-transaction"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ListTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transaction/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <DetailTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export-detail/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <ExportDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-transaction/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}> {/* ✅ CHO PHÉP CẢ EMPLOYEE VÀ MANAGER */}
+                  <EditTransaction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/get-all-user"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ListAllUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/category"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <ListCategory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/get-list-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["employee", "manager"]}>
+                  <SupplierList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/add-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <AddNewSuppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/edit-suppliers"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <EditSuppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/manage-supplier-products"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ManageSupplierProducts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/category/add-category"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <AddCategory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory-check"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <InventoryCheck />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stocktaking"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <Stocktaking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* 添加仓库货架管理路由 */}
-          <Route
-            path="/warehouse"
-            element={
-              <ProtectedRoute allowedRoles={["manager", "employee"]}>
-                <ProductWarehouse />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Layout>
-    </NotificationProvider>
+            {/* 添加仓库货架管理路由 */}
+            <Route
+              path="/warehouse"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <ProductWarehouse />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Layout>
+      </NotificationProvider>
+    </DataRefreshProvider>
   );
 }
 

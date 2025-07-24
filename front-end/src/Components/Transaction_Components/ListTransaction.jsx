@@ -84,6 +84,7 @@ const ListTransaction = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [sortByDateOrder, setSortByDateOrder] = useState("asc"); // ✅ THÊM: Thêm state cho sort date
   const [editedTransactions, setEditedTransactions] = useState(new Set());
 
   const navigate = useNavigate();
@@ -375,6 +376,20 @@ const ListTransaction = () => {
                       }}
                       onClick={() => openStatusModal(transaction)}
                     />
+                    {/* ✅ THÊM: Hiển thị badge "Đã rà soát" cho giao dịch nhập kho */}
+                    {transaction.transactionType === "import" && transaction.reviewedBy && (
+                      <Chip
+                        label={`Đã rà soát bởi ${transaction.reviewedBy.fullName}`}
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                        sx={{
+                          ml: 1,
+                          fontSize: '0.75rem',
+                          height: '20px'
+                        }}
+                      />
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
@@ -450,6 +465,18 @@ const ListTransaction = () => {
                     onClick={() => openStatusModal(transaction)}
                   />
                 </Box>
+                {/* ✅ THÊM: Hiển thị badge "Đã rà soát" trong mobile view cho giao dịch nhập kho */}
+                {transaction.transactionType === "import" && transaction.reviewedBy && (
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                    <Chip
+                      label={`Đã rà soát bởi ${transaction.reviewedBy.fullName}`}
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  </Box>
+                )}
               </CardContent>
               <Box
                 sx={{

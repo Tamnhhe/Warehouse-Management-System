@@ -7,7 +7,7 @@ const generateAccessToken = (user) => {
     { id: user._id, email: user.account.email, role: user.role },
     process.env.ACCESS_TOKEN_SECRET_KEY,
     {
-      expiresIn: 60 * 180, // 1 hour
+      expiresIn: "8h", // ✅ TĂNG LÊN 8 TIẾNG cho ca làm việc
     }
   );
 };

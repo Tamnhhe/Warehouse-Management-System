@@ -47,7 +47,7 @@ const validationSchema = Yup.object({
           .min(1, "Số lượng phải lớn hơn 0"),
         price: Yup.number()
           .required("Đơn giá là bắt buộc")
-          .min(0, "Đơn giá không được âm"),
+          .min(0.01, "Giá nhập phải lớn hơn 0"),
         // Bỏ weight
       })
     )
@@ -295,9 +295,17 @@ const CreateReceipt = () => {
                             e.target.value
                           )
                         }
+                        inputProps={{
+                          min: "0.01",
+                          step: "0.01"
+                        }}
                         error={
                           formik.touched.products?.[index]?.price &&
                           Boolean(formik.errors.products?.[index]?.price)
+                        }
+                        helperText={
+                          formik.touched.products?.[index]?.price &&
+                          formik.errors.products?.[index]?.price
                         }
                       />
                     </TableCell>

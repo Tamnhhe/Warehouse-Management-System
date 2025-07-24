@@ -7,7 +7,17 @@ const checkTokenExpiration = () => {
     if (token) {
         try {
             const { exp } = jwtDecode(token);
-            if (Date.now() >= exp * 1000) {
+            const currentTime = Date.now() / 1000;
+
+            // ✅ THÊM: Kiểm tra nếu token sắp hết hạn trong 30 phút tới
+            const timeUntilExpiry = exp - currentTime;
+            if (timeUntilExpiry < 1800) { // 30 phút = 1800 seconds
+                console.warn('⚠️ Token sắp hết hạn trong 30 phút');
+                // Có thể thêm logic refresh token tại đây
+            }
+
+            if (currentTime >= exp) {
+                console.warn('🚨 Token đã hết hạn');
                 localStorage.removeItem('authToken');
                 return true; // Token hết hạn
             }

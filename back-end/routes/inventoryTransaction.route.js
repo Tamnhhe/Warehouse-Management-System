@@ -19,7 +19,7 @@ inventoryTransactionRouter.get(
 inventoryTransactionRouter.put(
   "/updateTransaction/:id",
   authenticateJWT,
-  roleAuthenticate(["manager"]), // ✅ CHỈ MANAGER MỚI ĐƯỢC SỬA
+  roleAuthenticate(["manager", "employee"]), // ✅ CHO PHÉP CẢ EMPLOYEE VÀ MANAGER RÀ SOÁT
   InventoryTransactionController.updateTransaction
 );
 inventoryTransactionRouter.put(

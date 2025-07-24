@@ -73,6 +73,34 @@ const DetailTransaction = () => {
           </div>
         )}
 
+        <div className="section my-4">
+          <h5>Thông tin người tạo đơn:</h5>
+          <p><strong>Họ tên:</strong> {transaction.operator?.fullName || "Không xác định"}</p>
+          {transaction.operator?.profile?.phoneNumber && (
+            <p><strong>Số điện thoại:</strong> {transaction.operator.profile.phoneNumber}</p>
+          )}
+          {transaction.operator?.account?.email && (
+            <p><strong>Email:</strong> {transaction.operator.account.email}</p>
+          )}
+        </div>
+
+        {/* Thông tin người rà soát (chỉ hiển thị nếu đã có người rà soát) */}
+        {transaction.reviewedBy && (
+          <div className="section my-4">
+            <h5>Thông tin người rà soát:</h5>
+            <p><strong>Họ tên:</strong> {transaction.reviewedBy?.fullName || "Không xác định"}</p>
+            {transaction.reviewedBy?.profile?.phoneNumber && (
+              <p><strong>Số điện thoại:</strong> {transaction.reviewedBy.profile.phoneNumber}</p>
+            )}
+            {transaction.reviewedBy?.account?.email && (
+              <p><strong>Email:</strong> {transaction.reviewedBy.account.email}</p>
+            )}
+            {transaction.reviewedAt && (
+              <p><strong>Thời gian rà soát:</strong> {new Date(transaction.reviewedAt).toLocaleString('vi-VN')}</p>
+            )}
+          </div>
+        )}
+
         <table className="table table-bordered text-center">
           <thead className="table-light">
             <tr>

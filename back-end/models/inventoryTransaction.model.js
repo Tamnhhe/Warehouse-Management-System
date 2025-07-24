@@ -56,7 +56,8 @@ const inventoryTransactionSchema = new mongoose.Schema(
         price: {
           //Giá bán
           type: Number,
-          min: 0,
+          min: [0.01, "Giá nhập phải lớn hơn 0"],
+          required: [true, "Giá nhập là bắt buộc"],
         },
         expiry: {
           //nngaf heetts hạn
@@ -94,6 +95,16 @@ const inventoryTransactionSchema = new mongoose.Schema(
       required: true,
       enum: ["pending", "completed", "cancelled"],
       default: "pending",
+    },
+    // ✅ THÊM: Thông tin rà soát
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+    reviewedAt: {
+      type: Date,
+      required: false,
     },
   },
   { timestamps: true }

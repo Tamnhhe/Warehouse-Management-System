@@ -8,6 +8,7 @@ const getAllTransactions = async (req, res) => {
     const transactions = await db.InventoryTransaction.find()
       .populate("supplier", "name") // Lấy TÊN thay vì chỉ ID
       .populate("branch", "name receiver address phone email") // Populate thông tin branch
+      .populate("reviewedBy", "fullName role") // ✅ THÊM: Populate thông tin người rà soát
       .sort({ transactionDate: -1 });
 
     res.status(200).json(transactions);
@@ -35,7 +36,14 @@ const getTransactionById = async (req, res) => {
         model: "Product",
         strictPopulate: false, // Cho phép populate trường không có trong schema
       })
-      .populate("operator")
+      .populate({
+        path: "operator",
+        select: "fullName account.email profile.phoneNumber profile.address role"
+      }) // ✅ SỬA: Populate đầy đủ thông tin operator
+      .populate({
+        path: "reviewedBy", 
+        select: "fullName account.email profile.phoneNumber profile.address role"
+      }) // ✅ THÊM: Populate thông tin người rà soát
       .populate("branch", "name receiver address phone email"); // Populate thông tin branch
 
     if (!transaction) {
@@ -339,6 +347,14 @@ const createReceipt = async (req, res) => {
     const processedProducts = [];
     for (const product of products) {
       try {
+        console.log("🔍 DEBUG - Processing product:", {
+          productName: product.productName,
+          price: product.price,
+          priceType: typeof product.price,
+          quantity: product.quantity,
+          quantityType: typeof product.quantity,
+        });
+
         // Validate required product fields
         if (
           !product.productName ||
@@ -350,6 +366,31 @@ const createReceipt = async (req, res) => {
             `Missing required fields for product ${
               product.productName || "unknown"
             }`
+          );
+        }
+
+        // ✅ SỬA: Chuyển đổi price thành number trước khi kiểm tra
+        const numericPrice = Number(product.price);
+        const numericQuantity = Number(product.quantity);
+
+        console.log("🔍 DEBUG - After conversion:", {
+          numericPrice,
+          numericQuantity,
+          isNaNPrice: isNaN(numericPrice),
+          isNaNQuantity: isNaN(numericQuantity),
+        });
+
+        // ✅ THÊM: Kiểm tra giá nhập phải lớn hơn 0
+        if (isNaN(numericPrice) || numericPrice <= 0) {
+          throw new Error(
+            `Giá nhập của sản phẩm ${product.productName} phải lớn hơn 0`
+          );
+        }
+
+        // ✅ THÊM: Kiểm tra số lượng phải lớn hơn 0
+        if (isNaN(numericQuantity) || numericQuantity <= 0) {
+          throw new Error(
+            `Số lượng của sản phẩm ${product.productName} phải lớn hơn 0`
           );
         }
 
@@ -640,11 +681,15 @@ const updateTransaction = async (req, res) => {
       return res.status(404).json({ message: "Giao dịch không tồn tại" });
     }
 
-    // Lặp qua từng sản phẩm để cập nhật
-    let updateFields = {};
-    let arrayFilters = [];
+    // ✅ SỬA: Sử dụng cách tiếp cận khác để cập nhật từng sản phẩm riêng lẻ
+    // Thay vì sử dụng arrayFilters có thể gây xung đột, ta sẽ cập nhật từng sản phẩm một cách riêng biệt
 
-    products.forEach((product) => {
+    let validProductsCount = 0;
+    let totalPrice = 0;
+
+    for (let i = 0; i < products.length; i++) {
+      const product = products[i];
+
       if (
         !product.supplierProductId ||
         product.supplierProductId.length !== 24
@@ -652,7 +697,7 @@ const updateTransaction = async (req, res) => {
         console.warn(
           `⚠️ Cảnh báo: sản phẩm ${product._id} thiếu supplierProductId`
         );
-        return;
+        continue;
       }
 
       // Chuyển đổi supplierProductId thành ObjectId
@@ -660,47 +705,61 @@ const updateTransaction = async (req, res) => {
         product.supplierProductId
       );
 
-      // Cập nhật dữ liệu sản phẩm
-      updateFields[`products.$[elem].requestQuantity`] =
-        product.requestQuantity;
-      updateFields[`products.$[elem].receiveQuantity`] =
-        product.receiveQuantity;
-      updateFields[`products.$[elem].defectiveProduct`] =
-        product.defectiveProduct;
-      updateFields[`products.$[elem].achievedProduct`] =
-        product.achievedProduct;
-      updateFields[`products.$[elem].price`] = product.price;
-      updateFields[`products.$[elem].expiry`] = product.expiry;
+      try {
+        // Cập nhật từng sản phẩm riêng lẻ bằng cách sử dụng positional operator với điều kiện cụ thể
+        await db.InventoryTransaction.updateOne(
+          {
+            _id: id,
+            "products.supplierProductId": supplierProductObjectId,
+          },
+          {
+            $set: {
+              "products.$.requestQuantity": product.requestQuantity,
+              "products.$.receiveQuantity": product.receiveQuantity,
+              "products.$.defectiveProduct": product.defectiveProduct,
+              "products.$.achievedProduct": product.achievedProduct,
+              "products.$.price": product.price,
+              "products.$.expiry": product.expiry,
+            },
+          }
+        );
 
-      // Điều kiện lọc sản phẩm trong `arrayFilters`
-      arrayFilters.push({ "elem.supplierProductId": supplierProductObjectId });
-    });
+        validProductsCount++;
+        totalPrice += product.achievedProduct * product.price;
+      } catch (updateError) {
+        console.error(
+          `Lỗi khi cập nhật sản phẩm ${product.supplierProductId}:`,
+          updateError
+        );
+      }
+    }
 
-    // Nếu không có sản phẩm hợp lệ, trả về lỗi
-    if (arrayFilters.length === 0) {
+    // Nếu không có sản phẩm hợp lệ nào được cập nhật
+    if (validProductsCount === 0) {
       return res
         .status(400)
         .json({ message: "Không có sản phẩm hợp lệ để cập nhật" });
     }
 
-    // Tính tổng giá tiền (price * achievedProduct)
-    const totalPrice = products.reduce(
-      (sum, product) => sum + product.achievedProduct * product.price,
-      0
-    );
-
-    // Cập nhật transaction trong database
-    const updatedTransaction = await db.InventoryTransaction.findOneAndUpdate(
-      { _id: id },
-      { $set: { ...updateFields, totalPrice } }, // Thêm totalPrice vào cập nhật
-      { arrayFilters, new: true }
+    // Cập nhật tổng giá tiền
+    const updatedTransaction = await db.InventoryTransaction.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          totalPrice,
+          // ✅ THÊM: Lưu thông tin rà soát
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+        },
+      },
+      { new: true }
     );
 
     // Kiểm tra xem cập nhật có thành công không
     if (!updatedTransaction) {
       return res
         .status(404)
-        .json({ message: "Không tìm thấy sản phẩm để cập nhật" });
+        .json({ message: "Không tìm thấy giao dịch để cập nhật" });
     }
 
     console.log("Giao dịch sau cập nhật:", updatedTransaction);

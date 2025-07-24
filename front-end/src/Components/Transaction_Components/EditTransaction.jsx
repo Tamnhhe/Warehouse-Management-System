@@ -12,11 +12,23 @@ const EditTransaction = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true); // ✅ THÊM: Loading state
 
+  // ✅ THÊM: Hàm lấy token từ localStorage
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('authToken'); // ✅ SỬA: Đổi từ 'token' thành 'authToken'
+    console.log('🔍 DEBUG - Token from localStorage:', token); // Debug log
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   useEffect(() => {
+    console.log('🔍 DEBUG - Making request to:', `http://localhost:9999/inventoryTransactions/getTransactionById/${id}`);
+    console.log('🔍 DEBUG - Headers:', getAuthHeaders());
+
     axios
-      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`)
+      .get(`http://localhost:9999/inventoryTransactions/getTransactionById/${id}`, {
+        headers: getAuthHeaders() // ✅ THÊM: Headers với token
+      })
       .then((res) => {
-        console.log("Transaction data:", res.data); // Debug log
+        console.log("✅ Transaction data loaded successfully:", res.data); // Debug log
         if (res.data?.products) {
           setFormData({
             products: res.data.products.map((p) => ({
@@ -30,15 +42,30 @@ const EditTransaction = () => {
               price: p.price ?? 0,
               expiry: p.expiry ? new Date(p.expiry).toISOString().split("T")[0] : "",
             })),
+            // ✅ THÊM: Thêm thông tin người xử lý vào formData
+            operator: res.data.operator || null,
+            reviewedBy: res.data.reviewedBy || null, // ✅ THÊM: Thêm thông tin người rà soát
+            reviewedAt: res.data.reviewedAt || null, // ✅ THÊM: Thêm thời gian rà soát
           });
         }
       })
       .catch((err) => {
-        console.error("Lỗi khi lấy dữ liệu:", err);
-        setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
+        console.error("❌ Error details:", {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          headers: err.response?.headers
+        });
+
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          // ✅ SỬA: Chỉ hiển thị lỗi, không tự động logout
+          setError("Không thể tải dữ liệu giao dịch. Vui lòng kiểm tra quyền truy cập hoặc đăng nhập lại.");
+        } else {
+          setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
+        }
       })
       .finally(() => setLoading(false)); // ✅ THÊM: Đặt loading thành false sau khi hoàn thành gọi API
-  }, [id]);
+  }, [id, navigate]);
 
   // <-- KHU VỰC THAY ĐỔI LỚN: Cập nhật hàm handleChange để tự động tính toán -->
   const handleChange = (e, index, field) => {
@@ -51,8 +78,15 @@ const EditTransaction = () => {
       // Cập nhật giá trị cho trường đang được thay đổi
       if (field === "expiry") {
         productToUpdate[field] = value;
+      } else if (field === "price") {
+        // ✅ THÊM: Validation cho giá nhập phải > 0
+        const numericValue = value === "" ? "" : parseFloat(value);
+        if (numericValue <= 0 && numericValue !== "") {
+          return prev; // Không cập nhật nếu giá <= 0
+        }
+        productToUpdate[field] = numericValue;
       } else {
-        // Xử lý cho các trường số
+        // Xử lý cho các trường số khác
         const numericValue = value === "" ? "" : Math.max(0, Number(value.replace(/^0+(?=\d)/, "")));
         productToUpdate[field] = numericValue;
       }
@@ -80,6 +114,16 @@ const EditTransaction = () => {
     e.preventDefault();
     setError(''); // Reset lỗi
 
+    // ✅ THÊM: Kiểm tra giá nhập phải lớn hơn 0
+    const priceValidationError = formData.products.find(
+      (p) => !p.price || Number(p.price) <= 0
+    );
+
+    if (priceValidationError) {
+      setError(`Giá nhập của sản phẩm "${priceValidationError.productName}" phải lớn hơn 0.`);
+      return;
+    }
+
     const validationError = formData.products.find(
       (p) => Number(p.defectiveProduct) + Number(p.achievedProduct) !== Number(p.receiveQuantity)
     );
@@ -91,15 +135,22 @@ const EditTransaction = () => {
 
     axios
       .put(`http://localhost:9999/inventoryTransactions/updateTransaction/${id}`, formData, {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders() // ✅ THÊM: Headers với token
+        },
       })
       .then(() => {
         alert("Cập nhật thành công!");
-        navigate("/list-transaction");
+        navigate("/receipts");
       })
-      .catch((err) =>
-        setError("Lỗi khi cập nhật: " + (err.response?.data?.message || err.message))
-      );
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        } else {
+          setError("Lỗi khi cập nhật: " + (err.response?.data?.message || err.message));
+        }
+      });
   };
 
   if (loading) {
@@ -109,6 +160,9 @@ const EditTransaction = () => {
   return (
     <div className="container mt-4">
       <h2 className="mb-4">Rà soát sản phẩm trong phiếu nhập</h2>
+
+
+
       <Form onSubmit={handleSubmit}>
         {error && <Alert variant="danger">{error}</Alert>}
 
@@ -134,7 +188,13 @@ const EditTransaction = () => {
                   <td><Form.Control type="number" value={product.receiveQuantity} onChange={(e) => handleChange(e, index, "receiveQuantity")} /></td>
                   <td><Form.Control type="number" value={product.achievedProduct} onChange={(e) => handleChange(e, index, "achievedProduct")} /></td>
                   <td><Form.Control type="number" value={product.defectiveProduct} readOnly /></td>
-                  <td><Form.Control type="number" value={product.price} onChange={(e) => handleChange(e, index, "price")} /></td>
+                  <td><Form.Control
+                    type="number"
+                    value={product.price}
+                    onChange={(e) => handleChange(e, index, "price")}
+                    min="0.01"
+                    step="0.01"
+                  /></td>
                   <td><Form.Control type="date" value={product.expiry} onChange={(e) => handleChange(e, index, "expiry")} /></td>
                 </tr>
               ))}
@@ -166,7 +226,13 @@ const EditTransaction = () => {
                 </Form.Group>
                 <Form.Group as={Row} className="mb-2" controlId={`price-${index}`}>
                   <Form.Label column sm="5">Giá nhập</Form.Label>
-                  <Col sm="7"><Form.Control type="number" value={product.price} onChange={(e) => handleChange(e, index, "price")} /></Col>
+                  <Col sm="7"><Form.Control
+                    type="number"
+                    value={product.price}
+                    onChange={(e) => handleChange(e, index, "price")}
+                    min="0.01"
+                    step="0.01"
+                  /></Col>
                 </Form.Group>
                 <Form.Group as={Row} className="mb-2" controlId={`exp-${index}`}>
                   <Form.Label column sm="5">Hết hạn</Form.Label>

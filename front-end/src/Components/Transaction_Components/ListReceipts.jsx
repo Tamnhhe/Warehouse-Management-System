@@ -193,10 +193,24 @@ const ListReceipts = () => {
                   size="small"
                   sx={{
                     textTransform: "capitalize",
-                    cursor: (isManager && transaction.status === "pending") ? "pointer" : "default" // ✅ Chỉ cho cursor pointer với manager và pending
+                    cursor: (isManager && transaction.status === "pending") ? "pointer" : "default"
                   }}
                   onClick={() => openStatusModal(transaction)}
                 />
+                {/* ✅ THÊM: Hiển thị badge "Đã rà soát" nếu có reviewedBy */}
+                {transaction.reviewedBy && (
+                  <Chip
+                    label={`Đã rà soát bởi ${transaction.reviewedBy.fullName}`}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                    sx={{
+                      ml: 1,
+                      fontSize: '0.75rem',
+                      height: '20px'
+                    }}
+                  />
+                )}
               </TableCell>
               <TableCell align="center">
                 <IconButton
@@ -270,6 +284,18 @@ const ListReceipts = () => {
               <Typography variant="h6" color="text.primary" align="right">
                 {transaction.totalPrice.toLocaleString()} VNĐ
               </Typography>
+              {/* ✅ THÊM: Hiển thị badge "Đã rà soát" trong mobile view */}
+              {transaction.reviewedBy && (
+                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
+                  <Chip
+                    label={`Đã rà soát bởi ${transaction.reviewedBy.fullName}`}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem' }}
+                  />
+                </Box>
+              )}
             </CardContent>
             <Box
               sx={{
@@ -281,14 +307,14 @@ const ListReceipts = () => {
             >
               <Button
                 startIcon={<VisibilityIcon />}
-                onClick={() => navigate(`/receipt/view/${transaction._id}`)}
+                onClick={() => navigate(`/transaction/${transaction._id}`)}
               >
                 Xem
               </Button>
               <Button
                 startIcon={<EditNoteIcon />}
                 disabled={transaction.status !== "pending"}
-                onClick={() => navigate(`/receipt/review/${transaction._id}`)}
+                onClick={() => navigate(`/edit-transaction/${transaction._id}`)}
               >
                 Rà soát
               </Button>
