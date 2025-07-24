@@ -165,9 +165,30 @@ const notificationController = {
       });
 
       for (const manager of managers) {
+        let title, message;
+
+        // Tùy chỉnh thông báo theo loại hành động
+        switch (actionType) {
+          case "nhập kho":
+            title = "Đơn nhập hàng mới";
+            message = `${employeeName} đã tạo đơn nhập hàng vào ${timestamp}`;
+            break;
+          case "xuất kho":
+            title = "Đơn xuất hàng mới";
+            message = `${employeeName} đã tạo đơn xuất hàng vào ${timestamp}`;
+            break;
+          case "kiểm kê":
+            title = "Đơn kiểm kê mới";
+            message = `${employeeName} đã tạo đơn kiểm kê vào ${timestamp}`;
+            break;
+          default:
+            title = `Phiếu ${actionType} mới`;
+            message = `${employeeName} đã tạo phiếu ${actionType} vào ${timestamp}`;
+        }
+
         const notification = new db.Notification({
-          title: `Phiếu ${actionType} mới`,
-          message: `Nhân viên ${employeeName} đã tạo phiếu ${actionType} vào ${timestamp}`,
+          title,
+          message,
           type: "employee_action",
           userId: manager._id,
           data: JSON.stringify({
@@ -196,9 +217,34 @@ const notificationController = {
     timestamp
   ) => {
     try {
+      let title, message;
+
+      // Tùy chỉnh thông báo theo loại hành động
+      switch (actionType) {
+        case "duyệt đơn nhập kho":
+          title = "Đơn nhập kho đã được duyệt";
+          message = `Manager ${managerName} đã duyệt đơn nhập kho của bạn vào ${timestamp}`;
+          break;
+        case "duyệt đơn xuất kho":
+          title = "Đơn xuất kho đã được duyệt";
+          message = `Manager ${managerName} đã duyệt đơn xuất kho của bạn vào ${timestamp}`;
+          break;
+        case "duyệt đơn kiểm kê":
+          title = "Đơn kiểm kê đã được duyệt";
+          message = `Manager ${managerName} đã duyệt đơn kiểm kê của bạn vào ${timestamp}`;
+          break;
+        case "điều chỉnh sản phẩm trong phiếu kiểm kê":
+          title = "Phiếu điều chỉnh đã được tạo";
+          message = `Manager ${managerName} đã tạo phiếu điều chỉnh cho đơn kiểm kê của bạn vào ${timestamp}`;
+          break;
+        default:
+          title = `Phiếu ${actionType} đã được duyệt`;
+          message = `Manager ${managerName} đã duyệt phiếu ${actionType} của bạn vào ${timestamp}`;
+      }
+
       const notification = new db.Notification({
-        title: `Phiếu ${actionType} đã được duyệt`,
-        message: `Manager ${managerName} đã duyệt phiếu ${actionType} của bạn vào ${timestamp}`,
+        title,
+        message,
         type: "manager_approval",
         userId: employeeId,
         data: JSON.stringify({

@@ -38,11 +38,13 @@ const getTransactionById = async (req, res) => {
       })
       .populate({
         path: "operator",
-        select: "fullName account.email profile.phoneNumber profile.address role"
+        select:
+          "fullName account.email profile.phoneNumber profile.address role",
       }) // ✅ SỬA: Populate đầy đủ thông tin operator
       .populate({
-        path: "reviewedBy", 
-        select: "fullName account.email profile.phoneNumber profile.address role"
+        path: "reviewedBy",
+        select:
+          "fullName account.email profile.phoneNumber profile.address role",
       }) // ✅ THÊM: Populate thông tin người rà soát
       .populate("branch", "name receiver address phone email"); // Populate thông tin branch
 
@@ -99,21 +101,15 @@ const createTransaction = async (req, res, next) => {
     }
 
     // Lấy user đang đăng nhập làm người xử lý đơn
-    let operatorId = null;
-    if (req.user && req.user._id) {
-      operatorId = req.user._id;
-    } else {
-      // Tìm user mặc định nếu không có authentication
-      const defaultUser = await db.User.findOne().limit(1);
-      if (defaultUser) {
-        operatorId = defaultUser._id;
-      } else {
-        return res.status(400).json({
-          message:
-            "Không xác định được người tạo đơn! Vui lòng đăng nhập hoặc tạo ít nhất một user trong hệ thống.",
-        });
-      }
+    // ✅ SỬA: Sử dụng req.user.id thay vì req.user._id (theo JWT payload structure)
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Không xác định được người tạo đơn! Vui lòng đăng nhập.",
+      });
     }
+
+    const operatorId = req.user.id;
 
     // Tìm một supplier mặc định nếu không được cung cấp
     let transactionSupplier = supplier;
@@ -343,6 +339,18 @@ const createReceipt = async (req, res) => {
       });
     }
 
+    // Lấy user đang đăng nhập làm người xử lý đơn
+    // ✅ SỬA: Chỉ lấy user từ token, không dùng fallback
+    if (!req.user || !req.user.id) {
+      console.log("❌ DEBUG createReceipt - req.user:", req.user);
+      return res.status(401).json({
+        success: false,
+        message: "Không xác định được người tạo đơn! Vui lòng đăng nhập.",
+      });
+    }
+
+    const operatorId = req.user.id;
+
     // Process each product
     const processedProducts = [];
     for (const product of products) {
@@ -447,9 +455,30 @@ const createReceipt = async (req, res) => {
       products: processedProducts,
       supplier: supplierDoc._id,
       supplierName: supplierDoc.name,
+      operator: operatorId, // ✅ THÊM: Thêm thông tin operator
       totalPrice,
       status: "pending",
     });
+
+    // ✅ THÊM: Gửi thông báo Socket.IO cho manager khi tạo phiếu nhập hàng
+    try {
+      const io = req.app.get("io");
+      const employee = await db.User.findById(operatorId);
+      const timestamp = new Date().toLocaleString("vi-VN");
+
+      if (employee && io) {
+        await notificationController.notifyManagerOnEmployeeAction(
+          io,
+          employee.fullName || employee.username,
+          "nhập kho",
+          timestamp,
+          employee.branchId
+        );
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Không làm gián đoạn quá trình tạo receipt
+    }
 
     res.status(201).json({
       success: true,
@@ -631,24 +660,59 @@ const updateTransactionStatus = async (req, res) => {
     try {
       const io = req.app.get("io");
       const manager = req.user; // Giả sử user đang đăng nhập là manager
-      const actionType =
-        transaction.transactionType === "import" ? "nhập kho" : "xuất kho";
       const timestamp = new Date().toLocaleString("vi-VN");
-      const statusText =
-        status === "completed"
-          ? "duyệt"
-          : status === "cancelled"
-          ? "từ chối"
-          : "cập nhật";
+
+      // Xác định action type dựa trên status và transaction type
+      let actionType = "";
+      if (transaction.transactionType === "import") {
+        switch (status) {
+          case "completed":
+            actionType = "duyệt đơn nhập kho";
+            break;
+          case "cancelled":
+            actionType = "từ chối đơn nhập kho";
+            break;
+          default:
+            actionType = "cập nhật đơn nhập kho";
+        }
+      } else if (transaction.transactionType === "export") {
+        switch (status) {
+          case "completed":
+            actionType = "duyệt đơn xuất kho";
+            break;
+          case "cancelled":
+            actionType = "từ chối đơn xuất kho";
+            break;
+          default:
+            actionType = "cập nhật đơn xuất kho";
+        }
+      }
+
+      console.log("🔔 Sending notification to employee:", {
+        employeeId: transaction.operator._id,
+        managerName: manager?.fullName || manager?.username,
+        actionType,
+        timestamp,
+        transactionType: transaction.transactionType,
+        status,
+      });
 
       if (manager && transaction.operator && io) {
         await notificationController.notifyEmployeeOnManagerApproval(
           io,
           transaction.operator._id,
           manager.fullName || manager.username,
-          `${statusText} phiếu ${actionType}`,
+          actionType,
           timestamp
         );
+
+        console.log("✅ Notification sent successfully to employee");
+      } else {
+        console.log("❌ Missing required data for notification:", {
+          hasManager: !!manager,
+          hasOperator: !!transaction.operator,
+          hasIO: !!io,
+        });
       }
     } catch (notificationError) {
       console.error("Error sending approval notification:", notificationError);
@@ -748,7 +812,7 @@ const updateTransaction = async (req, res) => {
         $set: {
           totalPrice,
           // ✅ THÊM: Lưu thông tin rà soát
-          reviewedBy: req.user._id,
+          reviewedBy: req.user.id,
           reviewedAt: new Date(),
         },
       },

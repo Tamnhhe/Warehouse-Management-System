@@ -1011,7 +1011,7 @@ const ExportProduct = () => {
 
                     <Box sx={{ mb: 3 }}>
                       <FormControl fullWidth>
-                        <InputLabel>Chi nhánh xuất hàng</InputLabel>
+                        <InputLabel>Chi nhánh/Khách Hàng</InputLabel>
                         <Select
                           value={branch}
                           onChange={(e) => setBranch(e.target.value)}
@@ -1054,7 +1054,7 @@ const ExportProduct = () => {
                         borderRadius: 2,
                       }}
                     >
-                      + Tạo chi nhánh mới
+                      + Thêm Chi nhánh/Khách Hàng
                     </Button>
 
                     <Box>

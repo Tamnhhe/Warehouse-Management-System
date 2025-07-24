@@ -498,15 +498,15 @@ function Stocktaking() {
       case "pending":
         return "Chờ kiểm kê";
       case "completed":
-        return "Chờ điều chỉnh";
+        return "Chờ điều chỉnh"; // ✅ ĐÃ ĐÚNG: Sau khi kiểm kê xong thì chờ điều chỉnh
       case "adjusted":
-        return "Đã hoàn thành";
+        return "Đã hoàn thành"; // ✅ ĐÃ ĐÚNG: Sau khi điều chỉnh xong mới hoàn thành
       default:
         return status;
     }
   };
 
-  // Hàm để lấy màu chip theo trạng thái
+  // Hàm để lấy màu chip theo trạng thái  
   const getStatusChipColor = (status) => {
     switch (status) {
       case "pending":

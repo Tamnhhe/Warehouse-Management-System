@@ -420,7 +420,7 @@ exports.createAdjustment = async (req, res) => {
 
     // Gắn adjustmentId vào task
     task.adjustmentId = adjustment._id;
-    task.status = "adjusted"; // Cập nhật trạng thái thành "adjusted"
+    task.status = "adjusted"; // ✅ QUAN TRỌNG: Cập nhật trạng thái thành "adjusted" sau khi điều chỉnh
     await task.save();
 
     // Gửi thông báo Socket.IO cho nhân viên khi manager tạo phiếu điều chỉnh

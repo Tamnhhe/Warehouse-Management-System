@@ -56,7 +56,7 @@ const CreateBranchDialog = ({ open, onClose, onSuccess }) => {
             <DialogContent>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
                     <TextField
-                        label="Tên chi nhánh"
+                        label="Tên chi nhánh/Khách Hàng"
                         name="name"
                         value={form.name}
                         onChange={handleChange}

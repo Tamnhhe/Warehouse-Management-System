@@ -13,6 +13,11 @@ const authorApi = axios.create({
 
 // Request Interceptor
 authorApi.interceptors.request.use(config => {
+    // ✅ THÊM: Lấy token từ localStorage và gắn vào header
+    const token = localStorage.getItem('authToken');
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
 }, (error) => {
     return Promise.reject(error);
@@ -27,10 +32,28 @@ authorApi.interceptors.response.use(
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true; // Prevent infinite loops
 
-            const response = await authAPI.refreshToken();
-            if (response) return authorApi(originalRequest);
-            // If refresh fails, redirect to login
-            window.location.href = '/login';
+            try {
+                const response = await authAPI.refreshToken();
+
+                // ✅ SỬA: Kiểm tra response và accessToken trước khi sử dụng
+                if (response && response.data && response.data.accessToken) {
+                    localStorage.setItem('authToken', response.data.accessToken);
+                    originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+                    return authorApi(originalRequest);
+                } else if (response && response.accessToken) {
+                    localStorage.setItem('authToken', response.accessToken);
+                    originalRequest.headers['Authorization'] = `Bearer ${response.accessToken}`;
+                    return authorApi(originalRequest);
+                } else {
+                    console.error('Refresh token response không có accessToken');
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login';
+                }
+            } catch (refreshError) {
+                console.error('Refresh token failed:', refreshError);
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+            }
         }
 
         return Promise.reject(error);

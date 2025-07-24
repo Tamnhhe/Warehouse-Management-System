@@ -35,11 +35,31 @@ authorApi.interceptors.response.use(
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true; // Prevent infinite loops
 
-            const response = await authAPI.refreshToken();
-            localStorage.setItem('authToken', response.data.accessToken); // Update token in localStorage
-            if (response) return authorApi(originalRequest);
-            // If refresh fails, redirect to login
-            window.location.href = '/login';
+            try {
+                const response = await authAPI.refreshToken();
+
+                // ✅ SỬA: Kiểm tra response và accessToken trước khi sử dụng
+                if (response && response.data && response.data.accessToken) {
+                    localStorage.setItem('authToken', response.data.accessToken);
+                    // Cập nhật token cho request hiện tại
+                    originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+                    return authorApi(originalRequest);
+                } else if (response && response.accessToken) {
+                    // Trường hợp response.accessToken trực tiếp
+                    localStorage.setItem('authToken', response.accessToken);
+                    originalRequest.headers['Authorization'] = `Bearer ${response.accessToken}`;
+                    return authorApi(originalRequest);
+                } else {
+                    // Không có accessToken, chuyển về login
+                    console.error('Refresh token response không có accessToken');
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login';
+                }
+            } catch (refreshError) {
+                console.error('Refresh token failed:', refreshError);
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+            }
         }
 
         return Promise.reject(error);

@@ -1,4 +1,5 @@
 import unauthorApi from "./baseAPI/unauthorAPI";
+import authorApi from "./baseAPI/authorAPI";
 
 const authAPI = {
   login: (credentials) =>
@@ -18,7 +19,7 @@ const authAPI = {
       .post("/authentication/logout")
       .then((response) => response.data),
   getCurrentUser: async () =>
-    unauthorApi
+    authorApi
       .get("/authentication/current-user")
       .then((response) => response.data),
 };

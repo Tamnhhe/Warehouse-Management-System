@@ -106,6 +106,11 @@ const ExportProductList = () => {
     // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
     if (!isManager) return;
 
+    // ✅ KHÔNG CHO PHÉP ĐỔI TRẠNG THÁI NẾU ĐÃ HOÀN THÀNH HOẶC ĐÃ BỊ TỪ CHỐI
+    if (transaction.status === "completed" || transaction.status === "cancelled") {
+      return;
+    }
+
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setShowModal(true);
