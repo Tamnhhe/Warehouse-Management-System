@@ -120,11 +120,11 @@ const ProductDetailsAntdMotion = ({ show, handleClose, product }) => {
                                             <b>{product.totalStock}</b> {product.unit}
                                         </Descriptions.Item>
                                         <Descriptions.Item label="Giá nhập">
-                                            {product.importPrice ? product.importPrice.toLocaleString("vi-VN") + " VND" : "Không có"}
+                                            {product.importPrice ? Math.round(product.importPrice).toLocaleString("vi-VN") + " VND" : "Không có"}
                                         </Descriptions.Item>
                                         {product.exportPrice && (
                                             <Descriptions.Item label="Giá bán">
-                                                {product.exportPrice.toLocaleString("vi-VN")} VND
+                                                {Math.round(product.exportPrice).toLocaleString("vi-VN")} VND
                                             </Descriptions.Item>
                                         )}
                                         {product.expiryDate && (

@@ -364,7 +364,7 @@ const ProductList = () => {
                                 color="primary.main"
                                 fontWeight="bold"
                               >
-                                {product.importPrice?.toLocaleString("vi-VN")}{" "}
+                                {product.importPrice ? Math.round(product.importPrice).toLocaleString("vi-VN") : "0"}{" "}
                                 VND
                               </Typography>
                               {renderStatusChip(product.status)}
@@ -510,7 +510,7 @@ const ProductList = () => {
                           {product.totalStock}
                         </TableCell>
                         <TableCell align="right">
-                          {product.importPrice?.toLocaleString("vi-VN")} VND
+                          {product.importPrice ? Math.round(product.importPrice).toLocaleString("vi-VN") : "0"} VND
                         </TableCell>
                         <TableCell>{product.unit}</TableCell>
                         <TableCell>
