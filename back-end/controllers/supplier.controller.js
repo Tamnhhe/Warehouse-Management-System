@@ -95,20 +95,20 @@ exports.createSupplier = async (req, res) => {
     // Kiểm tra nhà cung cấp đã tồn tại chưa (theo tên)
     const existingSupplier = await Supplier.findOne({ name });
     if (existingSupplier) {
-      return res.status(400).json({ error: "Nhà cung cấp đã tồn tại" });
+      return res.status(400).json({ name: "Nhà cung cấp đã tồn tại" });
     }
 
     // Kiểm tra số điện thoại đã tồn tại chưa
     if (contact) {
       const existingContact = await Supplier.findOne({ contact });
       if (existingContact) {
-        return res.status(400).json({ error: "Số điện thoại đã tồn tại" });
+        return res.status(400).json({ contact: "Số điện thoại đã tồn tại" });
       }
       // Kiểm tra số điện thoại hợp lệ (chỉ chứa số, độ dài từ 10-15 số)
       if (!/^\d{10,15}$/.test(contact)) {
         return res
           .status(400)
-          .json({ error: "Số điện thoại phải chứa 10 - 15 chữ số" });
+          .json({ contact: "Số điện thoại phải chứa 10 - 15 chữ số" });
       }
     }
 
@@ -116,11 +116,11 @@ exports.createSupplier = async (req, res) => {
     if (email) {
       const existingEmail = await Supplier.findOne({ email });
       if (existingEmail) {
-        return res.status(400).json({ error: "Email đã tồn tại" });
+        return res.status(400).json({ email: "Email đã tồn tại" });
       }
       // Kiểm tra email hợp lệ
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ error: "Invalid email format" });
+        return res.status(400).json({ email: "Invalid email format" });
       }
     }
 
@@ -154,7 +154,7 @@ exports.updateSupplier = async (req, res) => {
         _id: { $ne: supplierId },
       });
       if (duplicateName) {
-        return res.status(400).json({ error: "Supplier name already exists" });
+        return res.status(400).json({ name: "Tên nhà cung cấp đã tồn tại" });
       }
     }
 
@@ -165,11 +165,11 @@ exports.updateSupplier = async (req, res) => {
         _id: { $ne: supplierId },
       });
       if (duplicateContact) {
-        return res.status(400).json({ error: "Contact number already exists" });
+        return res.status(400).json({ contact: "Số điện thoại đã tồn tại" });
       }
       // Kiểm tra số điện thoại hợp lệ (10-15 chữ số)
       if (!/^\d{10,15}$/.test(contact)) {
-        return res.status(400).json({ error: "Invalid contact number format" });
+        return res.status(400).json({ contact: "Số điện thoại hợp lệ" });
       }
     }
 
@@ -180,11 +180,11 @@ exports.updateSupplier = async (req, res) => {
         _id: { $ne: supplierId },
       });
       if (duplicateEmail) {
-        return res.status(400).json({ error: "Email already exists" });
+        return res.status(400).json({ email: "Email đã tồn tại" });
       }
       // Kiểm tra email hợp lệ
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ error: "Invalid email format" });
+        return res.status(400).json({ email: "Email không hợp lệ" });
       }
     }
 
@@ -258,7 +258,7 @@ exports.getSupplierWithProducts = async (req, res) => {
       avgPrice:
         validProducts.length > 0
           ? validProducts.reduce((sum, sp) => sum + sp.price, 0) /
-            validProducts.length
+          validProducts.length
           : 0,
       totalValue: validProducts.reduce(
         (sum, sp) => sum + sp.price * sp.stock,

@@ -76,6 +76,10 @@ const SupplierList = () => {
   // Menu anchor
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuSupplier, setMenuSupplier] = useState(null);
+  // Clear form errors when formData changes
+  useEffect(() => {
+    setFormErrors({});
+  }, [formData]);
 
   useEffect(() => {
     fetchSuppliers();
@@ -119,16 +123,22 @@ const SupplierList = () => {
   const validateForm = (data) => {
     const errors = {};
 
-    if (!data.name.trim()) errors.name = "Tên nhà cung cấp là bắt buộc";
-    if (!data.address.trim()) errors.address = "Địa chỉ là bắt buộc";
-    if (!data.contact.trim()) {
+    // Ensure all fields are strings before calling trim
+    const name = typeof data.name === "string" ? data.name : String(data.name ?? "");
+    const address = typeof data.address === "string" ? data.address : String(data.address ?? "");
+    const contact = typeof data.contact === "string" ? data.contact : String(data.contact ?? "");
+    const email = typeof data.email === "string" ? data.email : String(data.email ?? "");
+
+    if (!name.trim()) errors.name = "Tên nhà cung cấp là bắt buộc";
+    if (!address.trim()) errors.address = "Địa chỉ là bắt buộc";
+    if (!contact.trim()) {
       errors.contact = "Số điện thoại là bắt buộc";
-    } else if (!/^\d{10,15}$/.test(data.contact)) {
+    } else if (!/^\d{10,15}$/.test(contact)) {
       errors.contact = "Số điện thoại phải có 10-15 chữ số";
     }
-    if (!data.email.trim()) {
+    if (!email.trim()) {
       errors.email = "Email là bắt buộc";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Email không hợp lệ";
     }
 
@@ -159,7 +169,7 @@ const SupplierList = () => {
       });
       setFormErrors({});
     } catch (error) {
-      console.error("Lỗi khi lưu nhà cung cấp:", error);
+      setFormErrors(error.response.data);
     }
   };
 
@@ -220,14 +230,28 @@ const SupplierList = () => {
     setMenuSupplier(null);
   };
 
+  const handleOpenAddModal = () => {
+    setOpenAddModal(true);
+    setFormData({
+      name: "",
+      address: "",
+      contact: "",
+      email: "",
+      description: "",
+      status: "active",
+    });
+    setFormErrors({});
+  }
+
+
   // Lọc danh sách nhà cung cấp
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
       supplier.name.toLowerCase().includes(search.toLowerCase()) &&
       (Object.values(filterStatus).some((value) => value)
         ? filterStatus[
-            supplier.status === "active" ? "Còn cung cấp" : "Ngừng cung cấp"
-          ]
+        supplier.status === "active" ? "Còn cung cấp" : "Ngừng cung cấp"
+        ]
         : true)
   );
 
@@ -263,11 +287,11 @@ const SupplierList = () => {
     );
   }
 
-  if (error) {
+  if (error?.list) {
     return (
       <Box sx={{ height: "100vh", p: 3, backgroundColor: "#f5f5f5" }}>
         <Alert severity="error" sx={{ textAlign: "center" }}>
-          {error}
+          {error.list}
         </Alert>
       </Box>
     );
@@ -318,7 +342,7 @@ const SupplierList = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setOpenAddModal(true)}
+              onClick={handleOpenAddModal}
               sx={{
                 backgroundColor: palette.medium,
                 color: palette.dark,
@@ -669,8 +693,7 @@ const SupplierList = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               labelRowsPerPage="Số hàng mỗi trang:"
               labelDisplayedRows={({ from, to, count }) =>
-                `${from}–${to} trong tổng số ${
-                  count !== -1 ? count : `hơn ${to}`
+                `${from}–${to} trong tổng số ${count !== -1 ? count : `hơn ${to}`
                 }`
               }
               sx={{

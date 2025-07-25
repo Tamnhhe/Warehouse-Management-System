@@ -24,6 +24,7 @@ const AddSupplierModal = ({
   onSubmit,
   palette,
 }) => {
+
   return (
     <Dialog
       open={open}

@@ -15,7 +15,7 @@ const useSupplier = () => {
             const data = response.data?.data || response.data || [];
             setSuppliers(data);
         } catch (err) {
-            setError(err.message || "Failed to fetch suppliers");
+            setError({ list: err.message } || "Failed to fetch suppliers");
         } finally {
             setLoading(false);
         }
@@ -45,6 +45,7 @@ const useSupplier = () => {
             setSuppliers(prev => [...prev, response.data]);
         } catch (err) {
             setError(err.message || "Failed to create supplier");
+            throw err; // Re-throw to handle in the component if needed
         } finally {
             setLoading(false);
         }
@@ -57,6 +58,7 @@ const useSupplier = () => {
             setSuppliers(prev => prev.map(s => (s._id === id ? response.data : s)));
         } catch (err) {
             setError(err.message || "Failed to update supplier");
+            throw err; // Re-throw to handle in the component if needed
         } finally {
             setLoading(false);
         }
