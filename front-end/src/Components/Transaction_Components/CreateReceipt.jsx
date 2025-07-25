@@ -66,7 +66,6 @@ const CreateReceipt = () => {
   const { suppliers, fetchSuppliers } = useSupplier();
   const { fetchProductsBySupplier } = useSupplierProduct();
   const { categories, getAllCategories } = useCategory();
-
   useEffect(() => {
     fetchSuppliers();
     getAllCategories();
@@ -131,12 +130,23 @@ const CreateReceipt = () => {
   // Khi chọn sản phẩm, tự động điền danh mục (không điền weight nữa)
   const handleProductSelect = (index, value) => {
     if (value) {
+      // Check if this product is already selected in another row
+      const isDuplicate = formik.values.products.some(
+        (p, i) => i !== index && p.productName === value.productName
+      );
+      if (isDuplicate) {
+        setError("Không thể chọn cùng một sản phẩm nhiều lần trong phiếu nhập.");
+        // Reset the productName for this row
+        formik.setFieldValue(`products.${index}.productName`, "");
+        formik.setFieldValue(`products.${index}.categoryName`, "");
+        return;
+      }
+      setError(""); // Clear error if not duplicate
       formik.setFieldValue(`products.${index}.productName`, value.productName);
       formik.setFieldValue(
         `products.${index}.categoryName`,
         value.categoryId?.categoryName || ""
       );
-      // Không set weight
     }
   };
 
@@ -229,7 +239,6 @@ const CreateReceipt = () => {
                 <TableRow>
                   <TableCell>Sản phẩm</TableCell>
                   <TableCell>Số lượng</TableCell>
-                  {/* <TableCell>Cân nặng</TableCell> */}
                   <TableCell>Đơn giá (VNĐ)</TableCell>
                   <TableCell>Thành tiền (VNĐ)</TableCell>
                   <TableCell></TableCell>
@@ -240,7 +249,13 @@ const CreateReceipt = () => {
                   <TableRow key={index}>
                     <TableCell sx={{ width: "40%" }}>
                       <Autocomplete
-                        options={filteredProducts}
+                        options={filteredProducts.filter(
+                          (p) =>
+                            !formik.values.products.some(
+                              (row, i) =>
+                                i !== index && row.productName === p.productName
+                            )
+                        )}
                         getOptionLabel={(option) => option.productName || ""}
                         value={
                           filteredProducts.find(

@@ -59,7 +59,7 @@ const useAuth = () => {
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Register failed");
       setLoading(false);
-      return null;
+      throw err;
     }
   };
 
@@ -91,7 +91,7 @@ const useAuth = () => {
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Logout failed");
       setLoading(false);
-      return null;
+      throw err;
     }
   };
 
