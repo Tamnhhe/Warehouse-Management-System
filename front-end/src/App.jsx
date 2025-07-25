@@ -46,10 +46,11 @@ import Stocktaking from "./Components/Inventory_Components/Stocktaking";
 // Layout component đã được đơn giản hóa
 import VerifyEmail from "./Components/Login_Components/VerifyEmail";
 import { jwtDecode } from "jwt-decode";
+import AIInventoryHub from "./Components/Inventory_Components/AIInventoryHub";
 
 // Context
 import { NotyfProvider } from "./Contexts/NotyfContext";
-import { NotificationProvider } from "./Contexts/NotificationProvider";
+import { NotificationProvider } from "./contexts/NotificationProvider";
 import { DataRefreshProvider } from "./Hooks/useDataRefresh"; // Thêm import này
 
 // Layout component
@@ -343,6 +344,14 @@ function AppWithAuth() {
               element={
                 <ProtectedRoute allowedRoles={["manager", "employee"]}>
                   <ProductWarehouse />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-inventory-hub"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "employee"]}>
+                  <AIInventoryHub />
                 </ProtectedRoute>
               }
             />
