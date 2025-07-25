@@ -308,6 +308,16 @@ const EditUserModal = ({ user, closeModal, users, setUsers }) => {
                                 min: 1,
                                 message: "Lương phải lớn hơn 0",
                               },
+                              {
+                                validator: (_, value) => {
+                                  if (value && !Number.isInteger(value)) {
+                                    return Promise.reject(
+                                      new Error("Lương phải là số nguyên")
+                                    );
+                                  }
+                                  return Promise.resolve();
+                                },
+                              },
                             ]}
                           >
                             <InputNumber
@@ -316,10 +326,11 @@ const EditUserModal = ({ user, closeModal, users, setUsers }) => {
                               formatter={(value) =>
                                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                               }
-                              parser={(value) =>
-                                value.replace(/\$\s?|(,*)/g, "")
-                              }
+                              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                               onChange={(value) => setSalary(value)}
+                              step={1}
+                              min={1}
+                              precision={0} // Không cho nhập số thập phân
                             />
                           </Form.Item>
                         </motion.div>

@@ -494,6 +494,14 @@ const CreateEmployeeModal = ({ open, handleClose, onCreateSuccess }) => {
                             min: 1,
                             message: "Lương phải lớn hơn 0",
                           },
+                          {
+                            validator: (_, value) => {
+                              if (value && !Number.isInteger(value)) {
+                                return Promise.reject(new Error("Lương phải là số nguyên"));
+                              }
+                              return Promise.resolve();
+                            },
+                          },
                         ]}
                       >
                         <InputNumber
@@ -505,6 +513,9 @@ const CreateEmployeeModal = ({ open, handleClose, onCreateSuccess }) => {
                           parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                           placeholder="Nhập mức lương"
                           onChange={(value) => handleChange("salary", value)}
+                          step={1}
+                          min={1}
+                          precision={0} // Không cho nhập số thập phân
                         />
                       </Form.Item>
                     </motion.div>
