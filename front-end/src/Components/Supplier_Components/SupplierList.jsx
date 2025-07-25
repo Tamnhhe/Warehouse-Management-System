@@ -31,7 +31,7 @@ import ExpandSupplierProduct from "./ExpandSupplierProduct";
 
 const SupplierList = () => {
   const {
-    suppliers,
+    fullSuppliers,
     loading,
     error,
     fetchSuppliers,
@@ -69,6 +69,7 @@ const SupplierList = () => {
   const [openSupplierDetails, setOpenSupplierDetails] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
 
   // Expanded rows
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -113,6 +114,11 @@ const SupplierList = () => {
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateSupplierStatus(id, newStatus);
+      setFilteredSuppliers((prev) =>
+        prev.map((supplier) =>
+          supplier._id === id ? { ...supplier, status: newStatus } : supplier
+        )
+      );
       handleMenuClose();
     } catch (error) {
       console.log("Lỗi khi cập nhật trạng thái:", error);
@@ -244,16 +250,19 @@ const SupplierList = () => {
   }
 
 
-  // Lọc danh sách nhà cung cấp
-  const filteredSuppliers = suppliers.filter(
-    (supplier) =>
-      supplier.name.toLowerCase().includes(search.toLowerCase()) &&
-      (Object.values(filterStatus).some((value) => value)
-        ? filterStatus[
-        supplier.status === "active" ? "Còn cung cấp" : "Ngừng cung cấp"
-        ]
-        : true)
-  );
+  useEffect(() => {
+    console.log("Filtering fullSuppliers" , fullSuppliers);
+    const filtered = fullSuppliers.filter(
+      (supplier) =>
+        (supplier.name ? supplier.name.toLowerCase() : "").includes(search.toLowerCase()) &&
+        (Object.values(filterStatus).some((value) => value)
+          ? filterStatus[
+              supplier.status === "active" ? "Còn cung cấp" : "Ngừng cung cấp"
+            ]
+          : true)
+    );
+    setFilteredSuppliers(filtered);
+  }, [fullSuppliers, search, filterStatus]);
 
   // Pagination
   const paginatedSuppliers = filteredSuppliers.slice(
@@ -334,7 +343,7 @@ const SupplierList = () => {
                 Quản lý nhà cung cấp
               </Typography>
               <Typography variant="subtitle1" sx={{ opacity: 0.8 }}>
-                Tổng: {suppliers.length} nhà cung cấp
+                Tổng: {fullSuppliers.length} nhà cung cấp
               </Typography>
             </Box>
           </Box>
