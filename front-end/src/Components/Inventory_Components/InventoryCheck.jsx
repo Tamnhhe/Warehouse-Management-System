@@ -109,6 +109,11 @@ function InventoryCheck() {
   };
 
   const handleDelete = async (id) => {
+    const inventory = inventories.find(inv => inv._id === id);
+    if (inventory && inventory.products && inventory.products.length > 0) {
+      alert("Không thể xóa kệ khi vẫn còn sản phẩm trong kệ này!");
+      return;
+    }
     if (window.confirm("Bạn có chắc chắn muốn xóa kệ này?")) {
       try {
         await deleteInventory(id);
@@ -233,6 +238,7 @@ function InventoryCheck() {
                     startIcon={<DeleteIcon />}
                     size="small"
                     variant="contained"
+                    disabled={inv.products && inv.products.length > 0} // Vô hiệu nếu còn sản phẩm
                     sx={{
                       fontWeight: 800,
                       borderRadius: 3,
