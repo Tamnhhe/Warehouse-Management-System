@@ -6,13 +6,16 @@ const useCategory = () => {
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
     const [category, setCategory] = useState(null);
-
+    const [fullcategories, setFullCategories] = useState([]);
     const getAllCategories = async () => {
         setLoading(true);
         setError(null);
         try {
             const res = await categoryAPI.getAll();
-            setCategories(res.data || res);
+            const data = res.data?.data || res.data || [];
+            const filteredActiveCategories = data.filter(cat => cat.status === 'active');
+            setCategories(filteredActiveCategories);
+            setFullCategories(data);
             setLoading(false);
             return res;
         } catch (err) {
@@ -45,6 +48,7 @@ const useCategory = () => {
             const res = await categoryAPI.add(data);
             // Update the local state to include the new category
             setCategories(prev => [...prev, res.data.newCategory]);
+            setFullCategories(prev => [...prev, res.data.newCategory]);
             setLoading(false);
             return res;
         } catch (err) {
@@ -72,9 +76,9 @@ const useCategory = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await categoryAPI.inactivate(id, data);
-            // Update the local state to reflect the change
+            const res = await categoryAPI.inactivate(id, { status: data.status });
             setCategories(prev => prev.map(cat => cat._id === id ? { ...cat, status: data.status } : cat));
+            setFullCategories(prev => prev.map(cat => cat._id === id ? { ...cat, status: data.status } : cat));
             setLoading(false);
             return res;
         } catch (err) {
@@ -130,6 +134,6 @@ const useCategory = () => {
         }
     };
 
-    return { loading, error, categories, category, getAllCategories, getCategoryById, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory };
+    return { loading, error, categories, category, fullcategories, getAllCategories, getCategoryById, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory };
 }
 export default useCategory;

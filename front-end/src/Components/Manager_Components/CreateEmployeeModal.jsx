@@ -33,25 +33,9 @@ import {
   ClockCircleOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-const modalVariants = {
-  hidden: { opacity: 0, y: 50, scale: 0.9 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      damping: 25,
-      stiffness: 500,
-    },
-  },
-  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
-};
 
 const contentVariants = {
   hidden: { opacity: 0 },

@@ -19,7 +19,7 @@ import EditCategoryDialog from './EditCategory';
 import useCategory from '../../Hooks/useCategory';
 
 function ListCategory() {
-  const { categories, getAllCategories, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory } = useCategory();
+  const { fullcategories, getAllCategories, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory } = useCategory();
   const [filterText, setFilterText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'categoryName', direction: 'asc' });
   const [statusFirst, setStatusFirst] = useState('active'); // 'active' hoặc 'inactive'
@@ -58,7 +58,7 @@ function ListCategory() {
   };
 
   const filteredCategories = useMemo(() => {
-    let sortableItems = [...categories];
+    let sortableItems = [...fullcategories];
 
     // Lọc theo text
     if (filterText) {
@@ -86,7 +86,7 @@ function ListCategory() {
     });
 
     return sortableItems;
-  }, [categories, filterText, sortConfig, statusFirst]);
+  }, [fullcategories, filterText, sortConfig, statusFirst]);
 
   const handleOpenEditDialog = (category) => {
     setSelectedCategory(category);

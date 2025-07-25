@@ -80,6 +80,7 @@ function CreateEmployee() {
     endTime: "",
   });
 
+  console.log("Creating")
   const [statusMessage, setStatusMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [errors, setErrors] = useState({});

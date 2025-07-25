@@ -62,47 +62,31 @@ async function updateCategory(req, res, next) {
         if (!updatedCategory) {
             return res.status(404).json({ message: "Category not found" });
         };
-        
+
         res.status(200).json({ message: "Category updated successfully", updatedCategory });
     } catch (error) {
         next(error);
     }
 }
 
-// // Thay đổi trạng thái category
-// async function inactiveCategory(req, res, next) {
-//     try {
-//         const { id } = req.params;
-//         const { status } = req.body;
-//         const changedCategory = await db.Category.findByIdAndUpdate(id, { status });
-//         if (!changedCategory) {
-//             return res.status(404).json({ message: "Category not found" });
-//         }
-//         res.status(200).json({ message: "Category status changed successfully", changedCategory });
-//     } catch (error) {
-//         next(error);
-//     }
-// }
-
 // Thay đổi trạng thái category và cập nhật trạng thái sản phẩm liên quan
 async function inactiveCategory(req, res, next) {
     try {
         const { id } = req.params;
-        const { status } = req.body;
-
         // Cập nhật trạng thái của category
-        const changedCategory = await db.Category.findByIdAndUpdate(id, { status });
+        const changedCategory = await db.Category.findById(id);
         if (!changedCategory) {
             return res.status(404).json({ message: "Category not found" });
         }
-
-        // Nếu trạng thái của category là "inactive", cập nhật tất cả sản phẩm thuộc category này
-        if (status === "inactive") {
-            await db.Product.updateMany(
-                { categoryId: id },
-                { $set: { status: "inactive" } }
-            );
+        let status;
+        if (changedCategory.status === "active") {
+            status = "inactive";
+        } else {
+            status = "active";
         }
+
+        changedCategory.status = status;
+        await changedCategory.save();
 
         res.status(200).json({ message: "Category status changed successfully", changedCategory });
     } catch (error) {
@@ -176,6 +160,7 @@ async function deleteSubCategory(req, res) {
         next(error);
     }
 }
+
 const categoryController = {
     getCategories,
     addCategory,
