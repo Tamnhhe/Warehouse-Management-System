@@ -1,39 +1,34 @@
 //Nguyễn Bảo Phi-HE173187-28/2/2025
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Modal, Form } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 import html2pdf from "html2pdf.js";
 import "./InvoiceStyles.css";
 import useTransaction from "../../Hooks/useTransaction";
-import useAuth from "../../Hooks/useAuth"; // ✅ Import useAuth để lấy thông tin user
 
 const ExportDetail = () => {
   const { id } = useParams();
   const [transaction, setTransaction] = useState(null);
   const navigate = useNavigate();
   const invoiceRef = useRef();
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
-  const [returnConfirmModal, setReturnConfirmModal] = useState(false);
-  const { updateTransactionStatus } = useTransaction();
-  const { user } = useAuth(); // ✅ Lấy thông tin user để kiểm tra role
+  const { getTransactionById } = useTransaction();
 
   useEffect(() => {
-    axios
-      .get(
-        `http://localhost:9999/inventoryTransactions/getTransactionById/${id}`
-      )
-      .then((response) => {
-        setTransaction(response.data);
-        setNewStatus(response.data.status);
-        console.log("Transaction data:", response.data);
-        console.log("Products:", response.data.products);
-      })
-      .catch((error) =>
-        console.error("Lỗi khi lấy chi tiết giao dịch:", error)
-      );
-  }, [id]);
+    const fetchTransaction = async () => {
+      try {
+        const response = await getTransactionById(id);
+        if (response && response.data) {
+          setTransaction(response.data);
+          console.log("Transaction data:", response.data);
+          console.log("Products:", response.data.products);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy chi tiết giao dịch:", error);
+      }
+    };
+
+    fetchTransaction();
+  }, [id, getTransactionById]);
 
   const handlePrint = () => {
     window.print();
@@ -51,63 +46,7 @@ const ExportDetail = () => {
     html2pdf().set(opt).from(element).save();
   };
 
-  const openStatusModal = () => {
-    // ✅ CHỈ CHO PHÉP MANAGER THAO TÁC VỚI TRẠNG THÁI
-    if (!isManager) return;
-
-    setShowStatusModal(true);
-  };
-
-  const handleStatusChange = async () => {
-    try {
-      const res = await updateTransactionStatus(id, { status: newStatus });
-      if (res && res.status) {
-        setTransaction({ ...transaction, status: res.status });
-        setShowStatusModal(false);
-      }
-    } catch (error) {
-      console.error("Lỗi khi cập nhật trạng thái:", error);
-    }
-  };
-
-  const handleReturnProducts = () => {
-    setReturnConfirmModal(true);
-  };
-
-  const confirmReturn = async () => {
-    // Chuyển sang màn tạo phiếu nhập đúng link, mang theo dữ liệu phiếu xuất
-    const importData = {
-      products: transaction.products.map((product) => ({
-        productId: product.productId?._id || product.productId,
-        productName:
-          (product.productId && typeof product.productId === "object"
-            ? product.productId.productName || product.productId.name
-            : typeof product.productId === "string"
-              ? product.productId
-              : product.supplierProductId && typeof product.supplierProductId === "object"
-                ? product.supplierProductId.productName || product.supplierProductId.name
-                : typeof product.supplierProductId === "string"
-                  ? product.supplierProductId
-                  : "") || "",
-        supplier:
-          (product.supplierProductId && typeof product.supplierProductId === "object"
-            ? product.supplierProductId.supplier?.name || product.supplierProductId.supplierName || ""
-            : product.supplierName || ""),
-        quantity: product.requestQuantity,
-        price: typeof product.price === "number" ? product.price : 0,
-      })),
-      branch: transaction.branch,
-      note: `Trả hàng từ phiếu xuất ${transaction._id}`,
-      returnedFrom: transaction._id,
-    };
-    navigate("/receipt/create", { state: importData });
-    setReturnConfirmModal(false);
-  };
-
   if (!transaction) return <p>Đang tải dữ liệu...</p>;
-
-  // ✅ Kiểm tra xem user có phải manager không
-  const isManager = user?.role === "manager";
 
   return (
     <div className="container my-4 invoice-container">
@@ -139,9 +78,9 @@ const ExportDetail = () => {
             </p>
           </div>
           <div className="text-end">
-            <h5>CÔNG TY TNHH ABC</h5>
+            <h5>Movico </h5>
             <p>123 Đường Chính, Hà Nội</p>
-            <p>hotro@abc.vn</p>
+            <p>support@movico.com</p>
           </div>
         </div>
 
@@ -238,104 +177,7 @@ const ExportDetail = () => {
         <Button variant="success" onClick={handleDownload}>
           Tải xuống PDF
         </Button>
-        {/* ✅ CHỈ HIỂN THỊ NÚT CẬP NHẬT TRẠNG THÁI CHO MANAGER */}
-        {isManager && (
-          <Button variant="warning" onClick={openStatusModal}>
-            Cập nhật trạng thái
-          </Button>
-        )}
-        <Button
-          variant="danger"
-          onClick={handleReturnProducts}
-          disabled={transaction.status !== "completed"}
-        >
-          Trả hàng
-        </Button>
       </div>
-
-      {/* Status Update Modal - CHỈ HIỂN THỊ CHO MANAGER */}
-      {isManager && (
-        <Modal
-          show={showStatusModal}
-          onHide={() => setShowStatusModal(false)}
-          centered
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Cập nhật trạng thái phiếu xuất</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>
-              Mã phiếu: <strong>{transaction._id}</strong>
-            </p>
-            <Form>
-              <Form.Check
-                type="radio"
-                id="status-pending"
-                label="🟡 Chờ xử lý"
-                value="pending"
-                checked={newStatus === "pending"}
-                onChange={(e) => setNewStatus(e.target.value)}
-              />
-              <Form.Check
-                type="radio"
-                id="status-completed"
-                label="✅ Hoàn thành"
-                value="completed"
-                checked={newStatus === "completed"}
-                onChange={(e) => setNewStatus(e.target.value)}
-              />
-              <Form.Check
-                type="radio"
-                id="status-cancelled"
-                label="❌ Từ chối"
-                value="cancelled"
-                checked={newStatus === "cancelled"}
-                onChange={(e) => setNewStatus(e.target.value)}
-              />
-            </Form>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
-              Hủy
-            </Button>
-            <Button variant="primary" onClick={handleStatusChange}>
-              Xác nhận
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      )}
-
-      {/* Return Products Confirmation Modal */}
-      <Modal
-        show={returnConfirmModal}
-        onHide={() => setReturnConfirmModal(false)}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Xác nhận trả hàng</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Bạn có chắc chắn muốn tạo phiếu nhập kho để trả hàng từ phiếu xuất
-            này?
-          </p>
-          <p>
-            Hệ thống sẽ tạo một phiếu nhập kho mới với cùng danh sách sản phẩm
-            và số lượng.
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => setReturnConfirmModal(false)}
-          >
-            Hủy
-          </Button>
-          <Button variant="danger" onClick={confirmReturn}>
-            Xác nhận trả hàng
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 };
