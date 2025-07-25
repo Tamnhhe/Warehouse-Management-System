@@ -12,7 +12,7 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
   const [categoryName, setCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [subcategories, setSubcategories] = useState([]);
-  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   // Hàm để reset form khi dialog đóng hoặc sau khi lưu thành công
@@ -20,55 +20,81 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
     setCategoryName('');
     setDescription('');
     setSubcategories([]);
-    setError('');
+    setFormErrors({});
     setLoading(false);
   };
 
   useEffect(() => {
     if (!open) {
-      // Đảm bảo form luôn được reset khi dialog đóng lại
-      const timer = setTimeout(() => resetForm(), 300); // Thêm delay nhỏ để tránh giật
+      const timer = setTimeout(() => resetForm(), 300);
       return () => clearTimeout(timer);
     }
   }, [open]);
 
   const handleAddSubcategory = () => {
-    // Kiểm tra xem có danh mục con nào chưa điền tên không
     if (subcategories.some(sub => !sub.name.trim())) {
-      setError("Vui lòng điền tên cho các danh mục con hiện có trước khi thêm mới.");
+      setFormErrors({ subcategories: "Vui lòng điền tên cho các danh mục con hiện có trước khi thêm mới." });
       return;
     }
     setSubcategories([...subcategories, { name: '', description: '' }]);
-    setError(''); // Xóa lỗi nếu có
+    setFormErrors((prev) => ({ ...prev, subcategories: undefined }));
   };
 
   const handleUpdateSubcategory = (index, key, value) => {
     const updated = [...subcategories];
     updated[index][key] = value;
     setSubcategories(updated);
+    setFormErrors((prev) => ({ ...prev, [`subcategories.${index}.${key}`]: undefined }));
   };
 
   const handleRemoveSubcategory = (index) => {
     setSubcategories(subcategories.filter((_, i) => i !== index));
+    setFormErrors((prev) => {
+      const newErrors = { ...prev };
+      Object.keys(newErrors).forEach(key => {
+        if (key.startsWith(`subcategories.${index}.`)) delete newErrors[key];
+      });
+      return newErrors;
+    });
+  };
+
+  const validate = () => {
+    const errors = {};
+    if (!categoryName.trim()) {
+      errors.categoryName = "Tên danh mục không được để trống.";
+    } else if (categoryName.length > 100) {
+      errors.categoryName = "Tên danh mục tối đa 100 ký tự.";
+    }
+    if (description.length > 250) {
+      errors.description = "Mô tả tối đa 250 ký tự.";
+    }
+    subcategories.forEach((sub, idx) => {
+      if (!sub.name.trim()) {
+        errors[`subcategories.${idx}.name`] = "Tên danh mục con không được để trống.";
+      }
+      if (sub.description && sub.description.length > 100) {
+        errors[`subcategories.${idx}.description`] = "Mô tả danh mục con tối đa 100 ký tự.";
+      }
+    });
+    return errors;
   };
 
   const handleSave = async () => {
-    if (!categoryName.trim()) {
-      setError("Tên danh mục không được để trống.");
-      return;
-    }
+    console.log("Saving category:")
+    const errors = validate();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setLoading(true);
-    setError('');
     try {
       await onAdd({
         categoryName,
         description,
-        // Chỉ gửi các danh mục con có tên, loại bỏ các dòng trống
         classifications: subcategories.filter(sub => sub.name.trim()),
       });
-      onClose(); // Đóng dialog
+      onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Lỗi khi thêm danh mục. Vui lòng thử lại.');
+      console.log(err.response?.data);
+      setFormErrors(err.response.data);
     } finally {
       setLoading(false);
     }
@@ -79,14 +105,23 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
       <DialogTitle>Thêm Danh Mục Mới</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={3} sx={{ pt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
+          {formErrors.general && (
+            <Alert severity="error">{formErrors.general}</Alert>
+          )}
           <TextField
             autoFocus
             label="Tên danh mục"
             fullWidth
             required
             value={categoryName}
-            onChange={(e) => setCategoryName(e.target.value)}
+            onChange={(e) => {
+              setCategoryName(e.target.value);
+              if (formErrors.categoryName) {
+                setFormErrors((prev) => ({ ...prev, categoryName: undefined }));
+              }
+            }}
+            error={!!formErrors.categoryName}
+            helperText={formErrors.categoryName}
           />
           <TextField
             label="Mô tả"
@@ -94,7 +129,14 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
             multiline
             rows={3}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              if (formErrors.description) {
+                setFormErrors((prev) => ({ ...prev, description: undefined }));
+              }
+            }}
+            error={!!formErrors.description}
+            helperText={formErrors.description}
           />
           <Box>
             <Typography variant="h6" gutterBottom>Danh mục con</Typography>
@@ -110,14 +152,51 @@ const AddCategoryDialog = ({ open, onClose, onCategoryAdded, onAdd }) => {
                 <TableBody>
                   {subcategories.map((sub, index) => (
                     <TableRow key={index}>
-                      <TableCell><TextField variant="standard" fullWidth placeholder="Tên" value={sub.name} onChange={(e) => handleUpdateSubcategory(index, 'name', e.target.value)} /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth placeholder="Mô tả ngắn" value={sub.description} onChange={(e) => handleUpdateSubcategory(index, 'description', e.target.value)} /></TableCell>
-                      <TableCell align="right"><IconButton size="small" color="error" onClick={() => handleRemoveSubcategory(index)}><DeleteIcon /></IconButton></TableCell>
+                      <TableCell>
+                        <TextField
+                          variant="standard"
+                          fullWidth
+                          placeholder="Tên"
+                          value={sub.name}
+                          onChange={(e) => {
+                            handleUpdateSubcategory(index, 'name', e.target.value);
+                            if (formErrors[`subcategories.${index}.name`]) {
+                              setFormErrors((prev) => ({ ...prev, [`subcategories.${index}.name`]: undefined }));
+                            }
+                          }}
+                          error={!!formErrors[`subcategories.${index}.name`]}
+                          helperText={formErrors[`subcategories.${index}.name`]}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          variant="standard"
+                          fullWidth
+                          placeholder="Mô tả ngắn"
+                          value={sub.description}
+                          onChange={(e) => {
+                            handleUpdateSubcategory(index, 'description', e.target.value);
+                            if (formErrors[`subcategories.${index}.description`]) {
+                              setFormErrors((prev) => ({ ...prev, [`subcategories.${index}.description`]: undefined }));
+                            }
+                          }}
+                          error={!!formErrors[`subcategories.${index}.description`]}
+                          helperText={formErrors[`subcategories.${index}.description`]}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" color="error" onClick={() => handleRemoveSubcategory(index)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
+            {formErrors.subcategories && (
+              <Alert severity="error" sx={{ mt: 1 }}>{formErrors.subcategories}</Alert>
+            )}
             <Button startIcon={<AddIcon />} onClick={handleAddSubcategory} sx={{ mt: 1 }}>
               Thêm dòng
             </Button>

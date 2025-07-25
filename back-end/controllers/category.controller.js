@@ -23,6 +23,12 @@ async function addCategory(req, res, next) {
             description: sub.description || "",
         }));
 
+        // Kiểm tra xem categoryName đã tồn tại chưa
+        const existingCategory = await db.Category.findOne({ categoryName });
+        if (existingCategory) {
+            return res.status(400).json({ categoryName: "Tên danh mục đã tồn tại." });
+        }
+
         const newCategory = new db.Category({
             categoryName,
             description,
@@ -40,14 +46,23 @@ async function updateCategory(req, res, next) {
     try {
         const { id } = req.params;
         const { categoryName, description, status } = req.body;
+
+        // Kiểm tra xem categoryName đã tồn tại chưa
+        const existingCategory = await db.Category.findOne({ categoryName, _id: { $ne: id } });
+        if (existingCategory) {
+            return res.status(400).json({ categoryName: "Tên danh mục đã tồn tại." });
+        }
+
         const updatedCategory = await db.Category.findByIdAndUpdate(
             id,
             { categoryName, description, status },
             { new: true }
         );
+
         if (!updatedCategory) {
             return res.status(404).json({ message: "Category not found" });
-        }
+        };
+        
         res.status(200).json({ message: "Category updated successfully", updatedCategory });
     } catch (error) {
         next(error);

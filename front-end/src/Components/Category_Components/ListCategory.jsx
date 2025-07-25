@@ -17,8 +17,9 @@ import AddCategoryDialog from './AddCategory';
 import EditCategoryDialog from './EditCategory';
 
 import useCategory from '../../Hooks/useCategory';
+
 function ListCategory() {
-  const { categories, getAllCategories, createCategory, inactivateCategory } = useCategory();
+  const { categories, getAllCategories, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory } = useCategory();
   const [filterText, setFilterText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'categoryName', direction: 'asc' });
   const [statusFirst, setStatusFirst] = useState('active'); // 'active' hoặc 'inactive'
@@ -230,6 +231,10 @@ function ListCategory() {
           onClose={() => setIsEditDialogOpen(false)}
           category={selectedCategory}
           onCategoryUpdated={fetchCategories}
+          onUpdate={updateCategory}
+          addSubcategory={addSubcategory}
+          updateSubcategory={updateSubcategory}
+          deleteSubcategory={deleteSubcategory}
         />
       )}
 

@@ -50,7 +50,7 @@ const useCategory = () => {
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'Create category failed');
             setLoading(false);
-            return null;
+            throw err; // Re-throw to handle in the component if needed
         }
     };
 
@@ -64,7 +64,7 @@ const useCategory = () => {
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'Update category failed');
             setLoading(false);
-            return null;
+            throw err; // Re-throw to handle in the component if needed
         }
     };
 
@@ -84,6 +84,52 @@ const useCategory = () => {
         }
     };
 
-    return { loading, error, categories, category, getAllCategories, getCategoryById, createCategory, updateCategory, inactivateCategory };
+    const addSubcategory = async (categoryId, data) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await categoryAPI.addSub(categoryId, data);
+            // Update the local state to include the new subcategory
+            setLoading(false);
+            return res;
+        }
+        catch (err) {
+            setError(err.response?.data?.message || err.message || 'Add subcategory failed');
+            setLoading(false);
+            throw err; // Re-throw to handle in the component if needed
+        }
+    }
+    const updateSubcategory = async (categoryId, subId, data) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await categoryAPI.updateSub(categoryId, subId, data);
+            // Update the local state to reflect the change
+            
+            setLoading(false);
+            return res;
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Update subcategory failed');
+            setLoading(false);
+            return null;
+        }
+    };
+    const deleteSubcategory = async (categoryId, subId) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await categoryAPI.deleteSub(categoryId, subId);
+            // Update the local state to remove the deleted subcategory
+            
+            setLoading(false);
+            return res;
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Delete subcategory failed');
+            setLoading(false);
+            return null;
+        }
+    };
+
+    return { loading, error, categories, category, getAllCategories, getCategoryById, createCategory, updateCategory, inactivateCategory, addSubcategory, updateSubcategory, deleteSubcategory };
 }
 export default useCategory;
