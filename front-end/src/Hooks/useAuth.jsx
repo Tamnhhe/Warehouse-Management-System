@@ -23,7 +23,6 @@ const useAuth = () => {
         err.response?.data?.message || err.message || "Failed to get user info"
       );
       setLoading(false);
-      return null;
     }
   }, []);
 
@@ -46,7 +45,7 @@ const useAuth = () => {
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Login failed");
       setLoading(false);
-      return null;
+      throw err;
     }
   };
 

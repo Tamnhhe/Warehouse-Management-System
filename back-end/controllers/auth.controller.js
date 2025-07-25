@@ -50,7 +50,6 @@ const register = async (req, res) => {
         message: "Đăng ký thành công! Vui lòng xác minh tài khoản của bạn.",
       });
   } catch (error) {
-    console.error("Registration error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -58,7 +57,6 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    console.log("Login attempt with email:", email);
     const user = await db.User.findOne({ "account.email": email });
     if (!user) {
       return res.status(404).json({ message: "Tài khoản không tồn tại" });
@@ -77,7 +75,7 @@ const login = async (req, res) => {
 
     const isValidPassword = await isMatch(password, user.account.password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: "Invalid password" });
+      return res.status(401).json({ message: "Sai tài khoản hoặc mật khẩu" });
     }
 
     const accessToken = generateAccessToken(user);
@@ -101,7 +99,6 @@ const login = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error("Login error:", error);
     res.status(500).json({ message: error.message });
   }
 };
