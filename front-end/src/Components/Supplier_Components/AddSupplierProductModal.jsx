@@ -41,6 +41,7 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
   };
 
   const handleChange = (e) => {
+    setFormErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
     const { name, value, type, files } = e.target;
     if (name === "productImage" && files && files[0]) {
       setFormData((prev) => ({ ...prev, productImage: files[0] }));
@@ -49,24 +50,33 @@ const AddSupplierProductModal = ({ open, onClose, onSubmit, supplierId, palette,
     }
   };
 
-  const handleSubmit = () => {
-    const errors = validate(formData);
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-    onSubmit(formData);
-    setFormData({
-      supplier: supplierId || "",
-      stock: 0,
-      expiry: "",
-      categoryId: "",
-      productImage: null,
-      productName: "",
-      quantitative: 1,
-      unit: ""
-    });
-    setFormErrors({});
-    onClose();
-  };
+  const handleSubmit = async () => {
+    try {
+        const errors = validate(formData);
+        setFormErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+        await onSubmit(formData);
+        setFormData({
+            supplier: supplierId || "",
+            stock: 0,
+            expiry: "",
+            categoryId: "",
+            productImage: null,
+            productName: "",
+            quantitative: 1,
+            unit: ""
+        });
+        setFormErrors({});
+        onClose();
+    } catch (err) {
+      if (err.response && err.response.data) {
+        setFormErrors(err.response.data);
+      } else {
+        console.error("Error adding product:", err);
+        alert("Lỗi khi thêm sản phẩm: " + (err.message || "Vui lòng thử lại sau"));
+      }
+    }
+};
 
   return (
     <Dialog

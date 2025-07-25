@@ -51,13 +51,12 @@ const ExpandSupplierProduct = ({
     try {
       await createSupplierProduct(productData);
       setOpenAddProductModal(false);
-      // Refresh product list after adding
       if (supplier?._id) {
         const products = await fetchProductsBySupplier(supplier._id);
         setSupplierProducts(products);
       }
     } catch (err) {
-      alert("Lỗi khi thêm sản phẩm nhà cung cấp: " + (err.message || ""));
+      throw err; // Re-throw to handle in the component if needed
     }
   };
 

@@ -52,28 +52,27 @@ const createSupplierProduct = async (req, res) => {
       quantitative,
       unit
     } = req.body;
+
+    console.log("Received data:", req.body);
     const productImage = req.file ? `/uploads/${req.file.filename}` : req.body.productImage;
 
     // Validate required fields
-    if (!supplier) return res.status(400).json({ message: 'Nhà cung cấp là bắt buộc.' });
+    if (!supplier) return res.status(400).json({ supplier: 'Nhà cung cấp là bắt buộc.' });
     // if (typeof stock !== 'number' || stock < 0) return res.status(400).json({ message: 'Tồn kho phải là số không âm.' });
-    if (!productImage || typeof productImage !== 'string') return res.status(400).json({ message: 'Ảnh sản phẩm là bắt buộc.' });
-    if (!productName || typeof productName !== 'string' || !productName.trim()) return res.status(400).json({ message: 'Tên sản phẩm là bắt buộc.' });
+    if (!productImage || typeof productImage !== 'string') return res.status(400).json({ image: 'Ảnh sản phẩm là bắt buộc.' });
+    if (!productName || typeof productName !== 'string' || !productName.trim()) return res.status(400).json({ name: 'Tên sản phẩm là bắt buộc.' });
     // if (typeof quantitative !== 'number' || quantitative <= 0) return res.status(400).json({ message: 'Định lượng phải là số dương.' });
-    if (!unit || typeof unit !== 'string' || !unit.trim()) return res.status(400).json({ message: 'Đơn vị là bắt buộc.' });
+    if (!unit || typeof unit !== 'string' || !unit.trim()) return res.status(400).json({ unit: 'Đơn vị là bắt buộc.' });
     if (categoryId && !mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ message: 'Danh mục phải là ObjectId hợp lệ.' });
+      return res.status(400).json({ category: 'Danh mục phải là ObjectId hợp lệ.' });
     }
     if (expiry && isNaN(Date.parse(expiry))) {
-      return res.status(400).json({ message: 'Ngày hết hạn không hợp lệ.' });
+      return res.status(400).json({ expiry: 'Ngày hết hạn không hợp lệ.' });
     }
 
     const supplierProductExists = await SupplierProduct.findOne({ productName: productName.trim() });
     if (supplierProductExists) {
-      return res.status(400).json({
-        error: 'Supplier product already exists',
-        message: 'Sản phẩm đã tồn tại trong danh sách nhà cung cấp.'
-      });
+      return res.status(400).json({ productName: 'Sản phẩm đã tồn tại trong danh sách nhà cung cấp.' });
     }
 
     // Create new supplier product
