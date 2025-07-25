@@ -7,20 +7,41 @@
     "$oid": "687fcbc6305ceddd031f8925"
   },
   "maxQuantitative": 100,
-  "currentQuantitative": 0,
+  "currentQuantitative": 50,
   "maxWeight": 100,
-  "currentWeight": 0,
+  "currentWeight": -15,
   "status": "active",
   "priority": 0,
   "maxCapacityPerProduct": null,
-  "products": [],
+  "products": [
+    {
+      "productId": {
+        "$oid": "687fd023273b5658f3898680"
+      },
+      "quantity": 5,
+      "price": 98000000,
+      "_id": {
+        "$oid": "6883c4f369352574ed0a1468"
+      }
+    },
+    {
+      "productId": {
+        "$oid": "687fd03c273b5658f389868d"
+      },
+      "quantity": 45,
+      "price": 18900000,
+      "_id": {
+        "$oid": "6883c4f369352574ed0a1472"
+      }
+    }
+  ],
   "createdAt": {
     "$date": "2025-07-22T17:44:23.997Z"
   },
   "updatedAt": {
-    "$date": "2025-07-22T17:44:23.997Z"
+    "$date": "2025-07-25T17:58:51.169Z"
   },
-  "__v": 0
+  "__v": 2
 },
 {
   "_id": {
@@ -168,13 +189,13 @@
 },
 {
   "_id": {
-    "$oid": "68810469587d4c5076ae6afd"
+    "$oid": "6883c46969352574ed0a1319"
   },
   "name": "Tầng 1 B2",
   "categoryId": {
     "$oid": "687fcbf1305ceddd031f8929"
   },
-  "maxQuantitative": 1000,
+  "maxQuantitative": 100,
   "currentQuantitative": 100,
   "maxWeight": 100,
   "currentWeight": 0,
@@ -184,20 +205,55 @@
   "products": [
     {
       "productId": {
-        "$oid": "6881044c587d4c5076ae6ae0"
+        "$oid": "6883c44c69352574ed0a12c8"
       },
-      "quantity": 100,
-      "price": 27900000,
+      "quantity": 92,
+      "price": 27980000,
       "_id": {
-        "$oid": "68810487587d4c5076ae6b28"
+        "$oid": "6883c49e69352574ed0a13d5"
       }
     }
   ],
   "createdAt": {
-    "$date": "2025-07-23T15:48:57.010Z"
+    "$date": "2025-07-25T17:52:41.700Z"
   },
   "updatedAt": {
-    "$date": "2025-07-23T15:49:27.812Z"
+    "$date": "2025-07-25T17:58:51.175Z"
+  },
+  "__v": 1
+},
+{
+  "_id": {
+    "$oid": "6883c4c169352574ed0a13f5"
+  },
+  "name": "Tầng 1 B3",
+  "categoryId": {
+    "$oid": "687fcbf1305ceddd031f8929"
+  },
+  "maxQuantitative": 250,
+  "currentQuantitative": 85,
+  "maxWeight": 100,
+  "currentWeight": -15,
+  "status": "active",
+  "priority": 0,
+  "maxCapacityPerProduct": null,
+  "products": [
+    {
+      "productId": {
+        "$oid": "687fcf74273b5658f389865e"
+      },
+      "quantity": 80,
+      "price": 21000000,
+      "_id": {
+        "$oid": "6883c4db69352574ed0a1430"
+      }
+    }
+  ],
+  "createdAt": {
+    "$date": "2025-07-25T17:54:09.917Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-25T17:58:51.179Z"
   },
   "__v": 1
 }]

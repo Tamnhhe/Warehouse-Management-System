@@ -1,0 +1,288 @@
+[{
+  "_id": {
+    "$oid": "688370aca942ddbd0c8974e8"
+  },
+  "title": "Phiếu kiểm kê mới",
+  "message": "Nhân viên Huy Tâm đã tạo phiếu kiểm kê vào 18:55:24 25/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"kiểm kê\",\"timestamp\":\"18:55:24 25/7/2025\"}",
+  "isRead": true,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T11:55:24.181Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68837aa319b93c3320a12422"
+  },
+  "title": "Đơn nhập hàng mới",
+  "message": "Linh Đàm đã tạo đơn nhập hàng vào 19:37:55 25/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Linh Đàm\",\"actionType\":\"nhập kho\",\"timestamp\":\"19:37:55 25/7/2025\"}",
+  "isRead": true,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T12:37:55.233Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68837af719b93c3320a12445"
+  },
+  "title": "Đơn nhập hàng mới",
+  "message": "Linh Đàm đã tạo đơn nhập hàng vào 19:39:19 25/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Linh Đàm\",\"actionType\":\"nhập kho\",\"timestamp\":\"19:39:19 25/7/2025\"}",
+  "isRead": true,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T12:39:19.953Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68837d0719b93c3320a12671"
+  },
+  "title": "Đơn xuất hàng mới",
+  "message": "Linh Đàm đã tạo đơn xuất hàng vào 19:48:07 25/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Linh Đàm\",\"actionType\":\"xuất kho\",\"timestamp\":\"19:48:07 25/7/2025\"}",
+  "isRead": true,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T12:48:07.302Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c49969352574ed0a13c3"
+  },
+  "title": "Đơn nhập hàng mới",
+  "message": "Huy Tâm đã tạo đơn nhập hàng vào 00:53:29 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"nhập kho\",\"timestamp\":\"00:53:29 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:53:29.301Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c49e69352574ed0a13dc"
+  },
+  "title": "Đơn nhập kho đã được duyệt",
+  "message": "Manager undefined đã duyệt đơn nhập kho của bạn vào 00:53:34 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"actionType\":\"duyệt đơn nhập kho\",\"timestamp\":\"00:53:34 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:53:34.141Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c4d469352574ed0a141b"
+  },
+  "title": "Đơn nhập hàng mới",
+  "message": "Huy Tâm đã tạo đơn nhập hàng vào 00:54:28 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"nhập kho\",\"timestamp\":\"00:54:28 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:54:28.511Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c4db69352574ed0a1437"
+  },
+  "title": "Đơn nhập kho đã được duyệt",
+  "message": "Manager undefined đã duyệt đơn nhập kho của bạn vào 00:54:35 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"actionType\":\"duyệt đơn nhập kho\",\"timestamp\":\"00:54:35 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:54:35.264Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c4ed69352574ed0a144f"
+  },
+  "title": "Đơn nhập hàng mới",
+  "message": "Huy Tâm đã tạo đơn nhập hàng vào 00:54:53 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"nhập kho\",\"timestamp\":\"00:54:53 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:54:53.973Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c4f369352574ed0a147a"
+  },
+  "title": "Đơn nhập kho đã được duyệt",
+  "message": "Manager undefined đã duyệt đơn nhập kho của bạn vào 00:54:59 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"actionType\":\"duyệt đơn nhập kho\",\"timestamp\":\"00:54:59 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:54:59.907Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c51869352574ed0a1510"
+  },
+  "title": "Đơn xuất hàng mới",
+  "message": "Huy Tâm đã tạo đơn xuất hàng vào 00:55:36 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"xuất kho\",\"timestamp\":\"00:55:36 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:55:36.061Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c51d69352574ed0a152a"
+  },
+  "title": "Đơn xuất kho đã được duyệt",
+  "message": "Manager undefined đã duyệt đơn xuất kho của bạn vào 00:55:41 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"actionType\":\"duyệt đơn xuất kho\",\"timestamp\":\"00:55:41 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:55:41.804Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c59369352574ed0a159a"
+  },
+  "title": "Đơn xuất hàng mới",
+  "message": "Huy Tâm đã tạo đơn xuất hàng vào 00:57:39 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"xuất kho\",\"timestamp\":\"00:57:39 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:57:39.504Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c59969352574ed0a15ba"
+  },
+  "title": "Đơn xuất kho đã được duyệt",
+  "message": "Manager undefined đã duyệt đơn xuất kho của bạn vào 00:57:45 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"actionType\":\"duyệt đơn xuất kho\",\"timestamp\":\"00:57:45 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:57:45.093Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c5aa69352574ed0a167e"
+  },
+  "title": "Đơn kiểm kê mới",
+  "message": "Huy Tâm đã tạo đơn kiểm kê vào 00:58:02 26/7/2025",
+  "type": "employee_action",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"employeeName\":\"Huy Tâm\",\"actionType\":\"kiểm kê\",\"timestamp\":\"00:58:02 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:58:02.955Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c5db69352574ed0a16d0"
+  },
+  "title": "Phiếu điều chỉnh đã được tạo",
+  "message": "Manager Huy Tâm đã tạo phiếu điều chỉnh cho đơn kiểm kê của bạn vào 00:58:51 26/7/2025",
+  "type": "manager_approval",
+  "userId": {
+    "$oid": "687fcb16305ceddd031f88f4"
+  },
+  "data": "{\"managerName\":\"Huy Tâm\",\"actionType\":\"điều chỉnh sản phẩm trong phiếu kiểm kê\",\"timestamp\":\"00:58:51 26/7/2025\"}",
+  "isRead": false,
+  "isSeen": false,
+  "createdAt": {
+    "$date": "2025-07-25T17:58:51.201Z"
+  },
+  "__v": 0
+}]

@@ -12,10 +12,10 @@
   "productImage": "/uploads/1753206622200-496423996-image_processing20241021-2-173e1ev.png",
   "productName": "Iphone 16 Pro Max",
   "quantitative": 1,
-  "unit": "Chiếc",
   "createdAt": {
     "$date": "2025-07-22T17:50:22.211Z"
   },
+  "unit": "Chiếc",
   "__v": 0
 },
 {
@@ -32,10 +32,10 @@
   "productImage": "/uploads/1753206644000-878118038-galaxy_s24_ultra_761_576_2_1.png",
   "productName": "Samsung S24 Ultra",
   "quantitative": 1,
-  "unit": "Chiếc",
   "createdAt": {
     "$date": "2025-07-22T17:50:44.009Z"
   },
+  "unit": "Chiếc",
   "__v": 0
 },
 {
@@ -52,10 +52,10 @@
   "productImage": "/uploads/1753206819510-165231485-xe-may-vinh-truong-tien-giang-01_d328ca27abea4524b847e06bd912ff81_grande.jpg",
   "productName": "Honda SH 150i (đỏ)",
   "quantitative": 1,
-  "unit": "Chiếc",
   "createdAt": {
     "$date": "2025-07-22T17:53:39.517Z"
   },
+  "unit": "Chiếc",
   "__v": 0
 },
 {
@@ -72,10 +72,10 @@
   "productImage": "/uploads/1753206844954-203066495-Honda-Wave-alpha-110-ban-tieu-chuan-mau-xanh-1.jpg",
   "productName": "Honda Wave 110cc",
   "quantitative": 1,
-  "unit": "Chiếc",
   "createdAt": {
     "$date": "2025-07-22T17:54:04.962Z"
   },
+  "unit": "Chiếc",
   "__v": 0
 },
 {
@@ -95,9 +95,9 @@
   "productImage": "/uploads/1753207045708-836553553-JBL-Flip5-Black-A.jpg",
   "productName": "Loa JBL flip 5",
   "quantitative": 1,
-  "unit": "Cái",
   "createdAt": {
     "$date": "2025-07-22T17:57:25.714Z"
   },
+  "unit": "Cái",
   "__v": 0
 }]

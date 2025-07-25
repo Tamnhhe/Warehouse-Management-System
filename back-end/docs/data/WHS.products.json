@@ -6,14 +6,26 @@
   "categoryId": {
     "$oid": "687fcbf1305ceddd031f8929"
   },
-  "totalStock": 0,
+  "totalStock": 80,
   "thresholdStock": 15,
   "productImage": "/uploads/1753206644000-878118038-galaxy_s24_ultra_761_576_2_1.png",
   "unit": "Chiếc",
   "quantitative": 1,
-  "location": [],
+  "location": [
+    {
+      "inventoryId": {
+        "$oid": "6883c4c169352574ed0a13f5"
+      },
+      "stock": 80,
+      "price": 21000000,
+      "totalImportValue": 0,
+      "_id": {
+        "$oid": "6883c4db69352574ed0a1433"
+      }
+    }
+  ],
   "status": "active",
-  "__v": 0
+  "__v": 1
 },
 {
   "_id": {
@@ -23,14 +35,26 @@
   "categoryId": {
     "$oid": "687fcbc6305ceddd031f8925"
   },
-  "totalStock": 0,
+  "totalStock": 5,
   "thresholdStock": 12,
   "productImage": "/uploads/1753206819510-165231485-xe-may-vinh-truong-tien-giang-01_d328ca27abea4524b847e06bd912ff81_grande.jpg",
   "unit": "Chiếc",
   "quantitative": 1,
-  "location": [],
+  "location": [
+    {
+      "inventoryId": {
+        "$oid": "687fcdf7273b5658f38985ec"
+      },
+      "stock": 5,
+      "price": 98000000,
+      "totalImportValue": 0,
+      "_id": {
+        "$oid": "6883c4f369352574ed0a146b"
+      }
+    }
+  ],
   "status": "active",
-  "__v": 0
+  "__v": 1
 },
 {
   "_id": {
@@ -40,14 +64,26 @@
   "categoryId": {
     "$oid": "687fcbc6305ceddd031f8925"
   },
-  "totalStock": 0,
+  "totalStock": 45,
   "thresholdStock": 10,
   "productImage": "/uploads/1753206844954-203066495-Honda-Wave-alpha-110-ban-tieu-chuan-mau-xanh-1.jpg",
   "unit": "Chiếc",
   "quantitative": 1,
-  "location": [],
+  "location": [
+    {
+      "inventoryId": {
+        "$oid": "687fcdf7273b5658f38985ec"
+      },
+      "stock": 45,
+      "price": 18900000,
+      "totalImportValue": 0,
+      "_id": {
+        "$oid": "6883c4f369352574ed0a1475"
+      }
+    }
+  ],
   "status": "active",
-  "__v": 0
+  "__v": 1
 },
 {
   "_id": {
@@ -68,27 +104,27 @@
 },
 {
   "_id": {
-    "$oid": "6881044c587d4c5076ae6ae0"
+    "$oid": "6883c44c69352574ed0a12c8"
   },
   "productName": "Iphone 16 Pro Max",
   "categoryId": {
     "$oid": "687fcbf1305ceddd031f8929"
   },
-  "totalStock": 100,
+  "totalStock": 92,
   "thresholdStock": 10,
-  "productImage": "/uploads/1753285708221-104598589-1753285042206-973785764-apple-iphone-16-pro-max-white-titanium-smartphone-EKrrokE-600.jpg",
+  "productImage": "/uploads/1753465932512-371204205-image_processing20241021-2-173e1ev.png",
   "unit": "Chiếc",
   "quantitative": 1,
   "location": [
     {
       "inventoryId": {
-        "$oid": "68810469587d4c5076ae6afd"
+        "$oid": "6883c46969352574ed0a1319"
       },
-      "stock": 100,
-      "price": 27900000,
+      "stock": 92,
+      "price": 27980000,
       "totalImportValue": 0,
       "_id": {
-        "$oid": "68810487587d4c5076ae6b2b"
+        "$oid": "6883c49e69352574ed0a13d8"
       }
     }
   ],

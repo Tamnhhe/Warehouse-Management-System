@@ -8,4 +8,15 @@
   "phone": "0912654921",
   "email": "thuymy@gmail.com",
   "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6883c57f69352574ed0a156c"
+  },
+  "name": "Cửa hàng Long Châu",
+  "receiver": "Long Thị Châu",
+  "address": "Châu Long, Mộc Bài, Cabuchia",
+  "phone": "0979123876",
+  "email": "longvachau@gmail.com",
+  "__v": 0
 }]

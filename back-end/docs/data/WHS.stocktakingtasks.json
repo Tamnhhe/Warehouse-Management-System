@@ -1,35 +1,121 @@
 [{
   "_id": {
-    "$oid": "688101e5fc24a8220a960280"
+    "$oid": "6883c5aa69352574ed0a1673"
   },
   "inventoryId": {
-    "$oid": "687fce9a273b5658f389861c"
+    "$oid": "687fcdf7273b5658f38985ec"
   },
   "products": [
     {
       "productId": {
-        "$oid": "688101b2fc24a8220a9601c8"
+        "$oid": "687fd023273b5658f3898680"
       },
       "systemQuantity": 10,
-      "actualQuantity": null,
-      "difference": null,
+      "actualQuantity": 5,
+      "difference": -5,
+      "note": "",
+      "inventoryName": "Khu 1",
+      "originalInventoryId": {
+        "$oid": "687fcdf7273b5658f38985ec"
+      },
       "_id": {
-        "$oid": "688101e5fc24a8220a960281"
+        "$oid": "6883c5aa69352574ed0a1674"
+      }
+    },
+    {
+      "productId": {
+        "$oid": "687fd03c273b5658f389868d"
+      },
+      "systemQuantity": 40,
+      "actualQuantity": 45,
+      "difference": 5,
+      "note": "",
+      "inventoryName": "Khu 1",
+      "originalInventoryId": {
+        "$oid": "687fcdf7273b5658f38985ec"
+      },
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a1675"
+      }
+    },
+    {
+      "productId": {
+        "$oid": "6883c44c69352574ed0a12c8"
+      },
+      "systemQuantity": 100,
+      "actualQuantity": 92,
+      "difference": -8,
+      "note": "Cho Con gái",
+      "inventoryName": "Tầng 1 B2",
+      "originalInventoryId": {
+        "$oid": "6883c46969352574ed0a1319"
+      },
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a1676"
+      }
+    },
+    {
+      "productId": {
+        "$oid": "687fcf74273b5658f389865e"
+      },
+      "systemQuantity": 85,
+      "actualQuantity": 80,
+      "difference": -5,
+      "note": "Bị rơi",
+      "inventoryName": "Tầng 1 B3",
+      "originalInventoryId": {
+        "$oid": "6883c4c169352574ed0a13f5"
+      },
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a1677"
       }
     }
   ],
   "auditor": {
-    "$oid": "6822aa2b7b1ef5596ea4b66b"
+    "$oid": "687fcb16305ceddd031f88f4"
   },
-  "status": "pending",
+  "status": "adjusted",
+  "isWarehouseStocktaking": true,
+  "relatedInventories": [
+    {
+      "inventoryId": {
+        "$oid": "687fcdf7273b5658f38985ec"
+      },
+      "inventoryName": "Khu 1",
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a1678"
+      }
+    },
+    {
+      "inventoryId": {
+        "$oid": "6883c46969352574ed0a1319"
+      },
+      "inventoryName": "Tầng 1 B2",
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a1679"
+      }
+    },
+    {
+      "inventoryId": {
+        "$oid": "6883c4c169352574ed0a13f5"
+      },
+      "inventoryName": "Tầng 1 B3",
+      "_id": {
+        "$oid": "6883c5aa69352574ed0a167a"
+      }
+    }
+  ],
   "checkedAt": {
-    "$date": "2025-07-23T15:38:13.622Z"
+    "$date": "2025-07-25T17:58:48.994Z"
   },
   "createdAt": {
-    "$date": "2025-07-23T15:38:13.623Z"
+    "$date": "2025-07-25T17:58:02.950Z"
   },
   "updatedAt": {
-    "$date": "2025-07-23T15:38:13.623Z"
+    "$date": "2025-07-25T17:58:51.198Z"
   },
-  "__v": 0
+  "__v": 1,
+  "adjustmentId": {
+    "$oid": "6883c5db69352574ed0a16b3"
+  }
 }]
