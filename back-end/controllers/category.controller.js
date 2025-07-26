@@ -8,7 +8,8 @@ async function getCategories(req, res, next) {
         const categories = await db.Category.find({});
         res.status(200).json(categories);
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 
@@ -38,7 +39,8 @@ async function addCategory(req, res, next) {
         await newCategory.save();
         res.status(201).json({ message: "Danh mục thêm mới thành công", newCategory });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 // Sửa category
@@ -65,7 +67,7 @@ async function updateCategory(req, res, next) {
 
         res.status(200).json({ message: "Category updated successfully", updatedCategory });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
     }
 }
 
@@ -90,7 +92,8 @@ async function inactiveCategory(req, res, next) {
 
         res.status(200).json({ message: "Category status changed successfully", changedCategory });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 
@@ -112,7 +115,8 @@ async function addSubCategory(req, res, next) {
         await category.save();
         res.status(201).json({ message: "Subcategory added successfully", newSubCategory });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 
@@ -135,7 +139,8 @@ async function updateSubCategory(req, res, next) {
         await category.save();
         res.status(200).json({ message: "Subcategory updated successfully", subCategory });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 
@@ -157,7 +162,8 @@ async function deleteSubCategory(req, res) {
 
         return res.status(404).json({ message: "Subcategory not found" });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: error.message });
+
     }
 }
 

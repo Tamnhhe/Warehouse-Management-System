@@ -228,7 +228,8 @@ async function banUser(req, res, next) {
     await user.save();
     res.status(200).json({ message: "User status changed successfully", user });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: error.message });
+
   }
 }
 

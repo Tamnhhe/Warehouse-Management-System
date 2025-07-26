@@ -48,10 +48,7 @@ const createProduct = async (req, res, next) => {
     const newProduct = new Product({
       productName,
       categoryId,
-      totalStock:
-        location.reduce((sum, loc) => sum + Number(loc.stock || 0), 0) ||
-        totalStock ||
-        0,
+      totalStock: totalStock || 0,
       thresholdStock: thresholdStock || 0,
       productImage,
       unit,
@@ -137,9 +134,12 @@ async function updateProduct(req, res, next) {
       location,
       status,
     } = req.body;
+
     const productImage = req.file
       ? `/uploads/${req.file.filename}`
       : req.body.productImage;
+
+    console.log(productImage);
 
     const existingProductName = await Product.findOne({ productName, _id: { $ne: id } });
     if (existingProductName) {
@@ -157,14 +157,17 @@ async function updateProduct(req, res, next) {
     const updatedProduct = {
       productName,
       categoryId,
-      totalStock: location.reduce((sum, loc) => sum + Number(loc.stock || 0), 0) || totalStock || 0,
+      totalStock: totalStock || 0,
       thresholdStock,
       unit,
       quantitative,
       location: formattedLocation,
       status,
     };
-    if (productImage) updatedProduct.productImage = productImage;
+
+    if (productImage && productImage !== "undefined" && productImage !== "null") {
+      updatedProduct.productImage = productImage;
+    }
 
     const product = await Product.findByIdAndUpdate(
       id,
@@ -178,8 +181,7 @@ async function updateProduct(req, res, next) {
 
     res.status(200).json({ message: "Cập nhật sản phẩm thành công", product });
   } catch (error) {
-    console.log(error);
-    next(error);
+    res.status(500).json({ message: error.message });
   }
 }
 
@@ -241,7 +243,7 @@ const updateProductWithSupplier = async (req, res, next) => {
     const updatedProduct = {
       productName,
       categoryId,
-      totalStock: location.reduce((sum, loc) => sum + (loc.stock || 0), 0) || totalStock || 0,
+      totalStock: totalStock || 0,
       thresholdStock,
       unit,
       quantitative,
@@ -260,7 +262,7 @@ const updateProductWithSupplier = async (req, res, next) => {
       product,
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -285,7 +287,8 @@ const getProductSupplier = async (req, res, next) => {
       supplierProduct,
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: error.message });
+
   }
 };
 
@@ -310,7 +313,8 @@ const inactiveProduct = async (req, res, next) => {
         changedProduct,
       });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: error.message });
+
   }
 };
 
