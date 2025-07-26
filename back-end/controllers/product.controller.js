@@ -13,6 +13,7 @@ const createProduct = async (req, res, next) => {
       thresholdStock,
       unit,
       status,
+      location,
       quantitative,
       supplierId,
     } = req.body;
@@ -150,7 +151,7 @@ async function updateProduct(req, res, next) {
         inventoryId: loc.inventoryId?._id || loc.inventoryId,
         stock: loc.stock,
       }))
-    : location;
+      : location;
 
 
     const updatedProduct = {
