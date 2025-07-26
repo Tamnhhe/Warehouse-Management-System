@@ -89,11 +89,16 @@ const AddSupplierModal = ({
               fullWidth
               label="Số điện thoại"
               value={formData.contact}
-              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+              onChange={(e) => {
+                // Only allow numbers
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                setFormData({ ...formData, contact: value });
+              }}
               error={!!formErrors.contact}
               helperText={formErrors.contact}
               required
               variant="outlined"
+              inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   "&.Mui-focused fieldset": {

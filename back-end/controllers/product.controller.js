@@ -141,7 +141,7 @@ async function updateProduct(req, res, next) {
       ? `/uploads/${req.file.filename}`
       : req.body.productImage;
 
-    const existingProductName = await Product.findOne({ productName });
+    const existingProductName = await Product.findOne({ productName, _id: { $ne: id } });
     if (existingProductName) {
       return res.status(400).json({ productName: "Sản phẩm đã tồn tại trong kho." });
     }
