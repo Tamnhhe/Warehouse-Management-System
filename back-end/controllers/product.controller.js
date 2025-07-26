@@ -14,47 +14,11 @@ const createProduct = async (req, res, next) => {
       unit,
       status,
       quantitative,
-      location,
       supplierId,
     } = req.body;
     const productImage = req.file
       ? `/uploads/${req.file.filename}`
       : req.body.productImage;
-
-    // Parse location if sent as array of objects in multipart/form-data
-    if (Array.isArray(location)) {
-      // location is array of objects, but each field is sent as string
-      location = location.map((loc) => {
-        if (typeof loc === "string") {
-          try {
-            return JSON.parse(loc);
-          } catch {
-            return loc;
-          }
-        }
-        return loc;
-      });
-    } else if (
-      typeof location === "object" &&
-      location !== null &&
-      !Array.isArray(location)
-    ) {
-      location = [location];
-    }
-
-    // If location is undefined, try to reconstruct from req.body
-    if (!location) {
-      location = [];
-      Object.keys(req.body).forEach((key) => {
-        const match = key.match(/^location\[(\d+)\]\[(\w+)\]$/);
-        if (match) {
-          const idx = Number(match[1]);
-          const field = match[2];
-          if (!location[idx]) location[idx] = {};
-          location[idx][field] = req.body[key];
-        }
-      });
-    }
 
     // Kiểm tra các trường bắt buộc
     if (!productName || !categoryId || !productImage || !unit || !status) {
@@ -68,7 +32,7 @@ const createProduct = async (req, res, next) => {
     if (existingProduct) {
       return res
         .status(400)
-        .json({ message: "Sản phẩm đã tồn tại trong kho." });
+        .json({ productName: "Sản phẩm đã tồn tại trong kho." });
     }
 
     // Kiểm tra danh mục
@@ -76,7 +40,7 @@ const createProduct = async (req, res, next) => {
     if (!checkCategory) {
       return res
         .status(404)
-        .json({ message: "Định dạng danh mục không hợp lệ" });
+        .json({ categoryId: "Định dạng danh mục không hợp lệ" });
     }
 
     // Tạo sản phẩm mới
@@ -96,24 +60,6 @@ const createProduct = async (req, res, next) => {
     });
 
     await newProduct.save();
-
-    // Update kệ trong cơ sở dữ liệu
-    if (location && Array.isArray(location)) {
-      for (const loc of location) {
-        if (loc.inventoryId) {
-          const inventory = await Inventory.findById(loc.inventoryId);
-          //Update quantitative left and stock in inventory
-          if (inventory) {
-            inventory.currentQuantitative += loc.stock*quantitative || 0;
-            inventory.products.push({
-              productId: newProduct._id,
-              quantity: loc.stock || 0,
-            });
-            await inventory.save();
-          }
-        }
-      }
-    }
 
     // Nếu có supplierId, thêm sản phẩm vào danh sách sản phẩm của nhà cung cấp
     if (supplierId) {
@@ -194,9 +140,9 @@ async function updateProduct(req, res, next) {
       ? `/uploads/${req.file.filename}`
       : req.body.productImage;
 
-    const existingProduct = await Product.findById(id);
-    if (!existingProduct) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    const existingProductName = await Product.findOne({ productName });
+    if (existingProductName) {
+      return res.status(400).json({ productName: "Sản phẩm đã tồn tại trong kho." });
     }
 
     const formattedLocation = Array.isArray(location)
@@ -225,31 +171,10 @@ async function updateProduct(req, res, next) {
       { new: true }
     );
 
-    //Update inventory stock and quantitative left
-    if (location && Array.isArray(location)) {
-      for (const loc of location) {
-        if (loc.inventoryId) {
-          const inventory = await Inventory.findById(loc.inventoryId);
-          //Update quantitative left and stock in inventory with updated values
-          if (inventory) {
-            const existingProductInInventory = inventory.products.find(
-              (p) => p.productId.toString() === product._id.toString()
-            );
-            if (existingProductInInventory) {
-              inventory.currentQuantitative -= existingProductInInventory.quantity * quantitative || 0;
-              existingProductInInventory.quantity = loc.stock || 0;
-            } else {
-              inventory.products.push({
-                productId: product._id,
-                quantity: loc.stock || 0,
-              });
-            }
-            inventory.currentQuantitative += loc.stock * quantitative || 0;
-            await inventory.save();
-          }
-        }
-      }
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tìm thấy" });
     }
+
     res.status(200).json({ message: "Cập nhật sản phẩm thành công", product });
   } catch (error) {
     console.log(error);

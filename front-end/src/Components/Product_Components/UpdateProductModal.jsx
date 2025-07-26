@@ -221,7 +221,7 @@ const UpdateProductModal = ({
         onUpdateSuccess();
         handleClose();
       } catch (error) {
-        setErrors((prev) => ({ ...prev, general: error?.message || "Có lỗi xảy ra." }));
+        setErrors((prev) => ({ ...prev, ...error.response.data || { general: "Có lỗi xảy ra." } }));
       } finally {
         setLoading(false);
       }

@@ -80,69 +80,6 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
         }
     };
 
-    // Handle inventory selection and stock input
-    const handleInventorySelect = (e) => {
-        setSelectedInventory(e.target.value);
-        setInventoryStock("");
-        setErrors((prev) => ({ ...prev, location: "" }));
-    };
-
-    const handleInventoryStockInput = (e) => {
-        setInventoryStock(e.target.value);
-        setErrors((prev) => ({ ...prev, location: "" }));
-    };
-
-    const handleAddInventory = () => {
-        if (!selectedInventory || inventoryStock === "" || Number(inventoryStock) < 0) {
-            setErrors((prev) => ({
-                ...prev,
-                location: "Vui lòng chọn kệ và nhập số lượng tồn kho hợp lệ."
-            }));
-            return;
-        }
-        // Prevent duplicate inventory
-        if (productData.location.some(inv => inv.inventoryId === selectedInventory)) {
-            setErrors((prev) => ({
-                ...prev,
-                location: "Kệ đã được thêm."
-            }));
-            return;
-        }
-
-        // Kiểm tra sức chứa định lượng của kệ
-        const inventoryObj = inventories.find(i => i._id === selectedInventory);
-        if (inventoryObj) {
-            const productQuantitative = Number(productData.quantitative) || 0;
-            const addQuantitative = Number(inventoryStock) * productQuantitative;
-            const availableQuantitative = (Number(inventoryObj.maxQuantitative) || 0) - (Number(inventoryObj.currentQuantitative) || 0);
-
-            if (addQuantitative > availableQuantitative) {
-                setErrors((prev) => ({
-                    ...prev,
-                    location: `Kệ này chỉ còn sức chứa định lượng tối đa là ${availableQuantitative}. Sản phẩm bạn thêm vượt quá sức chứa.`
-                }));
-                return;
-            }
-        }
-
-        setProductData((prev) => ({
-            ...prev,
-            location: [
-                ...prev.location,
-                { inventoryId: selectedInventory, stock: Number(inventoryStock) }
-            ]
-        }));
-        setSelectedInventory("");
-        setInventoryStock("");
-    };
-
-    const handleRemoveInventory = (inventoryId) => {
-        setProductData((prev) => ({
-            ...prev,
-            location: prev.location.filter(inv => inv.inventoryId !== inventoryId)
-        }));
-    };
-
     const handleSupplierCheck = (e) => {
         setHasSupplier(e.target.checked);
         if (!e.target.checked) {
@@ -170,15 +107,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
         } else {
             tempErrors.productImage = "";
         }
-        // Validate inventories
-        // if (!productData.location.length) {
-        //     tempErrors.location = "Vui lòng thêm ít nhất một kệ và số lượng tồn kho.";
-        // } else if (productData.location.some(inv => !inv.stock || inv.stock < 0)) {
-        //     tempErrors.location = "Số lượng tồn kho phải là số >= 0.";
-        // } else {
-        //     tempErrors.location = "";
-        // }
-        // Validate supplier if checked
+        
         if (hasSupplier && !productData.supplierId) {
             tempErrors.supplierId = "Vui lòng chọn nhà cung cấp.";
         } else {
@@ -210,7 +139,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                 await createProduct(formData);
                 onSaveSuccess();
             } catch (error) {
-                setErrors((prev) => ({ ...prev, general: error?.message || "Có lỗi xảy ra." }));
+                setErrors((prev) => ({ ...prev, ...error.response.data || { general: "Có lỗi xảy ra." } }));
             } finally {
                 setLoading(false);
             }
@@ -252,54 +181,7 @@ const AddProductModal = ({ open, handleClose, onSaveSuccess, createProduct, chec
                         fullWidth
                         inputProps={{ min: 0 }}
                     />
-                    {/* Inventory selection */}
-                    {/* <Box>
-                        <Typography variant="subtitle1" sx={{ mb: 1 }}>Chọn kệ và nhập tồn kho cho từng kệ:</Typography>
-                        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                            <FormControl sx={{ minWidth: 160 }}>
-                                <InputLabel id="inventory-select-label">Kệ</InputLabel>
-                                <Select
-                                    labelId="inventory-select-label"
-                                    value={selectedInventory}
-                                    label="Kệ"
-                                    onChange={handleInventorySelect}
-                                >
-                                    <MenuItem value=""><em>Chọn kệ</em></MenuItem>
-                                    {inventories
-                                        .filter(inv => !productData.location.some(i => i.inventoryId === inv._id))
-                                        .map(inv => (
-                                            <MenuItem key={inv._id} value={inv._id}>{inv.name}</MenuItem>
-                                        ))}
-                                </Select>
-                            </FormControl>
-                            <TextField
-                                type="number"
-                                label="Tồn kho"
-                                size="small"
-                                inputProps={{ min: 0 }}
-                                value={inventoryStock}
-                                onChange={handleInventoryStockInput}
-                                sx={{ width: 120 }}
-                            />
-                            <Button variant="contained" onClick={handleAddInventory}>Thêm</Button>
-                        </Stack>
-                        {productData.location.length > 0 && (
-                            <Box sx={{ mt: 1 }}>
-                                <Typography variant="subtitle2">Danh sách kệ đã chọn:</Typography>
-                                {productData.location.map(inv => {
-                                    const inventoryObj = inventories.find(i => i._id === inv.inventoryId);
-                                    return (
-                                        <Stack direction="row" alignItems="center" spacing={2} key={inv.inventoryId} sx={{ mb: 1 }}>
-                                            <Typography sx={{ minWidth: 100 }}>{inventoryObj ? inventoryObj.name : inv.inventoryId}</Typography>
-                                            <Typography sx={{ minWidth: 80 }}>Tồn kho: {inv.stock}</Typography>
-                                            <Button variant="outlined" color="error" size="small" onClick={() => handleRemoveInventory(inv.inventoryId)}>Xóa</Button>
-                                        </Stack>
-                                    );
-                                })}
-                            </Box>
-                        )}
-                        {errors.location && <FormHelperText error>{errors.location}</FormHelperText>}
-                    </Box> */}
+                    
                     <FormControl fullWidth>
                         <InputLabel id="status-select-label">Trạng Thái</InputLabel>
                         <Select labelId="status-select-label" name="status" value={productData.status} label="Trạng Thái" onChange={handleChange}>

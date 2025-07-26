@@ -39,6 +39,7 @@ const useProduct = () => {
       setProducts([...products, response.data]);
     } catch (err) {
       setError(err.message || "Failed to create product");
+      throw err; // Re-throw to handle in the component if needed
     } finally {
       setLoading(false);
     }
@@ -51,6 +52,7 @@ const useProduct = () => {
       setProducts(products.map((p) => (p._id === id ? response.data : p)));
     } catch (err) {
       setError(err.message || "Failed to update product");
+      throw err; 
     } finally {
       setLoading(false);
     }
