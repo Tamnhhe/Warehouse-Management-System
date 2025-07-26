@@ -44,6 +44,7 @@ const useSupplier = () => {
         try {
             const response = await supplierAPI.add(formData);
             setSuppliers(prev => [...prev, response.data]);
+            setFullSuppliers(prev => [...prev, response.data]);
         } catch (err) {
             setError(err.message || "Failed to create supplier");
             throw err; // Re-throw to handle in the component if needed
@@ -57,6 +58,7 @@ const useSupplier = () => {
         try {
             const response = await supplierAPI.update(id, formData);
             setSuppliers(prev => prev.map(s => (s._id === id ? response.data : s)));
+            setFullSuppliers(prev => prev.map(s => (s._id === id ? response.data : s)));
         } catch (err) {
             setError(err.message || "Failed to update supplier");
             throw err; // Re-throw to handle in the component if needed
@@ -82,7 +84,7 @@ const useSupplier = () => {
         loading,
         error,
         supplier,
-        fullSuppliers, 
+        fullSuppliers,
         fetchSuppliers,
         fetchSupplierById,
         createSupplier,

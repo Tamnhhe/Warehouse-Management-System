@@ -24,6 +24,7 @@ const EditSupplierModal = ({
   onSubmit,
   palette,
 }) => {
+
   return (
     <Dialog
       open={open}
@@ -87,12 +88,25 @@ const EditSupplierModal = ({
             <TextField
               fullWidth
               label="Số điện thoại"
-              value={formData.contact}
-              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+              value={
+                formData.contact && formData.contact.length > 0
+                  ? formData.contact.startsWith("0")
+                    ? formData.contact
+                    : "0" + formData.contact
+                  : formData.contact
+              }
+              onChange={(e) => {
+                // Only allow numbers, remove leading zeros except the first
+                let value = e.target.value.replace(/[^0-9]/g, "");
+                if (value.startsWith("00")) value = value.replace(/^0+/, "0");
+                else value = value.replace(/^0+/, "");
+                setFormData({ ...formData, contact: value });
+              }}
               error={!!formErrors.contact}
               helperText={formErrors.contact}
               required
               variant="outlined"
+              inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   "&.Mui-focused fieldset": {
